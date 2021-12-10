@@ -10,7 +10,7 @@ class Surface(
         class Definition(
             val name: String,
             val imports: KList<String>,
-            val resultant: Term,
+            val type: Term,
             val body: Term,
         ) : Item()
     }
@@ -32,7 +32,7 @@ class Surface(
         class LongArrayOf(val elements: KList<Term>) : Term()
         class ListOf(val elements: KList<Term>) : Term()
         class CompoundOf(val elements: KList<Term>) : Term()
-        class FunctionOf(val parameters: KList<Pair<kotlin.String, Term>>, val body: Term) : Term()
+        class FunctionOf(val parameters: KList<kotlin.String>, val body: Term) : Term()
         class Apply(val function: Term, val arguments: KList<Term>) : Term()
         class Boolean : Term()
         class Byte : Term()
