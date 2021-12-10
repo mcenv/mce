@@ -70,47 +70,47 @@ class Core(
 
         class Apply(val function: Term, val arguments: KList<Term>, override val type: Value) : Term()
 
-        class Boolean : Term() {
+        object Boolean : Term() {
             override val type: Value = Value.Type
         }
 
-        class Byte : Term() {
+        object Byte : Term() {
             override val type: Value = Value.Type
         }
 
-        class Short : Term() {
+        object Short : Term() {
             override val type: Value = Value.Type
         }
 
-        class Int : Term() {
+        object Int : Term() {
             override val type: Value = Value.Type
         }
 
-        class Long : Term() {
+        object Long : Term() {
             override val type: Value = Value.Type
         }
 
-        class Float : Term() {
+        object Float : Term() {
             override val type: Value = Value.Type
         }
 
-        class Double : Term() {
+        object Double : Term() {
             override val type: Value = Value.Type
         }
 
-        class String : Term() {
+        object String : Term() {
             override val type: Value = Value.Type
         }
 
-        class ByteArray : Term() {
+        object ByteArray : Term() {
             override val type: Value = Value.Type
         }
 
-        class IntArray : Term() {
+        object IntArray : Term() {
             override val type: Value = Value.Type
         }
 
-        class LongArray : Term() {
+        object LongArray : Term() {
             override val type: Value = Value.Type
         }
 
@@ -126,7 +126,7 @@ class Core(
             override val type: Value = Value.Type
         }
 
-        class Type : Term() {
+        object Type : Term() {
             override val type: Value = Value.Type
         }
     }
