@@ -1,6 +1,6 @@
 package mce.phase
 
-import mce.topologicalSort
+import mce.Diagnostic
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -9,13 +9,9 @@ typealias Context = List<Pair<String, C.Value>>
 typealias Environment = List<Lazy<C.Value>>
 
 class Elaborate {
-    operator fun invoke(surface: S): C {
-        val names = topologicalSort(surface.items.associate { it.name to it.imports })
-        val items = surface.items.associateBy { it.name }
-        return C(names.map { elaborateItem(items[it]!!) })
-    }
+    private val diagnostics: MutableList<Diagnostic> = mutableListOf()
 
-    private fun elaborateItem(item: S.Item): C.Item = when (item) {
+    private fun invoke(item: S.Item): Pair<C.Item, List<Diagnostic>> = when (item) {
         is S.Item.Definition -> C.Item.Definition(
             item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(
                 item.body, emptyList<Lazy<C.Value>>().evaluate(
@@ -23,12 +19,15 @@ class Elaborate {
                 )
             )
         )
-    }
+    } to diagnostics
 
     private fun Context.inferTerm(term: S.Term): C.Term = when (term) {
         is S.Term.Variable -> {
             val level = indexOfLast { it.first == term.name }
-            if (level == -1) TODO() else C.Term.Variable(level, this[level].second)
+            if (level == -1) {
+                diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
+                TODO()
+            } else C.Term.Variable(level, this[level].second)
         }
         is S.Term.BooleanOf -> C.Term.BooleanOf(term.value)
         is S.Term.ByteOf -> C.Term.ByteOf(term.value)
@@ -41,7 +40,10 @@ class Elaborate {
         is S.Term.ByteArrayOf -> C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) })
         is S.Term.IntArrayOf -> C.Term.IntArrayOf(term.elements.map { checkTerm(it, C.Value.Int) })
         is S.Term.LongArrayOf -> C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) })
-        is S.Term.ListOf -> if (term.elements.isEmpty()) TODO() else {
+        is S.Term.ListOf -> if (term.elements.isEmpty()) {
+            diagnostics += Diagnostic.InferenceFailed(term.id)
+            TODO()
+        } else {
             val first = inferTerm(term.elements.first())
             C.Term.ListOf(
                 listOf(first) + term.elements.drop(1).map { checkTerm(it, first.type) },
@@ -52,7 +54,10 @@ class Elaborate {
             val elements = term.elements.map { inferTerm(it) }
             C.Term.CompoundOf(elements, C.Value.Compound(elements.map { lazyOf(it.type) }))
         }
-        is S.Term.FunctionOf -> TODO()
+        is S.Term.FunctionOf -> {
+            diagnostics += Diagnostic.InferenceFailed(term.id)
+            TODO()
+        }
         is S.Term.Apply -> {
             val function = inferTerm(term.function)
             when (val type = function.type) {
@@ -62,7 +67,10 @@ class Elaborate {
                         arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
                     }.evaluate(type.resultant))
                 }
-                else -> TODO()
+                else -> {
+                    diagnostics += Diagnostic.FunctionExpected(term.function.id)
+                    TODO()
+                }
             }
         }
         is S.Term.Boolean -> C.Term.Boolean
@@ -101,7 +109,10 @@ class Elaborate {
             C.Term.CompoundOf((term.elements zip type.elements).map { checkTerm(it.first, it.second.value) }, type)
         else -> {
             val inferred = inferTerm(term)
-            if (inferred.type convertTo type) inferred else TODO()
+            if (inferred.type convertTo type) inferred else {
+                diagnostics += Diagnostic.TypeMismatch(TODO(), term.id)
+                TODO()
+            }
         }
     }
 
