@@ -3,9 +3,7 @@ package mce.graph
 import java.util.*
 import kotlin.collections.List as KList
 
-class Surface(
-    val items: KList<Item>
-) {
+object Surface {
     sealed class Item {
         abstract val name: String
         abstract val imports: KList<String>

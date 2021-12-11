@@ -2,9 +2,7 @@ package mce.graph
 
 import kotlin.collections.List as KList
 
-class Core(
-    val items: KList<Item>
-) {
+object Core {
     sealed class Item {
         data class Definition(
             val name: String,
