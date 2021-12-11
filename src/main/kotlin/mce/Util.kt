@@ -1,24 +1,25 @@
 package mce
 
 fun <T> topologicalSort(graph: Map<T, List<T>>): List<T> {
-    val result: MutableList<T> = mutableListOf()
     val permanent: MutableSet<T> = mutableSetOf()
     val temporary: MutableSet<T> = mutableSetOf()
+    val result: MutableList<T> = mutableListOf()
+    val stack: MutableList<T> = graph.keys.toMutableList()
 
-    fun visit(node: T) {
-        if (permanent.contains(node)) return
-        if (temporary.contains(node)) TODO()
+    while (stack.isNotEmpty()) {
+        val node = stack.removeLast()
 
-        temporary.add(node)
+        if (permanent.contains(node)) continue
+        if (temporary.contains(node)) throw Exception("cyclic")
 
-        graph[node]?.forEach(::visit)
+        temporary += node
 
-        temporary.remove(node)
-        permanent.add(node)
-        result.add(node)
+        stack.addAll(graph[node]!!)
+
+        temporary -= node
+        permanent += node
+        result += node
     }
 
-    graph.keys.forEach(::visit)
-
-    return result.reversed()
+    return result
 }
