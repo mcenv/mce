@@ -8,14 +8,14 @@ typealias Context = List<Pair<String, C.Value>>
 
 typealias Environment = List<Lazy<C.Value>>
 
-class Elaborate {
+class Elaborate : Phase<S.Item, C.Item> {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
 
-    operator fun invoke(item: S.Item): Pair<C.Item, List<Diagnostic>> = when (item) {
+    override fun run(input: S.Item): Pair<C.Item, List<Diagnostic>> = when (input) {
         is S.Item.Definition -> C.Item.Definition(
-            item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(
-                item.body, emptyList<Lazy<C.Value>>().evaluate(
-                    emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type)
+            input.name, input.imports, emptyList<Pair<String, C.Value>>().checkTerm(
+                input.body, emptyList<Lazy<C.Value>>().evaluate(
+                    emptyList<Pair<String, C.Value>>().checkTerm(input.type, C.Value.Type)
                 )
             )
         )
