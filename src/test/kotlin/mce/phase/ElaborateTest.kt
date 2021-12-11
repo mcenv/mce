@@ -8,7 +8,7 @@ import mce.graph.Surface as S
 class ElaborateTest {
     @Test
     fun testFalse() {
-        val (elaborated, diagnostics) = Elaborate()(
+        val (elaborated, diagnostics) = Elaborate().run(
             S.Item.Definition(
                 "a",
                 emptyList(),
