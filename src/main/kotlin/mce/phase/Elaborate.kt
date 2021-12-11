@@ -11,7 +11,7 @@ typealias Environment = List<Lazy<C.Value>>
 class Elaborate {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
 
-    private fun invoke(item: S.Item): Pair<C.Item, List<Diagnostic>> = when (item) {
+    operator fun invoke(item: S.Item): Pair<C.Item, List<Diagnostic>> = when (item) {
         is S.Item.Definition -> C.Item.Definition(
             item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(
                 item.body, emptyList<Lazy<C.Value>>().evaluate(
