@@ -7,9 +7,12 @@ class Surface(
     val items: KList<Item>
 ) {
     sealed class Item {
+        abstract val name: String
+        abstract val imports: KList<String>
+
         class Definition(
-            val name: String,
-            val imports: KList<String>,
+            override val name: String,
+            override val imports: KList<String>,
             val type: Term,
             val body: Term,
         ) : Item()

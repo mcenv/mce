@@ -1,10 +1,15 @@
 package mce.phase
 
+import mce.topologicalSort
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class Elaborate {
-    operator fun invoke(surface: S): C = C(surface.items.map(::elaborateItem))
+    operator fun invoke(surface: S): C {
+        val names = topologicalSort(surface.items.associate { it.name to it.imports })
+        val items = surface.items.associateBy { it.name }
+        return C(names.map { elaborateItem(items[it]!!) })
+    }
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> C.Item.Definition(
