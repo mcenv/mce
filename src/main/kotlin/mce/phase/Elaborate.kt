@@ -4,6 +4,10 @@ import mce.topologicalSort
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
+typealias Context = List<Pair<String, C.Value>>
+
+typealias Environment = List<Lazy<C.Value>>
+
 class Elaborate {
     operator fun invoke(surface: S): C {
         val names = topologicalSort(surface.items.associate { it.name to it.imports })
@@ -13,14 +17,19 @@ class Elaborate {
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> C.Item.Definition(
-            item.name,
-            item.imports,
-            checkTerm(item.body, emptyList<C.Value>().evaluate(checkTerm(item.type, C.Value.Type)))
+            item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(
+                item.body, emptyList<Lazy<C.Value>>().evaluate(
+                    emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type)
+                )
+            )
         )
     }
 
-    private fun inferTerm(term: S.Term): C.Term = when (term) {
-        is S.Term.Variable -> TODO()
+    private fun Context.inferTerm(term: S.Term): C.Term = when (term) {
+        is S.Term.Variable -> {
+            val level = indexOfLast { it.first == term.name }
+            if (level == -1) TODO() else C.Term.Variable(level, this[level].second)
+        }
         is S.Term.BooleanOf -> C.Term.BooleanOf(term.value)
         is S.Term.ByteOf -> C.Term.ByteOf(term.value)
         is S.Term.ShortOf -> C.Term.ShortOf(term.value)
@@ -40,11 +49,22 @@ class Elaborate {
             )
         }
         is S.Term.CompoundOf -> {
-            val elements = term.elements.map(::inferTerm)
+            val elements = term.elements.map { inferTerm(it) }
             C.Term.CompoundOf(elements, C.Value.Compound(elements.map { lazyOf(it.type) }))
         }
         is S.Term.FunctionOf -> TODO()
-        is S.Term.Apply -> TODO()
+        is S.Term.Apply -> {
+            val function = inferTerm(term.function)
+            when (val type = function.type) {
+                is C.Value.Function -> {
+                    val arguments = (term.arguments zip type.parameters).map { checkTerm(it.first, it.second.value) }
+                    C.Term.Apply(function, arguments, mutableListOf<Lazy<C.Value>>().let { environment ->
+                        arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
+                    }.evaluate(type.resultant))
+                }
+                else -> TODO()
+            }
+        }
         is S.Term.Boolean -> C.Term.Boolean
         is S.Term.Byte -> C.Term.Byte
         is S.Term.Short -> C.Term.Short
@@ -58,11 +78,23 @@ class Elaborate {
         is S.Term.LongArray -> C.Term.LongArray
         is S.Term.List -> C.Term.List(checkTerm(term.element, C.Value.Type))
         is S.Term.Compound -> C.Term.Compound(term.elements.map { checkTerm(it, C.Value.Type) })
-        is S.Term.Function -> TODO()
+        is S.Term.Function -> mutableListOf<Pair<String, C.Value>>().let { context ->
+            C.Term.Function(
+                mutableListOf<Lazy<C.Value>>().let { environment ->
+                    term.parameters.map { (name, parameter) ->
+                        context.checkTerm(parameter, C.Value.Type).also {
+                            context += name to environment.evaluate(it)
+                            environment += lazyOf(C.Value.Variable(environment.size))
+                        }
+                    }
+                },
+                context.checkTerm(term.resultant, C.Value.Type)
+            )
+        }
         is S.Term.Type -> C.Term.Type
     }
 
-    private fun checkTerm(term: S.Term, type: C.Value): C.Term = when {
+    private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term = when {
         term is S.Term.ListOf && type is C.Value.List ->
             C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) }, type)
         term is S.Term.CompoundOf && type is C.Value.Compound ->
@@ -73,8 +105,8 @@ class Elaborate {
         }
     }
 
-    private fun List<C.Value>.evaluate(term: C.Term): C.Value = when (term) {
-        is C.Term.Variable -> this[term.level]
+    private fun Environment.evaluate(term: C.Term): C.Value = when (term) {
+        is C.Term.Variable -> this[term.level].value
         is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
         is C.Term.ShortOf -> C.Value.ShortOf(term.value)
@@ -90,7 +122,7 @@ class Elaborate {
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.FunctionOf -> C.Value.Function(term.parameters.map { lazy { evaluate(it) } }, term.body)
         is C.Term.Apply -> when (val function = evaluate(term.function)) {
-            is C.Value.FunctionOf -> term.arguments.map { evaluate(it) }.evaluate(function.body)
+            is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
         }
         is C.Term.Boolean -> C.Value.Boolean
