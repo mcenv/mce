@@ -8,6 +8,8 @@ typealias Context = List<Pair<String, C.Value>>
 
 typealias Environment = List<Lazy<C.Value>>
 
+typealias Level = Int
+
 class Elaborate : Phase<S.Item, C.Item> {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
 
@@ -109,7 +111,7 @@ class Elaborate : Phase<S.Item, C.Item> {
             C.Term.CompoundOf((term.elements zip type.elements).map { checkTerm(it.first, it.second.value) }, type)
         else -> {
             val inferred = inferTerm(term)
-            if (inferred.type convertTo type) inferred else {
+            if (size.convertible(inferred.type, type)) inferred else {
                 diagnostics += Diagnostic.TypeMismatch(TODO(), term.id)
                 TODO()
             }
@@ -153,38 +155,54 @@ class Elaborate : Phase<S.Item, C.Item> {
         is C.Term.Type -> C.Value.Type
     }
 
-    private infix fun C.Value.convertTo(that: C.Value): Boolean = when {
-        this is C.Value.Variable && that is C.Value.Variable -> this.level == that.level
-        this is C.Value.BooleanOf && that is C.Value.BooleanOf -> this.value == that.value
-        this is C.Value.ByteOf && that is C.Value.ByteOf -> this.value == that.value
-        this is C.Value.ShortOf && that is C.Value.ShortOf -> this.value == that.value
-        this is C.Value.IntOf && that is C.Value.IntOf -> this.value == that.value
-        this is C.Value.LongOf && that is C.Value.LongOf -> this.value == that.value
-        this is C.Value.FloatOf && that is C.Value.FloatOf -> this.value == that.value
-        this is C.Value.DoubleOf && that is C.Value.DoubleOf -> this.value == that.value
-        this is C.Value.StringOf && that is C.Value.StringOf -> this.value == that.value
-        this is C.Value.ByteArrayOf && that is C.Value.ByteArrayOf -> (this.elements zip that.elements).all { it.first.value convertTo it.second.value }
-        this is C.Value.IntArrayOf && that is C.Value.IntArrayOf -> (this.elements zip that.elements).all { it.first.value convertTo it.second.value }
-        this is C.Value.LongArrayOf && that is C.Value.LongArrayOf -> (this.elements zip that.elements).all { it.first.value convertTo it.second.value }
-        this is C.Value.ListOf && that is C.Value.ListOf -> (this.elements zip that.elements).all { it.first.value convertTo it.second.value }
-        this is C.Value.CompoundOf && that is C.Value.CompoundOf -> (this.elements zip that.elements).all { it.first.value convertTo it.second.value }
-        this is C.Value.FunctionOf && that is C.Value.FunctionOf -> TODO()
-        this is C.Value.Apply && that is C.Value.Apply -> this.function convertTo that.function && (this.arguments zip that.arguments).all { it.first.value convertTo it.second.value }
-        this is C.Value.Boolean && that is C.Value.Boolean -> true
-        this is C.Value.Byte && that is C.Value.Byte -> true
-        this is C.Value.Short && that is C.Value.Short -> true
-        this is C.Value.Int && that is C.Value.Int -> true
-        this is C.Value.Long && that is C.Value.Long -> true
-        this is C.Value.Float && that is C.Value.Float -> true
-        this is C.Value.Double && that is C.Value.Double -> true
-        this is C.Value.String && that is C.Value.String -> true
-        this is C.Value.ByteArray && that is C.Value.ByteArray -> true
-        this is C.Value.IntArray && that is C.Value.IntArray -> true
-        this is C.Value.LongArray && that is C.Value.LongArray -> true
-        this is C.Value.List && that is C.Value.List -> this.element.value convertTo that.element.value
-        this is C.Value.Compound && that is C.Value.Compound -> (this.elements zip that.elements).all { it.first.value convertTo it.second.value }
-        this is C.Value.Function && that is C.Value.Function -> TODO()
-        this is C.Value.Type && that is C.Value.Type -> true
+    private fun Level.convertible(left: C.Value, right: C.Value): Boolean = when {
+        left is C.Value.Variable && right is C.Value.Variable -> left.level == right.level
+        left is C.Value.BooleanOf && right is C.Value.BooleanOf -> left.value == right.value
+        left is C.Value.ByteOf && right is C.Value.ByteOf -> left.value == right.value
+        left is C.Value.ShortOf && right is C.Value.ShortOf -> left.value == right.value
+        left is C.Value.IntOf && right is C.Value.IntOf -> left.value == right.value
+        left is C.Value.LongOf && right is C.Value.LongOf -> left.value == right.value
+        left is C.Value.FloatOf && right is C.Value.FloatOf -> left.value == right.value
+        left is C.Value.DoubleOf && right is C.Value.DoubleOf -> left.value == right.value
+        left is C.Value.StringOf && right is C.Value.StringOf -> left.value == right.value
+        left is C.Value.ByteArrayOf && right is C.Value.ByteArrayOf -> left.elements.size == right.elements.size &&
+                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.IntArrayOf && right is C.Value.IntArrayOf -> left.elements.size == right.elements.size &&
+                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.LongArrayOf && right is C.Value.LongArrayOf -> left.elements.size == right.elements.size &&
+                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.ListOf && right is C.Value.ListOf -> left.elements.size == right.elements.size &&
+                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.CompoundOf && right is C.Value.CompoundOf -> left.elements.size == right.elements.size &&
+                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.FunctionOf && right is C.Value.FunctionOf -> left.parameters == right.parameters &&
+                List(left.parameters) { index -> lazyOf(C.Value.Variable(this + index)) }.let {
+                    (this + left.parameters).convertible(it.evaluate(left.body), it.evaluate(right.body))
+                }
+        left is C.Value.Apply && right is C.Value.Apply -> convertible(left.function, right.function) &&
+                (left.arguments zip right.arguments).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.Boolean && right is C.Value.Boolean -> true
+        left is C.Value.Byte && right is C.Value.Byte -> true
+        left is C.Value.Short && right is C.Value.Short -> true
+        left is C.Value.Int && right is C.Value.Int -> true
+        left is C.Value.Long && right is C.Value.Long -> true
+        left is C.Value.Float && right is C.Value.Float -> true
+        left is C.Value.Double && right is C.Value.Double -> true
+        left is C.Value.String && right is C.Value.String -> true
+        left is C.Value.ByteArray && right is C.Value.ByteArray -> true
+        left is C.Value.IntArray && right is C.Value.IntArray -> true
+        left is C.Value.LongArray && right is C.Value.LongArray -> true
+        left is C.Value.List && right is C.Value.List -> convertible(left.element.value, right.element.value)
+        left is C.Value.Compound && right is C.Value.Compound -> left.elements.size == right.elements.size &&
+                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.Function && right is C.Value.Function -> left.parameters.size == right.parameters.size &&
+                (left.parameters zip right.parameters).withIndex().all { (index, it) ->
+                    (this + index).convertible(it.first.value, it.second.value)
+                } &&
+                List(left.parameters.size) { index -> lazyOf(C.Value.Variable(this + index)) }.let {
+                    (this + left.parameters.size).convertible(it.evaluate(left.resultant), it.evaluate(right.resultant))
+                }
+        left is C.Value.Type && right is C.Value.Type -> true
         else -> false
     }
 }
