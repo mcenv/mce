@@ -1,6 +1,7 @@
 package mce.phase
 
 import mce.Diagnostic
+import mce.Diagnostic.Companion.pretty
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -12,6 +13,7 @@ typealias Level = Int
 
 class Elaborate : Phase<S.Item, C.Item> {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
+    private val metas: MutableList<C.Value?> = mutableListOf()
 
     override fun run(input: S.Item): Pair<C.Item, List<Diagnostic>> = when (input) {
         is S.Item.Definition -> C.Item.Definition(
@@ -25,15 +27,17 @@ class Elaborate : Phase<S.Item, C.Item> {
 
     private fun Context.inferTerm(term: S.Term): C.Term = when (term) {
         is S.Term.Hole -> {
-            diagnostics += Diagnostic.TermExpected(TODO(), term.id)
-            C.Term.Hole(TODO())
+            val type = fresh()
+            diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
+            C.Term.Hole(type)
         }
-        is S.Term.Dummy -> C.Term.Dummy(TODO())
+        is S.Term.Dummy -> TODO()
+        is S.Term.Meta -> TODO()
         is S.Term.Variable -> {
             val level = indexOfLast { it.first == term.name }
             if (level == -1) {
                 diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
-                TODO()
+                C.Term.Dummy(fresh())
             } else C.Term.Variable(term.name, level, this[level].second)
         }
         is S.Term.BooleanOf -> C.Term.BooleanOf(term.value)
@@ -49,7 +53,7 @@ class Elaborate : Phase<S.Item, C.Item> {
         is S.Term.LongArrayOf -> C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) })
         is S.Term.ListOf -> if (term.elements.isEmpty()) {
             diagnostics += Diagnostic.InferenceFailed(term.id)
-            TODO()
+            C.Term.ListOf(emptyList(), fresh())
         } else {
             val first = inferTerm(term.elements.first())
             C.Term.ListOf(
@@ -78,7 +82,7 @@ class Elaborate : Phase<S.Item, C.Item> {
                 }
                 else -> {
                     diagnostics += Diagnostic.FunctionExpected(term.function.id)
-                    C.Term.Dummy(TODO())
+                    C.Term.Dummy(fresh())
                 }
             }
         }
@@ -113,18 +117,20 @@ class Elaborate : Phase<S.Item, C.Item> {
 
     private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term = when {
         term is S.Term.Hole -> {
-            diagnostics += Diagnostic.TermExpected(Diagnostic.pretty(type), term.id)
+            diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
             C.Term.Hole(type)
         }
         term is S.Term.ListOf && type is C.Value.List ->
             C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) }, type)
         term is S.Term.CompoundOf && type is C.Value.Compound ->
             C.Term.CompoundOf((term.elements zip type.elements).map { checkTerm(it.first, it.second.value) }, type)
+        term is S.Term.FunctionOf && type is C.Value.Function -> TODO()
+        term is S.Term.Apply -> TODO()
         else -> {
             val inferred = inferTerm(term)
-            if (size.convertible(inferred.type, type)) inferred else {
+            if (size.unify(inferred.type, type)) inferred else {
                 diagnostics +=
-                    Diagnostic.TypeMismatch(Diagnostic.pretty(type), Diagnostic.pretty(inferred.type), term.id)
+                    Diagnostic.TypeMismatch(metas.pretty(type), metas.pretty(inferred.type), term.id)
                 C.Term.Dummy(type)
             }
         }
@@ -171,7 +177,15 @@ class Elaborate : Phase<S.Item, C.Item> {
         is C.Term.Type -> C.Value.Type
     }
 
-    private fun Level.convertible(left: C.Value, right: C.Value): Boolean = when {
+    private fun Level.unify(left: C.Value, right: C.Value): Boolean = when {
+        left is C.Value.Meta -> when (val value = metas[left.index]) {
+            null -> {
+                metas[left.index] = right
+                true
+            }
+            else -> unify(value, right)
+        }
+        right is C.Value.Meta -> unify(right, left)
         left is C.Value.Variable && right is C.Value.Variable -> left.level == right.level
         left is C.Value.BooleanOf && right is C.Value.BooleanOf -> left.value == right.value
         left is C.Value.ByteOf && right is C.Value.ByteOf -> left.value == right.value
@@ -182,23 +196,23 @@ class Elaborate : Phase<S.Item, C.Item> {
         left is C.Value.DoubleOf && right is C.Value.DoubleOf -> left.value == right.value
         left is C.Value.StringOf && right is C.Value.StringOf -> left.value == right.value
         left is C.Value.ByteArrayOf && right is C.Value.ByteArrayOf -> left.elements.size == right.elements.size &&
-                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+                (left.elements zip right.elements).all { unify(it.first.value, it.second.value) }
         left is C.Value.IntArrayOf && right is C.Value.IntArrayOf -> left.elements.size == right.elements.size &&
-                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+                (left.elements zip right.elements).all { unify(it.first.value, it.second.value) }
         left is C.Value.LongArrayOf && right is C.Value.LongArrayOf -> left.elements.size == right.elements.size &&
-                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+                (left.elements zip right.elements).all { unify(it.first.value, it.second.value) }
         left is C.Value.ListOf && right is C.Value.ListOf -> left.elements.size == right.elements.size &&
-                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+                (left.elements zip right.elements).all { unify(it.first.value, it.second.value) }
         left is C.Value.CompoundOf && right is C.Value.CompoundOf -> left.elements.size == right.elements.size &&
-                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+                (left.elements zip right.elements).all { unify(it.first.value, it.second.value) }
         left is C.Value.FunctionOf && right is C.Value.FunctionOf -> left.parameters.size == right.parameters.size &&
                 left.parameters.mapIndexed { index, parameter ->
                     lazyOf(C.Value.Variable(parameter, this + index))
                 }.let {
-                    (this + left.parameters.size).convertible(it.evaluate(left.body), it.evaluate(right.body))
+                    (this + left.parameters.size).unify(it.evaluate(left.body), it.evaluate(right.body))
                 }
-        left is C.Value.Apply && right is C.Value.Apply -> convertible(left.function, right.function) &&
-                (left.arguments zip right.arguments).all { convertible(it.first.value, it.second.value) }
+        left is C.Value.Apply && right is C.Value.Apply -> unify(left.function, right.function) &&
+                (left.arguments zip right.arguments).all { unify(it.first.value, it.second.value) }
         left is C.Value.Boolean && right is C.Value.Boolean -> true
         left is C.Value.Byte && right is C.Value.Byte -> true
         left is C.Value.Short && right is C.Value.Short -> true
@@ -210,20 +224,22 @@ class Elaborate : Phase<S.Item, C.Item> {
         left is C.Value.ByteArray && right is C.Value.ByteArray -> true
         left is C.Value.IntArray && right is C.Value.IntArray -> true
         left is C.Value.LongArray && right is C.Value.LongArray -> true
-        left is C.Value.List && right is C.Value.List -> convertible(left.element.value, right.element.value)
+        left is C.Value.List && right is C.Value.List -> unify(left.element.value, right.element.value)
         left is C.Value.Compound && right is C.Value.Compound -> left.elements.size == right.elements.size &&
-                (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
+                (left.elements zip right.elements).all { unify(it.first.value, it.second.value) }
         left is C.Value.Function && right is C.Value.Function -> left.parameters.size == right.parameters.size &&
                 (left.parameters zip right.parameters).withIndex().all { (index, parameter) ->
                     val (leftParameter, rightParameter) = parameter
-                    (this + index).convertible(leftParameter.second.value, rightParameter.second.value)
+                    (this + index).unify(leftParameter.second.value, rightParameter.second.value)
                 } &&
                 left.parameters.mapIndexed { index, parameter ->
                     lazyOf(C.Value.Variable(parameter.first, this + index))
                 }.let {
-                    (this + left.parameters.size).convertible(it.evaluate(left.resultant), it.evaluate(right.resultant))
+                    (this + left.parameters.size).unify(it.evaluate(left.resultant), it.evaluate(right.resultant))
                 }
         left is C.Value.Type && right is C.Value.Type -> true
         else -> false
     }
+
+    private fun fresh(): C.Value = C.Value.Meta(metas.size).also { metas += null }
 }

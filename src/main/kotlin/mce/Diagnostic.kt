@@ -51,9 +51,10 @@ sealed class Diagnostic {
             is C.Term.Type -> S.Term.Type()
         }
 
-        fun pretty(value: C.Value): S.Term = when (value) {
+        fun List<C.Value?>.pretty(value: C.Value): S.Term = when (value) {
             is C.Value.Hole -> S.Term.Hole()
             is C.Value.Dummy -> S.Term.Dummy()
+            is C.Value.Meta -> this[value.index]?.let { pretty(it) } ?: S.Term.Meta(value.index)
             is C.Value.Variable -> S.Term.Variable(value.name)
             is C.Value.BooleanOf -> S.Term.BooleanOf(value.value)
             is C.Value.ByteOf -> S.Term.ByteOf(value.value)

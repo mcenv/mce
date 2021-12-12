@@ -144,6 +144,7 @@ object Core {
     sealed class Value {
         object Hole : Value()
         object Dummy : Value()
+        data class Meta(val index: KInt) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
         data class BooleanOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()

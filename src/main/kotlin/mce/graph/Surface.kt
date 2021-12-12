@@ -29,6 +29,7 @@ object Surface {
 
         class Hole : Term()
         class Dummy : Term()
+        class Meta(val index: KInt) : Term()
         class Variable(val name: KString) : Term()
         class BooleanOf(val value: KBoolean) : Term()
         class ByteOf(val value: KByte) : Term()
