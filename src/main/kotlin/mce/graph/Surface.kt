@@ -1,16 +1,24 @@
 package mce.graph
 
 import java.util.*
+import kotlin.Boolean as KBoolean
+import kotlin.Byte as KByte
+import kotlin.Double as KDouble
+import kotlin.Float as KFloat
+import kotlin.Int as KInt
+import kotlin.Long as KLong
+import kotlin.Short as KShort
+import kotlin.String as KString
 import kotlin.collections.List as KList
 
 object Surface {
     sealed class Item {
-        abstract val name: String
-        abstract val imports: KList<String>
+        abstract val name: KString
+        abstract val imports: KList<KString>
 
         class Definition(
-            override val name: String,
-            override val imports: KList<String>,
+            override val name: KString,
+            override val imports: KList<KString>,
             val type: Term,
             val body: Term,
         ) : Item()
@@ -19,21 +27,21 @@ object Surface {
     sealed class Term {
         val id: UUID = UUID.randomUUID()
 
-        class Variable(val name: kotlin.String) : Term()
-        class BooleanOf(val value: kotlin.Boolean) : Term()
-        class ByteOf(val value: kotlin.Byte) : Term()
-        class ShortOf(val value: kotlin.Short) : Term()
-        class IntOf(val value: kotlin.Int) : Term()
-        class LongOf(val value: kotlin.Long) : Term()
-        class FloatOf(val value: kotlin.Float) : Term()
-        class DoubleOf(val value: kotlin.Double) : Term()
-        class StringOf(val value: kotlin.String) : Term()
+        class Variable(val name: KString) : Term()
+        class BooleanOf(val value: KBoolean) : Term()
+        class ByteOf(val value: KByte) : Term()
+        class ShortOf(val value: KShort) : Term()
+        class IntOf(val value: KInt) : Term()
+        class LongOf(val value: KLong) : Term()
+        class FloatOf(val value: KFloat) : Term()
+        class DoubleOf(val value: KDouble) : Term()
+        class StringOf(val value: KString) : Term()
         class ByteArrayOf(val elements: KList<Term>) : Term()
         class IntArrayOf(val elements: KList<Term>) : Term()
         class LongArrayOf(val elements: KList<Term>) : Term()
         class ListOf(val elements: KList<Term>) : Term()
         class CompoundOf(val elements: KList<Term>) : Term()
-        class FunctionOf(val parameters: KList<kotlin.String>, val body: Term) : Term()
+        class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
         class Apply(val function: Term, val arguments: KList<Term>) : Term()
         class Boolean : Term()
         class Byte : Term()
@@ -48,7 +56,7 @@ object Surface {
         class LongArray : Term()
         class List(val element: Term) : Term()
         class Compound(val elements: KList<Term>) : Term()
-        class Function(val parameters: KList<Pair<kotlin.String, Term>>, val resultant: Term) : Term()
+        class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term()
         class Type : Term()
     }
 }

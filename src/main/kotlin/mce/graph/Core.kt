@@ -1,12 +1,20 @@
 package mce.graph
 
+import kotlin.Boolean as KBoolean
+import kotlin.Byte as KByte
+import kotlin.Double as KDouble
+import kotlin.Float as KFloat
+import kotlin.Int as KInt
+import kotlin.Long as KLong
+import kotlin.Short as KShort
+import kotlin.String as KString
 import kotlin.collections.List as KList
 
 object Core {
     sealed class Item {
         data class Definition(
-            val name: String,
-            val imports: KList<String>,
+            val name: KString,
+            val imports: KList<KString>,
             val body: Term,
         ) : Item()
     }
@@ -14,37 +22,37 @@ object Core {
     sealed class Term {
         abstract val type: Value
 
-        data class Variable(val level: kotlin.Int, override val type: Value) : Term()
+        data class Variable(val name: KString, val level: KInt, override val type: Value) : Term()
 
-        data class BooleanOf(val value: kotlin.Boolean) : Term() {
+        data class BooleanOf(val value: KBoolean) : Term() {
             override val type: Value = Value.Boolean
         }
 
-        data class ByteOf(val value: kotlin.Byte) : Term() {
+        data class ByteOf(val value: KByte) : Term() {
             override val type: Value = Value.Byte
         }
 
-        data class ShortOf(val value: kotlin.Short) : Term() {
+        data class ShortOf(val value: KShort) : Term() {
             override val type: Value = Value.Short
         }
 
-        data class IntOf(val value: kotlin.Int) : Term() {
+        data class IntOf(val value: KInt) : Term() {
             override val type: Value = Value.Int
         }
 
-        data class LongOf(val value: kotlin.Long) : Term() {
+        data class LongOf(val value: KLong) : Term() {
             override val type: Value = Value.Long
         }
 
-        data class FloatOf(val value: kotlin.Float) : Term() {
+        data class FloatOf(val value: KFloat) : Term() {
             override val type: Value = Value.Float
         }
 
-        data class DoubleOf(val value: kotlin.Double) : Term() {
+        data class DoubleOf(val value: KDouble) : Term() {
             override val type: Value = Value.Double
         }
 
-        data class StringOf(val value: kotlin.String) : Term() {
+        data class StringOf(val value: KString) : Term() {
             override val type: Value = Value.String
         }
 
@@ -64,7 +72,7 @@ object Core {
 
         data class CompoundOf(val elements: KList<Term>, override val type: Value) : Term()
 
-        data class FunctionOf(val parameters: KList<Term>, val body: Term, override val type: Value) : Term()
+        data class FunctionOf(val parameters: KList<KString>, val body: Term, override val type: Value) : Term()
 
         data class Apply(val function: Term, val arguments: KList<Term>, override val type: Value) : Term()
 
@@ -120,7 +128,7 @@ object Core {
             override val type: Value = Value.Type
         }
 
-        class Function(val parameters: KList<Term>, val resultant: Term) : Term() {
+        class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term() {
             override val type: Value = Value.Type
         }
 
@@ -130,21 +138,21 @@ object Core {
     }
 
     sealed class Value {
-        data class Variable(val level: kotlin.Int) : Value()
-        data class BooleanOf(val value: kotlin.Boolean) : Value()
-        data class ByteOf(val value: kotlin.Byte) : Value()
-        data class ShortOf(val value: kotlin.Short) : Value()
-        data class IntOf(val value: kotlin.Int) : Value()
-        data class LongOf(val value: kotlin.Long) : Value()
-        data class FloatOf(val value: kotlin.Float) : Value()
-        data class DoubleOf(val value: kotlin.Double) : Value()
-        data class StringOf(val value: kotlin.String) : Value()
+        data class Variable(val name: KString, val level: KInt) : Value()
+        data class BooleanOf(val value: KBoolean) : Value()
+        data class ByteOf(val value: KByte) : Value()
+        data class ShortOf(val value: KShort) : Value()
+        data class IntOf(val value: KInt) : Value()
+        data class LongOf(val value: KLong) : Value()
+        data class FloatOf(val value: KFloat) : Value()
+        data class DoubleOf(val value: KDouble) : Value()
+        data class StringOf(val value: KString) : Value()
         data class ByteArrayOf(val elements: KList<Lazy<Value>>) : Value()
         data class IntArrayOf(val elements: KList<Lazy<Value>>) : Value()
         data class LongArrayOf(val elements: KList<Lazy<Value>>) : Value()
         data class ListOf(val elements: KList<Lazy<Value>>) : Value()
         data class CompoundOf(val elements: KList<Lazy<Value>>) : Value()
-        data class FunctionOf(val parameters: kotlin.Int, val body: Term) : Value()
+        data class FunctionOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
         object Boolean : Value()
         object Byte : Value()
@@ -159,7 +167,7 @@ object Core {
         object LongArray : Value()
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Lazy<Value>>) : Value()
-        data class Function(val parameters: KList<Lazy<Value>>, val resultant: Term) : Value()
+        data class Function(val parameters: KList<Pair<KString, Lazy<Value>>>, val resultant: Term) : Value()
         object Type : Value()
     }
 }

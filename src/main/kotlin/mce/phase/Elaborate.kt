@@ -29,7 +29,7 @@ class Elaborate : Phase<S.Item, C.Item> {
             if (level == -1) {
                 diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
                 TODO()
-            } else C.Term.Variable(level, this[level].second)
+            } else C.Term.Variable(term.name, level, this[level].second)
         }
         is S.Term.BooleanOf -> C.Term.BooleanOf(term.value)
         is S.Term.ByteOf -> C.Term.ByteOf(term.value)
@@ -64,7 +64,9 @@ class Elaborate : Phase<S.Item, C.Item> {
             val function = inferTerm(term.function)
             when (val type = function.type) {
                 is C.Value.Function -> {
-                    val arguments = (term.arguments zip type.parameters).map { checkTerm(it.first, it.second.value) }
+                    val arguments = (term.arguments zip type.parameters).map { (argument, parameter) ->
+                        checkTerm(argument, parameter.second.value)
+                    }
                     C.Term.Apply(function, arguments, mutableListOf<Lazy<C.Value>>().let { environment ->
                         arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
                     }.evaluate(type.resultant))
@@ -92,9 +94,9 @@ class Elaborate : Phase<S.Item, C.Item> {
             C.Term.Function(
                 mutableListOf<Lazy<C.Value>>().let { environment ->
                     term.parameters.map { (name, parameter) ->
-                        context.checkTerm(parameter, C.Value.Type).also {
+                        name to context.checkTerm(parameter, C.Value.Type).also {
                             context += name to environment.evaluate(it)
-                            environment += lazyOf(C.Value.Variable(environment.size))
+                            environment += lazyOf(C.Value.Variable(name, environment.size))
                         }
                     }
                 },
@@ -112,7 +114,8 @@ class Elaborate : Phase<S.Item, C.Item> {
         else -> {
             val inferred = inferTerm(term)
             if (size.convertible(inferred.type, type)) inferred else {
-                diagnostics += Diagnostic.TypeMismatch(TODO(), term.id)
+                diagnostics +=
+                    Diagnostic.TypeMismatch(Diagnostic.pretty(type), Diagnostic.pretty(inferred.type), term.id)
                 TODO()
             }
         }
@@ -133,7 +136,7 @@ class Elaborate : Phase<S.Item, C.Item> {
         is C.Term.LongArrayOf -> C.Value.LongArrayOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { evaluate(it) } })
-        is C.Term.FunctionOf -> C.Value.Function(term.parameters.map { lazy { evaluate(it) } }, term.body)
+        is C.Term.FunctionOf -> C.Value.FunctionOf(term.parameters, term.body)
         is C.Term.Apply -> when (val function = evaluate(term.function)) {
             is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
@@ -151,7 +154,9 @@ class Elaborate : Phase<S.Item, C.Item> {
         is C.Term.LongArray -> C.Value.LongArray
         is C.Term.List -> C.Value.List(lazy { evaluate(term.element) })
         is C.Term.Compound -> C.Value.Compound(term.elements.map { lazy { evaluate(it) } })
-        is C.Term.Function -> C.Value.Function(term.parameters.map { lazy { evaluate(it) } }, term.resultant)
+        is C.Term.Function -> C.Value.Function(
+            term.parameters.map { (name, parameter) -> name to lazy { evaluate(parameter) } }, term.resultant
+        )
         is C.Term.Type -> C.Value.Type
     }
 
@@ -175,9 +180,11 @@ class Elaborate : Phase<S.Item, C.Item> {
                 (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
         left is C.Value.CompoundOf && right is C.Value.CompoundOf -> left.elements.size == right.elements.size &&
                 (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
-        left is C.Value.FunctionOf && right is C.Value.FunctionOf -> left.parameters == right.parameters &&
-                List(left.parameters) { index -> lazyOf(C.Value.Variable(this + index)) }.let {
-                    (this + left.parameters).convertible(it.evaluate(left.body), it.evaluate(right.body))
+        left is C.Value.FunctionOf && right is C.Value.FunctionOf -> left.parameters.size == right.parameters.size &&
+                left.parameters.mapIndexed { index, parameter ->
+                    lazyOf(C.Value.Variable(parameter, this + index))
+                }.let {
+                    (this + left.parameters.size).convertible(it.evaluate(left.body), it.evaluate(right.body))
                 }
         left is C.Value.Apply && right is C.Value.Apply -> convertible(left.function, right.function) &&
                 (left.arguments zip right.arguments).all { convertible(it.first.value, it.second.value) }
@@ -196,10 +203,13 @@ class Elaborate : Phase<S.Item, C.Item> {
         left is C.Value.Compound && right is C.Value.Compound -> left.elements.size == right.elements.size &&
                 (left.elements zip right.elements).all { convertible(it.first.value, it.second.value) }
         left is C.Value.Function && right is C.Value.Function -> left.parameters.size == right.parameters.size &&
-                (left.parameters zip right.parameters).withIndex().all { (index, it) ->
-                    (this + index).convertible(it.first.value, it.second.value)
+                (left.parameters zip right.parameters).withIndex().all { (index, parameter) ->
+                    val (leftParameter, rightParameter) = parameter
+                    (this + index).convertible(leftParameter.second.value, rightParameter.second.value)
                 } &&
-                List(left.parameters.size) { index -> lazyOf(C.Value.Variable(this + index)) }.let {
+                left.parameters.mapIndexed { index, parameter ->
+                    lazyOf(C.Value.Variable(parameter.first, this + index))
+                }.let {
                     (this + left.parameters.size).convertible(it.evaluate(left.resultant), it.evaluate(right.resultant))
                 }
         left is C.Value.Type && right is C.Value.Type -> true
