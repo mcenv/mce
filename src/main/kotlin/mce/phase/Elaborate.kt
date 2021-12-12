@@ -66,8 +66,13 @@ class Elaborate : Phase<S.Item, C.Item> {
             C.Term.CompoundOf(elements, C.Value.Compound(elements.map { lazyOf(it.type) }))
         }
         is S.Term.FunctionOf -> {
-            diagnostics += Diagnostic.InferenceFailed(term.id)
-            TODO()
+            val types = term.parameters.map { fresh() }
+            val body = (term.parameters zip types).inferTerm(term.body)
+            C.Term.FunctionOf(
+                term.parameters,
+                body,
+                C.Value.Function((term.parameters zip types.map(::lazyOf)), quote(body.type, C.Value.Type))
+            )
         }
         is S.Term.Apply -> {
             val function = inferTerm(term.function)
@@ -124,8 +129,23 @@ class Elaborate : Phase<S.Item, C.Item> {
             C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) }, type)
         term is S.Term.CompoundOf && type is C.Value.Compound ->
             C.Term.CompoundOf((term.elements zip type.elements).map { checkTerm(it.first, it.second.value) }, type)
-        term is S.Term.FunctionOf && type is C.Value.Function -> TODO()
-        term is S.Term.Apply -> TODO()
+        term is S.Term.FunctionOf && type is C.Value.Function -> C.Term.FunctionOf(
+            term.parameters,
+            (term.parameters zip type.parameters).map {
+                it.first to it.second.second.value
+            }.checkTerm(
+                term.body,
+                term.parameters.mapIndexed { index, parameter ->
+                    lazyOf(C.Value.Variable(parameter, index))
+                }.evaluate(type.resultant)
+            ), type
+        )
+        term is S.Term.Apply -> {
+            val arguments = term.arguments.map { inferTerm(it) }
+            C.Term.Apply(checkTerm(term.function, C.Value.Function(mutableListOf<Lazy<C.Value>>().let { environment ->
+                arguments.map { argument -> "" to lazy { environment.evaluate(argument) }.also { environment += it } }
+            }, quote(type, C.Value.Type))), arguments, type)
+        }
         else -> {
             val inferred = inferTerm(term)
             if (size.unify(inferred.type, type)) inferred else {
@@ -139,6 +159,7 @@ class Elaborate : Phase<S.Item, C.Item> {
     private fun Environment.evaluate(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
         is C.Term.Dummy -> C.Value.Dummy
+        is C.Term.Meta -> C.Value.Meta(term.index)
         is C.Term.Variable -> this[term.level].value
         is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
@@ -175,6 +196,46 @@ class Elaborate : Phase<S.Item, C.Item> {
             term.parameters.map { (name, parameter) -> name to lazy { evaluate(parameter) } }, term.resultant
         )
         is C.Term.Type -> C.Value.Type
+    }
+
+    private fun quote(value: C.Value, type: C.Value): C.Term = when {
+        value is C.Value.Hole -> C.Term.Hole(type)
+        value is C.Value.Dummy -> C.Term.Dummy(type)
+        value is C.Value.Meta -> metas[value.index]?.let { quote(it, type) } ?: C.Term.Meta(value.index, type)
+        value is C.Value.Variable -> C.Term.Variable(value.name, value.level, type)
+        value is C.Value.BooleanOf -> C.Term.BooleanOf(value.value)
+        value is C.Value.ByteOf -> C.Term.ByteOf(value.value)
+        value is C.Value.ShortOf -> C.Term.ShortOf(value.value)
+        value is C.Value.IntOf -> C.Term.IntOf(value.value)
+        value is C.Value.LongOf -> C.Term.LongOf(value.value)
+        value is C.Value.FloatOf -> C.Term.FloatOf(value.value)
+        value is C.Value.DoubleOf -> C.Term.DoubleOf(value.value)
+        value is C.Value.StringOf -> C.Term.StringOf(value.value)
+        value is C.Value.ByteArrayOf -> C.Term.ByteArrayOf(value.elements.map { quote(it.value, C.Value.Byte) })
+        value is C.Value.IntArrayOf -> C.Term.IntArrayOf(value.elements.map { quote(it.value, C.Value.Int) })
+        value is C.Value.LongArrayOf -> C.Term.LongArrayOf(value.elements.map { quote(it.value, C.Value.Long) })
+        value is C.Value.ListOf && type is C.Value.List ->
+            C.Term.ListOf(value.elements.map { quote(it.value, type.element.value) }, type)
+        value is C.Value.CompoundOf && type is C.Value.Compound ->
+            C.Term.CompoundOf((value.elements zip type.elements).map { quote(it.first.value, it.second.value) }, type)
+        value is C.Value.FunctionOf -> TODO()
+        value is C.Value.Apply -> TODO()
+        value is C.Value.Boolean -> C.Term.Boolean
+        value is C.Value.Byte -> C.Term.Byte
+        value is C.Value.Short -> C.Term.Short
+        value is C.Value.Int -> C.Term.Int
+        value is C.Value.Long -> C.Term.Long
+        value is C.Value.Float -> C.Term.Float
+        value is C.Value.Double -> C.Term.Double
+        value is C.Value.String -> C.Term.String
+        value is C.Value.ByteArray -> C.Term.ByteArray
+        value is C.Value.IntArray -> C.Term.IntArray
+        value is C.Value.LongArray -> C.Term.LongArray
+        value is C.Value.List -> C.Term.List(quote(value.element.value, C.Value.Type))
+        value is C.Value.Compound -> C.Term.Compound(value.elements.map { quote(it.value, C.Value.Type) })
+        value is C.Value.Function -> TODO()
+        value is C.Value.Type -> C.Term.Type
+        else -> TODO()
     }
 
     private fun Level.unify(left: C.Value, right: C.Value): Boolean = when {

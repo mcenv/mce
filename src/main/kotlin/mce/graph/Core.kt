@@ -26,6 +26,8 @@ object Core {
 
         data class Dummy(override val type: Value) : Term()
 
+        data class Meta(val index: KInt, override val type: Value) : Term()
+
         data class Variable(val name: KString, val level: KInt, override val type: Value) : Term()
 
         data class BooleanOf(val value: KBoolean) : Term() {

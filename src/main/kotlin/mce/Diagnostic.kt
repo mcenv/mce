@@ -17,6 +17,7 @@ sealed class Diagnostic {
         fun delaborate(term: C.Term): S.Term = when (term) {
             is C.Term.Hole -> S.Term.Hole()
             is C.Term.Dummy -> S.Term.Dummy()
+            is C.Term.Meta -> S.Term.Meta(term.index)
             is C.Term.Variable -> S.Term.Variable(term.name)
             is C.Term.BooleanOf -> S.Term.BooleanOf(term.value)
             is C.Term.ByteOf -> S.Term.ByteOf(term.value)
