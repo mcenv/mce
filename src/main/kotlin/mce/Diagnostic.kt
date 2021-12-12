@@ -16,6 +16,7 @@ sealed class Diagnostic {
     companion object {
         fun delaborate(term: C.Term): S.Term = when (term) {
             is C.Term.Hole -> S.Term.Hole()
+            is C.Term.Dummy -> S.Term.Dummy()
             is C.Term.Variable -> S.Term.Variable(term.name)
             is C.Term.BooleanOf -> S.Term.BooleanOf(term.value)
             is C.Term.ByteOf -> S.Term.ByteOf(term.value)
@@ -52,6 +53,7 @@ sealed class Diagnostic {
 
         fun pretty(value: C.Value): S.Term = when (value) {
             is C.Value.Hole -> S.Term.Hole()
+            is C.Value.Dummy -> S.Term.Dummy()
             is C.Value.Variable -> S.Term.Variable(value.name)
             is C.Value.BooleanOf -> S.Term.BooleanOf(value.value)
             is C.Value.ByteOf -> S.Term.ByteOf(value.value)

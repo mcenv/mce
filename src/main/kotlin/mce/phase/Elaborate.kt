@@ -26,8 +26,9 @@ class Elaborate : Phase<S.Item, C.Item> {
     private fun Context.inferTerm(term: S.Term): C.Term = when (term) {
         is S.Term.Hole -> {
             diagnostics += Diagnostic.TermExpected(TODO(), term.id)
-            TODO()
+            C.Term.Hole(TODO())
         }
+        is S.Term.Dummy -> C.Term.Dummy(TODO())
         is S.Term.Variable -> {
             val level = indexOfLast { it.first == term.name }
             if (level == -1) {
@@ -77,7 +78,7 @@ class Elaborate : Phase<S.Item, C.Item> {
                 }
                 else -> {
                     diagnostics += Diagnostic.FunctionExpected(term.function.id)
-                    TODO()
+                    C.Term.Dummy(TODO())
                 }
             }
         }
@@ -124,13 +125,14 @@ class Elaborate : Phase<S.Item, C.Item> {
             if (size.convertible(inferred.type, type)) inferred else {
                 diagnostics +=
                     Diagnostic.TypeMismatch(Diagnostic.pretty(type), Diagnostic.pretty(inferred.type), term.id)
-                TODO()
+                C.Term.Dummy(type)
             }
         }
     }
 
     private fun Environment.evaluate(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
+        is C.Term.Dummy -> C.Value.Dummy
         is C.Term.Variable -> this[term.level].value
         is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
