@@ -27,6 +27,7 @@ object Surface {
     sealed class Term {
         val id: UUID = UUID.randomUUID()
 
+        class Hole() : Term()
         class Variable(val name: KString) : Term()
         class BooleanOf(val value: KBoolean) : Term()
         class ByteOf(val value: KByte) : Term()

@@ -24,6 +24,10 @@ class Elaborate : Phase<S.Item, C.Item> {
     } to diagnostics
 
     private fun Context.inferTerm(term: S.Term): C.Term = when (term) {
+        is S.Term.Hole -> {
+            diagnostics += Diagnostic.TermExpected(TODO(), term.id)
+            TODO()
+        }
         is S.Term.Variable -> {
             val level = indexOfLast { it.first == term.name }
             if (level == -1) {
@@ -107,6 +111,10 @@ class Elaborate : Phase<S.Item, C.Item> {
     }
 
     private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term = when {
+        term is S.Term.Hole -> {
+            diagnostics += Diagnostic.TermExpected(Diagnostic.pretty(type), term.id)
+            C.Term.Hole(type)
+        }
         term is S.Term.ListOf && type is C.Value.List ->
             C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) }, type)
         term is S.Term.CompoundOf && type is C.Value.Compound ->
@@ -122,6 +130,7 @@ class Elaborate : Phase<S.Item, C.Item> {
     }
 
     private fun Environment.evaluate(term: C.Term): C.Value = when (term) {
+        is C.Term.Hole -> C.Value.Hole
         is C.Term.Variable -> this[term.level].value
         is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)

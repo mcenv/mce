@@ -22,6 +22,8 @@ object Core {
     sealed class Term {
         abstract val type: Value
 
+        data class Hole(override val type: Value) : Term()
+
         data class Variable(val name: KString, val level: KInt, override val type: Value) : Term()
 
         data class BooleanOf(val value: KBoolean) : Term() {
@@ -138,6 +140,7 @@ object Core {
     }
 
     sealed class Value {
+        object Hole : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
         data class BooleanOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()
