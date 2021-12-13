@@ -20,127 +20,40 @@ object Core {
     }
 
     sealed class Term {
-        abstract val type: Value
-
-        data class Hole(override val type: Value) : Term()
-
-        data class Dummy(override val type: Value) : Term()
-
-        data class Meta(val index: KInt, override val type: Value) : Term()
-
-        data class Variable(val name: KString, val level: KInt, override val type: Value) : Term()
-
-        data class BooleanOf(val value: KBoolean) : Term() {
-            override val type: Value = Value.Boolean
-        }
-
-        data class ByteOf(val value: KByte) : Term() {
-            override val type: Value = Value.Byte
-        }
-
-        data class ShortOf(val value: KShort) : Term() {
-            override val type: Value = Value.Short
-        }
-
-        data class IntOf(val value: KInt) : Term() {
-            override val type: Value = Value.Int
-        }
-
-        data class LongOf(val value: KLong) : Term() {
-            override val type: Value = Value.Long
-        }
-
-        data class FloatOf(val value: KFloat) : Term() {
-            override val type: Value = Value.Float
-        }
-
-        data class DoubleOf(val value: KDouble) : Term() {
-            override val type: Value = Value.Double
-        }
-
-        data class StringOf(val value: KString) : Term() {
-            override val type: Value = Value.String
-        }
-
-        data class ByteArrayOf(val elements: KList<Term>) : Term() {
-            override val type: Value = Value.ByteArray
-        }
-
-        data class IntArrayOf(val elements: KList<Term>) : Term() {
-            override val type: Value = Value.IntArray
-        }
-
-        data class LongArrayOf(val elements: KList<Term>) : Term() {
-            override val type: Value = Value.LongArray
-        }
-
-        data class ListOf(val elements: KList<Term>, override val type: Value) : Term()
-
-        data class CompoundOf(val elements: KList<Term>, override val type: Value) : Term()
-
-        data class FunctionOf(val parameters: KList<KString>, val body: Term, override val type: Value) : Term()
-
-        data class Apply(val function: Term, val arguments: KList<Term>, override val type: Value) : Term()
-
-        object Boolean : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Byte : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Short : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Int : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Long : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Float : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Double : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object String : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object ByteArray : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object IntArray : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object LongArray : Term() {
-            override val type: Value = Value.Type
-        }
-
-        class List(val element: Term) : Term() {
-            override val type: Value = Value.Type
-        }
-
-        class Compound(val elements: KList<Term>) : Term() {
-            override val type: Value = Value.Type
-        }
-
-        class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term() {
-            override val type: Value = Value.Type
-        }
-
-        object Type : Term() {
-            override val type: Value = Value.Type
-        }
+        object Hole : Term()
+        object Dummy : Term()
+        data class Meta(val index: KInt) : Term()
+        data class Variable(val name: KString, val level: KInt) : Term()
+        data class BooleanOf(val value: KBoolean) : Term()
+        data class ByteOf(val value: KByte) : Term()
+        data class ShortOf(val value: KShort) : Term()
+        data class IntOf(val value: KInt) : Term()
+        data class LongOf(val value: KLong) : Term()
+        data class FloatOf(val value: KFloat) : Term()
+        data class DoubleOf(val value: KDouble) : Term()
+        data class StringOf(val value: KString) : Term()
+        data class ByteArrayOf(val elements: KList<Term>) : Term()
+        data class IntArrayOf(val elements: KList<Term>) : Term()
+        data class LongArrayOf(val elements: KList<Term>) : Term()
+        data class ListOf(val elements: KList<Term>) : Term()
+        data class CompoundOf(val elements: KList<Term>) : Term()
+        data class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
+        data class Apply(val function: Term, val arguments: KList<Term>) : Term()
+        object Boolean : Term()
+        object Byte : Term()
+        object Short : Term()
+        object Int : Term()
+        object Long : Term()
+        object Float : Term()
+        object Double : Term()
+        object String : Term()
+        object ByteArray : Term()
+        object IntArray : Term()
+        object LongArray : Term()
+        data class List(val element: Term) : Term()
+        data class Compound(val elements: KList<Term>) : Term()
+        data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term()
+        object Type : Term()
     }
 
     sealed class Value {
