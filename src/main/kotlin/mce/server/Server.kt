@@ -1,6 +1,7 @@
 package mce.server
 
 import mce.phase.Elaborate
+import mce.pretty
 import java.util.*
 import mce.graph.Core as C
 import mce.graph.Surface as S
@@ -8,7 +9,7 @@ import mce.graph.Surface as S
 class Server {
     private val dependencies: MutableMap<String, MutableList<String>> = mutableMapOf()
     private val surfaces: MutableMap<String, S.Item> = mutableMapOf()
-    private val cores: MutableMap<String, C.Item> = mutableMapOf()
+    private val cores: MutableMap<String, Elaborate.Output> = mutableMapOf()
 
     fun register(surface: S.Item) {
         surface.imports.forEach {
@@ -17,9 +18,8 @@ class Server {
         surfaces[surface.name] = surface
     }
 
-    suspend fun fetch(name: String): C.Item = cores.getOrElse(name) {
-        val (core, diagnostics) = Elaborate().run(surfaces[name]!!)
-        core
+    suspend fun fetch(name: String): Elaborate.Output = cores.getOrElse(name) {
+        Elaborate().run(surfaces[name]!!)
     }
 
     fun edit(name: String) {
@@ -28,7 +28,8 @@ class Server {
         }
     }
 
-    suspend fun hover(name: String, id: UUID): HoverItem = TODO()
+    suspend fun hover(name: String, id: UUID): HoverItem =
+        HoverItem(emptyList<C.Value?>().pretty(fetch(name).types[id]!!))
 
     suspend fun build() {
         surfaces.keys.forEach {

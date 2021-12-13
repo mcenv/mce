@@ -8,15 +8,15 @@ import mce.graph.Surface as S
 class ElaborateTest {
     @Test
     fun testFalse() {
-        val (elaborated, diagnostics) = Elaborate().run(
-            S.Item.Definition(
-                "a",
-                emptyList(),
-                S.Term.Boolean(),
-                S.Term.BooleanOf(false)
-            )
+        val boolean = S.Term.Boolean()
+        val `false` = S.Term.BooleanOf(false)
+        val (elaborated, diagnostics, types) = Elaborate().run(
+            S.Item.Definition("a", emptyList(), boolean, `false`)
         )
+
         assert(diagnostics.isEmpty())
+        assertEquals(C.Value.Type, types[boolean.id])
+        assertEquals(C.Value.Boolean, types[`false`.id])
         assertEquals(
             C.Item.Definition(
                 "a",

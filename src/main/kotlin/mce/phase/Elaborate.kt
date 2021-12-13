@@ -1,7 +1,7 @@
 package mce.phase
 
 import mce.Diagnostic
-import mce.Diagnostic.Companion.pretty
+import mce.pretty
 import java.util.*
 import mce.graph.Core as C
 import mce.graph.Surface as S
@@ -35,133 +35,150 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
         }, diagnostics, types
     )
 
-    private fun Context.inferTerm(term: S.Term): Pair<C.Term, C.Value> = when (term) {
-        is S.Term.Hole -> {
-            val type = fresh()
-            diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
-            C.Term.Hole to type
-        }
-        is S.Term.Dummy -> TODO()
-        is S.Term.Meta -> TODO()
-        is S.Term.Variable -> {
-            val level = indexOfLast { it.first == term.name }
-            if (level == -1) {
-                diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
-                C.Term.Dummy to fresh()
-            } else C.Term.Variable(term.name, level) to this[level].second
-        }
-        is S.Term.BooleanOf -> C.Term.BooleanOf(term.value) to C.Value.Boolean
-        is S.Term.ByteOf -> C.Term.ByteOf(term.value) to C.Value.Byte
-        is S.Term.ShortOf -> C.Term.ShortOf(term.value) to C.Value.Short
-        is S.Term.IntOf -> C.Term.IntOf(term.value) to C.Value.Int
-        is S.Term.LongOf -> C.Term.LongOf(term.value) to C.Value.Long
-        is S.Term.FloatOf -> C.Term.FloatOf(term.value) to C.Value.Float
-        is S.Term.DoubleOf -> C.Term.DoubleOf(term.value) to C.Value.Double
-        is S.Term.StringOf -> C.Term.StringOf(term.value) to C.Value.String
-        is S.Term.ByteArrayOf ->
-            C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }) to C.Value.ByteArray
-        is S.Term.IntArrayOf -> C.Term.IntArrayOf(term.elements.map { checkTerm(it, C.Value.Int) }) to C.Value.IntArray
-        is S.Term.LongArrayOf ->
-            C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }) to C.Value.LongArray
-        is S.Term.ListOf -> if (term.elements.isEmpty()) {
-            diagnostics += Diagnostic.InferenceFailed(term.id)
-            C.Term.ListOf(emptyList()) to fresh()
-        } else {
-            val (first, firstType) = inferTerm(term.elements.first())
-            C.Term.ListOf(
-                listOf(first) + term.elements.drop(1).map { checkTerm(it, firstType) }
-            ) to C.Value.List(lazyOf(firstType))
-        }
-        is S.Term.CompoundOf -> {
-            val elements = term.elements.map { inferTerm(it) }
-            C.Term.CompoundOf(elements.map { it.first }) to C.Value.Compound(elements.map { lazyOf(it.second) })
-        }
-        is S.Term.FunctionOf -> {
-            val types = term.parameters.map { fresh() }
-            val (body, bodyType) = (term.parameters zip types).inferTerm(term.body)
-            C.Term.FunctionOf(
-                term.parameters,
-                body
-            ) to C.Value.Function((term.parameters zip types.map(::lazyOf)), quote(bodyType))
-        }
-        is S.Term.Apply -> {
-            val (function, functionType) = inferTerm(term.function)
-            when (functionType) {
-                is C.Value.Function -> {
-                    val arguments = (term.arguments zip functionType.parameters).map { (argument, parameter) ->
-                        checkTerm(argument, parameter.second.value)
-                    }
-                    C.Term.Apply(function, arguments) to mutableListOf<Lazy<C.Value>>().let { environment ->
-                        arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
-                    }.evaluate(functionType.resultant)
-                }
-                else -> {
-                    diagnostics += Diagnostic.FunctionExpected(term.function.id)
+    private fun Context.inferTerm(term: S.Term): Pair<C.Term, C.Value> {
+        val result = when (term) {
+            is S.Term.Hole -> {
+                val type = fresh()
+                diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
+                C.Term.Hole to type
+            }
+            is S.Term.Dummy -> TODO()
+            is S.Term.Meta -> TODO()
+            is S.Term.Variable -> {
+                val level = indexOfLast { it.first == term.name }
+                if (level == -1) {
+                    diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
                     C.Term.Dummy to fresh()
+                } else C.Term.Variable(term.name, level) to this[level].second
+            }
+            is S.Term.BooleanOf -> C.Term.BooleanOf(term.value) to C.Value.Boolean
+            is S.Term.ByteOf -> C.Term.ByteOf(term.value) to C.Value.Byte
+            is S.Term.ShortOf -> C.Term.ShortOf(term.value) to C.Value.Short
+            is S.Term.IntOf -> C.Term.IntOf(term.value) to C.Value.Int
+            is S.Term.LongOf -> C.Term.LongOf(term.value) to C.Value.Long
+            is S.Term.FloatOf -> C.Term.FloatOf(term.value) to C.Value.Float
+            is S.Term.DoubleOf -> C.Term.DoubleOf(term.value) to C.Value.Double
+            is S.Term.StringOf -> C.Term.StringOf(term.value) to C.Value.String
+            is S.Term.ByteArrayOf ->
+                C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }) to C.Value.ByteArray
+            is S.Term.IntArrayOf -> C.Term.IntArrayOf(term.elements.map {
+                checkTerm(
+                    it,
+                    C.Value.Int
+                )
+            }) to C.Value.IntArray
+            is S.Term.LongArrayOf ->
+                C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }) to C.Value.LongArray
+            is S.Term.ListOf -> if (term.elements.isEmpty()) {
+                diagnostics += Diagnostic.InferenceFailed(term.id)
+                C.Term.ListOf(emptyList()) to fresh()
+            } else {
+                val (first, firstType) = inferTerm(term.elements.first())
+                C.Term.ListOf(
+                    listOf(first) + term.elements.drop(1).map { checkTerm(it, firstType) }
+                ) to C.Value.List(lazyOf(firstType))
+            }
+            is S.Term.CompoundOf -> {
+                val elements = term.elements.map { inferTerm(it) }
+                C.Term.CompoundOf(elements.map { it.first }) to C.Value.Compound(elements.map { lazyOf(it.second) })
+            }
+            is S.Term.FunctionOf -> {
+                val types = term.parameters.map { fresh() }
+                val (body, bodyType) = (term.parameters zip types).inferTerm(term.body)
+                C.Term.FunctionOf(
+                    term.parameters,
+                    body
+                ) to C.Value.Function((term.parameters zip types.map(::lazyOf)), quote(bodyType))
+            }
+            is S.Term.Apply -> {
+                val (function, functionType) = inferTerm(term.function)
+                when (functionType) {
+                    is C.Value.Function -> {
+                        val arguments = (term.arguments zip functionType.parameters).map { (argument, parameter) ->
+                            checkTerm(argument, parameter.second.value)
+                        }
+                        C.Term.Apply(function, arguments) to mutableListOf<Lazy<C.Value>>().let { environment ->
+                            arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
+                        }.evaluate(functionType.resultant)
+                    }
+                    else -> {
+                        diagnostics += Diagnostic.FunctionExpected(term.function.id)
+                        C.Term.Dummy to fresh()
+                    }
                 }
             }
-        }
-        is S.Term.Boolean -> C.Term.Boolean to C.Value.Type
-        is S.Term.Byte -> C.Term.Byte to C.Value.Type
-        is S.Term.Short -> C.Term.Short to C.Value.Type
-        is S.Term.Int -> C.Term.Int to C.Value.Type
-        is S.Term.Long -> C.Term.Long to C.Value.Type
-        is S.Term.Float -> C.Term.Float to C.Value.Type
-        is S.Term.Double -> C.Term.Double to C.Value.Type
-        is S.Term.String -> C.Term.String to C.Value.Type
-        is S.Term.ByteArray -> C.Term.ByteArray to C.Value.Type
-        is S.Term.IntArray -> C.Term.IntArray to C.Value.Type
-        is S.Term.LongArray -> C.Term.LongArray to C.Value.Type
-        is S.Term.List -> C.Term.List(checkTerm(term.element, C.Value.Type)) to C.Value.Type
-        is S.Term.Compound -> C.Term.Compound(term.elements.map { checkTerm(it, C.Value.Type) }) to C.Value.Type
-        is S.Term.Function -> mutableListOf<Pair<String, C.Value>>().let { context ->
-            C.Term.Function(
-                mutableListOf<Lazy<C.Value>>().let { environment ->
-                    term.parameters.map { (name, parameter) ->
-                        name to context.checkTerm(parameter, C.Value.Type).also {
-                            context += name to environment.evaluate(it)
-                            environment += lazyOf(C.Value.Variable(name, environment.size))
+            is S.Term.Boolean -> C.Term.Boolean to C.Value.Type
+            is S.Term.Byte -> C.Term.Byte to C.Value.Type
+            is S.Term.Short -> C.Term.Short to C.Value.Type
+            is S.Term.Int -> C.Term.Int to C.Value.Type
+            is S.Term.Long -> C.Term.Long to C.Value.Type
+            is S.Term.Float -> C.Term.Float to C.Value.Type
+            is S.Term.Double -> C.Term.Double to C.Value.Type
+            is S.Term.String -> C.Term.String to C.Value.Type
+            is S.Term.ByteArray -> C.Term.ByteArray to C.Value.Type
+            is S.Term.IntArray -> C.Term.IntArray to C.Value.Type
+            is S.Term.LongArray -> C.Term.LongArray to C.Value.Type
+            is S.Term.List -> C.Term.List(checkTerm(term.element, C.Value.Type)) to C.Value.Type
+            is S.Term.Compound -> C.Term.Compound(term.elements.map { checkTerm(it, C.Value.Type) }) to C.Value.Type
+            is S.Term.Function -> mutableListOf<Pair<String, C.Value>>().let { context ->
+                C.Term.Function(
+                    mutableListOf<Lazy<C.Value>>().let { environment ->
+                        term.parameters.map { (name, parameter) ->
+                            name to context.checkTerm(parameter, C.Value.Type).also {
+                                context += name to environment.evaluate(it)
+                                environment += lazyOf(C.Value.Variable(name, environment.size))
+                            }
                         }
-                    }
-                },
-                context.checkTerm(term.resultant, C.Value.Type)
-            )
-        } to C.Value.Type
-        is S.Term.Type -> C.Term.Type to C.Value.Type
+                    },
+                    context.checkTerm(term.resultant, C.Value.Type)
+                )
+            } to C.Value.Type
+            is S.Term.Type -> C.Term.Type to C.Value.Type
+        }
+        types[term.id] = result.second
+        return result
     }
 
-    private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term = when {
-        term is S.Term.Hole -> {
-            diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
-            C.Term.Hole
-        }
-        term is S.Term.ListOf && type is C.Value.List ->
-            C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) })
-        term is S.Term.CompoundOf && type is C.Value.Compound ->
-            C.Term.CompoundOf((term.elements zip type.elements).map { checkTerm(it.first, it.second.value) })
-        term is S.Term.FunctionOf && type is C.Value.Function -> C.Term.FunctionOf(
-            term.parameters,
-            (term.parameters zip type.parameters).map {
-                it.first to it.second.second.value
-            }.checkTerm(
-                term.body,
-                term.parameters.mapIndexed { index, parameter ->
-                    lazyOf(C.Value.Variable(parameter, index))
-                }.evaluate(type.resultant)
+    private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term {
+        types[term.id] = type
+        return when {
+            term is S.Term.Hole -> {
+                diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
+                C.Term.Hole
+            }
+            term is S.Term.ListOf && type is C.Value.List ->
+                C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) })
+            term is S.Term.CompoundOf && type is C.Value.Compound ->
+                C.Term.CompoundOf((term.elements zip type.elements).map { checkTerm(it.first, it.second.value) })
+            term is S.Term.FunctionOf && type is C.Value.Function -> C.Term.FunctionOf(
+                term.parameters,
+                (term.parameters zip type.parameters).map {
+                    it.first to it.second.second.value
+                }.checkTerm(
+                    term.body,
+                    term.parameters.mapIndexed { index, parameter ->
+                        lazyOf(C.Value.Variable(parameter, index))
+                    }.evaluate(type.resultant)
+                )
             )
-        )
-        term is S.Term.Apply -> {
-            val (arguments, argumentsTypes) = term.arguments.map { inferTerm(it) }.unzip()
-            C.Term.Apply(checkTerm(term.function, C.Value.Function(mutableListOf<Lazy<C.Value>>().let { environment ->
-                arguments.map { argument -> "" to lazy { environment.evaluate(argument) }.also { environment += it } }
-            }, quote(type))), arguments)
-        }
-        else -> {
-            val (inferred, inferredType) = inferTerm(term)
-            if (size.unify(inferredType, type)) inferred else {
-                diagnostics +=
-                    Diagnostic.TypeMismatch(metas.pretty(type), metas.pretty(inferredType), term.id)
-                C.Term.Dummy
+            term is S.Term.Apply -> {
+                val (arguments, argumentsTypes) = term.arguments.map { inferTerm(it) }.unzip()
+                C.Term.Apply(
+                    checkTerm(
+                        term.function,
+                        C.Value.Function(mutableListOf<Lazy<C.Value>>().let { environment ->
+                            arguments.map { argument -> "" to lazy { environment.evaluate(argument) }.also { environment += it } }
+                        }, quote(type))
+                    ), arguments
+                )
+            }
+            else -> {
+                val (inferred, inferredType) = inferTerm(term)
+                if (size.unify(inferredType, type)) inferred else {
+                    diagnostics +=
+                        Diagnostic.TypeMismatch(metas.pretty(type), metas.pretty(inferredType), term.id)
+                    C.Term.Dummy
+                }
             }
         }
     }
