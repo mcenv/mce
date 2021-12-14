@@ -8,7 +8,6 @@ sealed class Diagnostic {
 
     class TermExpected(val type: S.Term, override val id: UUID) : Diagnostic()
     class VariableNotFound(val name: String, override val id: UUID) : Diagnostic()
-    class InferenceFailed(override val id: UUID) : Diagnostic()
     class FunctionExpected(override val id: UUID) : Diagnostic()
     class TypeMismatch(val expected: S.Term, val actual: S.Term, override val id: UUID) : Diagnostic()
 }
