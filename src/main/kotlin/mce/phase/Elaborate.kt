@@ -151,9 +151,7 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
                 C.Term.CompoundOf((term.elements zip forced.elements).map { checkTerm(it.first, it.second.value) })
             term is S.Term.FunctionOf && forced is C.Value.Function -> C.Term.FunctionOf(
                 term.parameters,
-                (term.parameters zip forced.parameters).map {
-                    it.first to it.second.second.value
-                }.checkTerm(
+                (term.parameters zip forced.parameters.map { it.second.value }).checkTerm(
                     term.body,
                     term.parameters.mapIndexed { index, parameter ->
                         lazyOf(C.Value.Variable(parameter, index))
@@ -168,10 +166,10 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
                 )
             }
             else -> {
-                val (inferred, inferredType) = inferTerm(term)
-                if (size.unify(inferredType, forced)) inferred else {
+                val inferred = inferTerm(term)
+                if (size.unify(inferred.type, forced)) inferred.term else {
                     diagnostics +=
-                        Diagnostic.TypeMismatch(metas.pretty(forced), metas.pretty(inferredType), term.id)
+                        Diagnostic.TypeMismatch(metas.pretty(forced), metas.pretty(inferred.type), term.id)
                     C.Term.Dummy
                 }
             }
