@@ -25,4 +25,18 @@ class ElaborateTest {
             ), elaborated
         )
     }
+
+    @Test
+    fun testApply() {
+        val (_, diagnostics, _) = Elaborate().run(
+            S.Item.Definition(
+                "a",
+                emptyList(),
+                S.Term.Boolean(),
+                S.Term.Apply(S.Term.FunctionOf(listOf("x"), S.Term.Variable("x")), listOf(S.Term.BooleanOf(false)))
+            )
+        )
+
+        assert(diagnostics.isEmpty())
+    }
 }

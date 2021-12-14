@@ -166,9 +166,7 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
                 C.Term.Apply(
                     checkTerm(
                         term.function,
-                        C.Value.Function(mutableListOf<Lazy<C.Value>>().let { environment ->
-                            arguments.map { argument -> "" to lazy { environment.evaluate(argument) }.also { environment += it } }
-                        }, quote(type))
+                        C.Value.Function(argumentsTypes.map { "" to lazyOf(it) }, quote(type))
                     ), arguments
                 )
             }
