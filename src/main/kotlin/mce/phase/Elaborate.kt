@@ -19,6 +19,11 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
         val types: Map<UUID, C.Value>
     )
 
+    data class Typing(
+        val term: C.Term,
+        val type: C.Value
+    )
+
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val types: MutableMap<UUID, C.Value> = mutableMapOf()
     private val metas: MutableList<C.Value?> = mutableListOf()
@@ -35,105 +40,102 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
         }, diagnostics, types
     )
 
-    private fun Context.inferTerm(term: S.Term): Pair<C.Term, C.Value> {
-        val result = when (term) {
-            is S.Term.Hole -> {
-                val type = fresh()
-                diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
-                C.Term.Hole to type
-            }
-            is S.Term.Dummy -> TODO()
-            is S.Term.Meta -> TODO()
-            is S.Term.Variable -> {
-                val level = indexOfLast { it.first == term.name }
-                if (level == -1) {
-                    diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
-                    C.Term.Dummy to fresh()
-                } else C.Term.Variable(term.name, level) to this[level].second
-            }
-            is S.Term.BooleanOf -> C.Term.BooleanOf(term.value) to C.Value.Boolean
-            is S.Term.ByteOf -> C.Term.ByteOf(term.value) to C.Value.Byte
-            is S.Term.ShortOf -> C.Term.ShortOf(term.value) to C.Value.Short
-            is S.Term.IntOf -> C.Term.IntOf(term.value) to C.Value.Int
-            is S.Term.LongOf -> C.Term.LongOf(term.value) to C.Value.Long
-            is S.Term.FloatOf -> C.Term.FloatOf(term.value) to C.Value.Float
-            is S.Term.DoubleOf -> C.Term.DoubleOf(term.value) to C.Value.Double
-            is S.Term.StringOf -> C.Term.StringOf(term.value) to C.Value.String
-            is S.Term.ByteArrayOf ->
-                C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }) to C.Value.ByteArray
-            is S.Term.IntArrayOf -> C.Term.IntArrayOf(term.elements.map {
-                checkTerm(it, C.Value.Int)
-            }) to C.Value.IntArray
-            is S.Term.LongArrayOf ->
-                C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }) to C.Value.LongArray
-            is S.Term.ListOf -> if (term.elements.isEmpty()) {
-                C.Term.ListOf(emptyList()) to fresh()
-            } else {
-                val (first, firstType) = inferTerm(term.elements.first())
-                C.Term.ListOf(
-                    listOf(first) + term.elements.drop(1).map { checkTerm(it, firstType) }
-                ) to C.Value.List(lazyOf(firstType))
-            }
-            is S.Term.CompoundOf -> {
-                val elements = term.elements.map { inferTerm(it) }
-                C.Term.CompoundOf(elements.map { it.first }) to C.Value.Compound(elements.map { lazyOf(it.second) })
-            }
-            is S.Term.FunctionOf -> {
-                val types = term.parameters.map { fresh() }
-                val (body, bodyType) = (term.parameters zip types).inferTerm(term.body)
-                C.Term.FunctionOf(
-                    term.parameters,
-                    body
-                ) to C.Value.Function((term.parameters zip types.map(::lazyOf)), quote(bodyType))
-            }
-            is S.Term.Apply -> {
-                val (function, functionType) = inferTerm(term.function)
-                when (val forced = force(functionType)) {
-                    is C.Value.Function -> {
-                        val arguments = (term.arguments zip forced.parameters).map { (argument, parameter) ->
-                            checkTerm(argument, parameter.second.value)
-                        }
-                        C.Term.Apply(function, arguments) to mutableListOf<Lazy<C.Value>>().let { environment ->
-                            arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
-                        }.evaluate(forced.resultant)
+    private fun Context.inferTerm(term: S.Term): Typing = when (term) {
+        is S.Term.Hole -> {
+            val type = fresh()
+            diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
+            Typing(C.Term.Hole, type)
+        }
+        is S.Term.Dummy -> TODO()
+        is S.Term.Meta -> TODO()
+        is S.Term.Variable -> {
+            val level = indexOfLast { it.first == term.name }
+            if (level == -1) {
+                diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
+                Typing(C.Term.Dummy, fresh())
+            } else Typing(C.Term.Variable(term.name, level), this[level].second)
+        }
+        is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
+        is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
+        is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)
+        is S.Term.IntOf -> Typing(C.Term.IntOf(term.value), C.Value.Int)
+        is S.Term.LongOf -> Typing(C.Term.LongOf(term.value), C.Value.Long)
+        is S.Term.FloatOf -> Typing(C.Term.FloatOf(term.value), C.Value.Float)
+        is S.Term.DoubleOf -> Typing(C.Term.DoubleOf(term.value), C.Value.Double)
+        is S.Term.StringOf -> Typing(C.Term.StringOf(term.value), C.Value.String)
+        is S.Term.ByteArrayOf ->
+            Typing(C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }), C.Value.ByteArray)
+        is S.Term.IntArrayOf -> Typing(C.Term.IntArrayOf(term.elements.map {
+            checkTerm(it, C.Value.Int)
+        }), C.Value.IntArray)
+        is S.Term.LongArrayOf ->
+            Typing(C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }), C.Value.LongArray)
+        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), fresh()) else {
+            val first = inferTerm(term.elements.first())
+            Typing(C.Term.ListOf(
+                listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }
+            ), C.Value.List(lazyOf(first.type)))
+        }
+        is S.Term.CompoundOf -> {
+            val elements = term.elements.map { inferTerm(it) }
+            Typing(C.Term.CompoundOf(elements.map { it.term }), C.Value.Compound(elements.map { lazyOf(it.type) }))
+        }
+        is S.Term.FunctionOf -> {
+            val types = term.parameters.map { fresh() }
+            val body = (term.parameters zip types).inferTerm(term.body)
+            Typing(
+                C.Term.FunctionOf(term.parameters, body.term),
+                C.Value.Function((term.parameters zip types.map(::lazyOf)), quote(body.type))
+            )
+        }
+        is S.Term.Apply -> {
+            val function = inferTerm(term.function)
+            when (val forced = force(function.type)) {
+                is C.Value.Function -> {
+                    val arguments = (term.arguments zip forced.parameters).map { (argument, parameter) ->
+                        checkTerm(argument, parameter.second.value)
                     }
-                    else -> {
-                        diagnostics += Diagnostic.FunctionExpected(term.function.id)
-                        C.Term.Dummy to fresh()
-                    }
+                    Typing(C.Term.Apply(function.term, arguments), mutableListOf<Lazy<C.Value>>().let { environment ->
+                        arguments.map { argument -> lazy { environment.evaluate(argument) }.also { environment += it } }
+                    }.evaluate(forced.resultant))
+                }
+                else -> {
+                    diagnostics += Diagnostic.FunctionExpected(term.function.id)
+                    Typing(C.Term.Dummy, fresh())
                 }
             }
-            is S.Term.Boolean -> C.Term.Boolean to C.Value.Type
-            is S.Term.Byte -> C.Term.Byte to C.Value.Type
-            is S.Term.Short -> C.Term.Short to C.Value.Type
-            is S.Term.Int -> C.Term.Int to C.Value.Type
-            is S.Term.Long -> C.Term.Long to C.Value.Type
-            is S.Term.Float -> C.Term.Float to C.Value.Type
-            is S.Term.Double -> C.Term.Double to C.Value.Type
-            is S.Term.String -> C.Term.String to C.Value.Type
-            is S.Term.ByteArray -> C.Term.ByteArray to C.Value.Type
-            is S.Term.IntArray -> C.Term.IntArray to C.Value.Type
-            is S.Term.LongArray -> C.Term.LongArray to C.Value.Type
-            is S.Term.List -> C.Term.List(checkTerm(term.element, C.Value.Type)) to C.Value.Type
-            is S.Term.Compound -> C.Term.Compound(term.elements.map { checkTerm(it, C.Value.Type) }) to C.Value.Type
-            is S.Term.Function -> mutableListOf<Pair<String, C.Value>>().let { context ->
-                C.Term.Function(
-                    mutableListOf<Lazy<C.Value>>().let { environment ->
-                        term.parameters.map { (name, parameter) ->
-                            name to context.checkTerm(parameter, C.Value.Type).also {
-                                context += name to environment.evaluate(it)
-                                environment += lazyOf(C.Value.Variable(name, environment.size))
-                            }
-                        }
-                    },
-                    context.checkTerm(term.resultant, C.Value.Type)
-                )
-            } to C.Value.Type
-            is S.Term.Type -> C.Term.Type to C.Value.Type
         }
-        types[term.id] = result.second
-        return result
-    }
+        is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
+        is S.Term.Byte -> Typing(C.Term.Byte, C.Value.Type)
+        is S.Term.Short -> Typing(C.Term.Short, C.Value.Type)
+        is S.Term.Int -> Typing(C.Term.Int, C.Value.Type)
+        is S.Term.Long -> Typing(C.Term.Long, C.Value.Type)
+        is S.Term.Float -> Typing(C.Term.Float, C.Value.Type)
+        is S.Term.Double -> Typing(C.Term.Double, C.Value.Type)
+        is S.Term.String -> Typing(C.Term.String, C.Value.Type)
+        is S.Term.ByteArray -> Typing(C.Term.ByteArray, C.Value.Type)
+        is S.Term.IntArray -> Typing(C.Term.IntArray, C.Value.Type)
+        is S.Term.LongArray -> Typing(C.Term.LongArray, C.Value.Type)
+        is S.Term.List -> Typing(C.Term.List(checkTerm(term.element, C.Value.Type)), C.Value.Type)
+        is S.Term.Compound -> Typing(
+            C.Term.Compound(term.elements.map { checkTerm(it, C.Value.Type) }),
+            C.Value.Type
+        )
+        is S.Term.Function -> Typing(mutableListOf<Pair<String, C.Value>>().let { context ->
+            C.Term.Function(
+                mutableListOf<Lazy<C.Value>>().let { environment ->
+                    term.parameters.map { (name, parameter) ->
+                        name to context.checkTerm(parameter, C.Value.Type).also {
+                            context += name to environment.evaluate(it)
+                            environment += lazyOf(C.Value.Variable(name, environment.size))
+                        }
+                    }
+                },
+                context.checkTerm(term.resultant, C.Value.Type)
+            )
+        }, C.Value.Type)
+        is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
+    }.also { types[term.id] = it.type }
 
     private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term {
         val forced = force(type)
@@ -159,12 +161,10 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
                 )
             )
             term is S.Term.Apply -> {
-                val (arguments, argumentsTypes) = term.arguments.map { inferTerm(it) }.unzip()
+                val arguments = term.arguments.map { inferTerm(it) }
                 C.Term.Apply(
-                    checkTerm(
-                        term.function,
-                        C.Value.Function(argumentsTypes.map { "" to lazyOf(it) }, quote(forced))
-                    ), arguments
+                    checkTerm(term.function, C.Value.Function(arguments.map { "" to lazyOf(it.type) }, quote(forced))),
+                    arguments.map { it.term }
                 )
             }
             else -> {
