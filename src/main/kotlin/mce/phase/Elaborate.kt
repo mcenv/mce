@@ -236,8 +236,13 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
         is C.Value.LongArrayOf -> C.Term.LongArrayOf(forced.elements.map { quote(it.value) })
         is C.Value.ListOf -> C.Term.ListOf(forced.elements.map { quote(it.value) })
         is C.Value.CompoundOf -> C.Term.CompoundOf(forced.elements.map { quote(it.value) })
-        is C.Value.FunctionOf -> TODO()
-        is C.Value.Apply -> TODO()
+        is C.Value.FunctionOf -> C.Term.FunctionOf(
+            forced.parameters,
+            quote(forced.parameters.mapIndexed { index, parameter ->
+                lazyOf(C.Value.Variable(parameter, index))
+            }.evaluate(forced.body))
+        )
+        is C.Value.Apply -> C.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) })
         is C.Value.Boolean -> C.Term.Boolean
         is C.Value.Byte -> C.Term.Byte
         is C.Value.Short -> C.Term.Short
@@ -251,7 +256,12 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
         is C.Value.LongArray -> C.Term.LongArray
         is C.Value.List -> C.Term.List(quote(forced.element.value))
         is C.Value.Compound -> C.Term.Compound(forced.elements.map { quote(it.value) })
-        is C.Value.Function -> TODO()
+        is C.Value.Function -> C.Term.Function(
+            forced.parameters.map { (name, parameter) -> name to quote(parameter.value) },
+            quote(forced.parameters.mapIndexed { index, (name, _) ->
+                lazyOf(C.Value.Variable(name, index))
+            }.evaluate(forced.resultant))
+        )
         is C.Value.Type -> C.Term.Type
     }
 
