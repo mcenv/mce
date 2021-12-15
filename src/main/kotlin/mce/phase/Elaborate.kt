@@ -213,7 +213,14 @@ class Elaborate private constructor(
         is C.Term.List -> C.Value.List(lazy { evaluate(term.element) })
         is C.Term.Compound -> C.Value.Compound(term.elements.map { lazy { evaluate(it) } })
         is C.Term.Function -> C.Value.Function(
-            term.parameters.map { (name, parameter) -> name to lazy { evaluate(parameter) } }, term.resultant
+            mutableListOf<Lazy<C.Value>>().let { environment ->
+                term.parameters.map { (name, parameter) ->
+                    name to lazy { environment.evaluate(parameter) }.also {
+                        environment += lazyOf(C.Value.Variable(name, environment.size))
+                    }
+                }
+            },
+            term.resultant
         )
         is C.Term.Type -> C.Value.Type
     }

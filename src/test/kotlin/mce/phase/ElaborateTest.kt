@@ -41,4 +41,19 @@ class ElaborateTest {
 
         assert(diagnostics.isEmpty())
     }
+
+    @Test
+    fun testDependentFunction() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            S.Item.Definition(
+                "a",
+                emptyList(),
+                S.Term.Function(listOf("x" to S.Term.Type(), "y" to S.Term.Variable("x")), S.Term.Variable("x")),
+                S.Term.FunctionOf(listOf("x", "y"), S.Term.Variable("y"))
+            )
+        )
+
+        assert(diagnostics.isEmpty())
+    }
 }
