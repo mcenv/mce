@@ -12,7 +12,9 @@ typealias Environment = List<Lazy<C.Value>>
 
 typealias Level = Int
 
-class Elaborate : Phase<S.Item, Elaborate.Output> {
+class Elaborate private constructor(
+    private val items: Map<String, C.Item>
+) {
     data class Output(
         val item: C.Item,
         val diagnostics: List<Diagnostic>,
@@ -28,17 +30,15 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
     private val types: MutableMap<UUID, C.Value> = mutableMapOf()
     private val metas: MutableList<C.Value?> = mutableListOf()
 
-    override fun run(input: S.Item): Output = Output(
-        when (input) {
-            is S.Item.Definition -> C.Item.Definition(
-                input.name, input.imports, emptyList<Pair<String, C.Value>>().checkTerm(
-                    input.body, emptyList<Lazy<C.Value>>().evaluate(
-                        emptyList<Pair<String, C.Value>>().checkTerm(input.type, C.Value.Type)
-                    )
+    private fun elaborateItem(item: S.Item): C.Item = when (item) {
+        is S.Item.Definition -> C.Item.Definition(
+            item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(
+                item.body, emptyList<Lazy<C.Value>>().evaluate(
+                    emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type)
                 )
             )
-        }, diagnostics, types
-    )
+        )
+    }
 
     private fun Context.inferTerm(term: S.Term): Typing = when (term) {
         is S.Term.Hole -> {
@@ -345,4 +345,10 @@ class Elaborate : Phase<S.Item, Elaborate.Output> {
     }
 
     private fun fresh(): C.Value = C.Value.Meta(metas.size).also { metas += null }
+
+    companion object {
+        operator fun invoke(items: Map<String, C.Item>, item: S.Item): Output = Elaborate(items).run {
+            Output(elaborateItem(item), diagnostics, types)
+        }
+    }
 }

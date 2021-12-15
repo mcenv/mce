@@ -19,7 +19,7 @@ class Server {
     }
 
     suspend fun fetch(name: String): Elaborate.Output = cores.getOrElse(name) {
-        Elaborate().run(surfaces[name]!!)
+        Elaborate(dependencies[name]!!.associateWith { fetch(it).item }, surfaces[name]!!)
     }
 
     fun edit(name: String) {

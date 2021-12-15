@@ -10,7 +10,8 @@ class ElaborateTest {
     fun testFalse() {
         val boolean = S.Term.Boolean()
         val `false` = S.Term.BooleanOf(false)
-        val (elaborated, diagnostics, types) = Elaborate().run(
+        val (elaborated, diagnostics, types) = Elaborate(
+            emptyMap(),
             S.Item.Definition("a", emptyList(), boolean, `false`)
         )
 
@@ -28,7 +29,8 @@ class ElaborateTest {
 
     @Test
     fun testApply() {
-        val (_, diagnostics, _) = Elaborate().run(
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
             S.Item.Definition(
                 "a",
                 emptyList(),
