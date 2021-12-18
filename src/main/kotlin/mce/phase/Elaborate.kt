@@ -31,13 +31,17 @@ class Elaborate private constructor(
     private val metas: MutableList<C.Value?> = mutableListOf()
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
-        is S.Item.Definition -> C.Item.Definition(
-            item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(
-                item.body, emptyList<Lazy<C.Value>>().evaluate(
-                    emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type)
-                )
+        is S.Item.Definition -> {
+            val type = emptyList<Lazy<C.Value>>().evaluate(
+                emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type)
             )
-        )
+            C.Item.Definition(
+                item.name,
+                item.imports,
+                emptyList<Pair<String, C.Value>>().checkTerm(item.body, type),
+                type
+            )
+        }
     }
 
     private fun Context.inferTerm(term: S.Term): Typing = when (term) {
@@ -48,12 +52,15 @@ class Elaborate private constructor(
         }
         is S.Term.Dummy -> TODO()
         is S.Term.Meta -> TODO()
-        is S.Term.Variable -> {
-            val level = indexOfLast { it.first == term.name }
-            if (level == -1) {
-                diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
-                Typing(C.Term.Dummy, fresh())
-            } else Typing(C.Term.Variable(term.name, level), this[level].second)
+        is S.Term.Name -> when (val level = indexOfLast { it.first == term.name }) {
+            -1 -> when (val item = items[term.name]) {
+                is C.Item.Definition -> Typing(C.Term.Definition(term.name), item.type)
+                null -> {
+                    diagnostics += Diagnostic.NameNotFound(term.name, term.id)
+                    Typing(C.Term.Dummy, fresh())
+                }
+            }
+            else -> Typing(C.Term.Variable(term.name, level), this[level].second)
         }
         is S.Term.Let -> (this + (term.name to inferTerm(term.init).type)).inferTerm(term.body)
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
@@ -183,6 +190,7 @@ class Elaborate private constructor(
         is C.Term.Dummy -> C.Value.Dummy
         is C.Term.Meta -> metas[term.index] ?: C.Value.Meta(term.index)
         is C.Term.Variable -> this[term.level].value
+        is C.Term.Definition -> C.Value.Definition(term.name)
         is C.Term.Let -> (this + lazyOf(evaluate(term.init))).evaluate(term.body)
         is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
@@ -233,6 +241,7 @@ class Elaborate private constructor(
         is C.Value.Dummy -> C.Term.Dummy
         is C.Value.Meta -> metas[forced.index]?.let(::quote) ?: C.Term.Meta(forced.index)
         is C.Value.Variable -> C.Term.Variable(forced.name, forced.level)
+        is C.Value.Definition -> C.Term.Definition(forced.name)
         is C.Value.BooleanOf -> C.Term.BooleanOf(forced.value)
         is C.Value.ByteOf -> C.Term.ByteOf(forced.value)
         is C.Value.ShortOf -> C.Term.ShortOf(forced.value)
@@ -288,6 +297,7 @@ class Elaborate private constructor(
             }
             forced2 is C.Value.Meta -> unify(forced2, forced1)
             forced1 is C.Value.Variable && forced2 is C.Value.Variable -> forced1.level == forced2.level
+            forced1 is C.Value.Definition && forced2 is C.Value.Definition -> forced1.name == forced2.name
             forced1 is C.Value.BooleanOf && forced2 is C.Value.BooleanOf -> forced1.value == forced2.value
             forced1 is C.Value.ByteOf && forced2 is C.Value.ByteOf -> forced1.value == forced2.value
             forced1 is C.Value.ShortOf && forced2 is C.Value.ShortOf -> forced1.value == forced2.value

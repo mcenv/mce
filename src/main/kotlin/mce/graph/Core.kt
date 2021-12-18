@@ -12,10 +12,14 @@ import kotlin.collections.List as KList
 
 object Core {
     sealed class Item {
+        abstract val name: KString
+        abstract val imports: KList<KString>
+
         data class Definition(
-            val name: KString,
-            val imports: KList<KString>,
+            override val name: KString,
+            override val imports: KList<KString>,
             val body: Term,
+            val type: Value
         ) : Item()
     }
 
@@ -24,6 +28,7 @@ object Core {
         object Dummy : Term()
         data class Meta(val index: KInt) : Term()
         data class Variable(val name: KString, val level: KInt) : Term()
+        data class Definition(val name: KString) : Term()
         data class Let(val name: KString, val init: Term, val body: Term) : Term()
         data class BooleanOf(val value: KBoolean) : Term()
         data class ByteOf(val value: KByte) : Term()
@@ -62,6 +67,7 @@ object Core {
         object Dummy : Value()
         data class Meta(val index: KInt) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
+        data class Definition(val name: KString) : Value()
         data class BooleanOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()
         data class ShortOf(val value: KShort) : Value()
