@@ -55,6 +55,7 @@ class Elaborate private constructor(
                 Typing(C.Term.Dummy, fresh())
             } else Typing(C.Term.Variable(term.name, level), this[level].second)
         }
+        is S.Term.Let -> (this + (term.name to inferTerm(term.init).type)).inferTerm(term.body)
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)
@@ -145,6 +146,7 @@ class Elaborate private constructor(
                 diagnostics += Diagnostic.TermExpected(metas.pretty(forced), term.id)
                 C.Term.Hole
             }
+            term is S.Term.Let -> (this + (term.name to inferTerm(term.init).type)).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List ->
                 C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
             term is S.Term.CompoundOf && forced is C.Value.Compound ->
@@ -181,6 +183,7 @@ class Elaborate private constructor(
         is C.Term.Dummy -> C.Value.Dummy
         is C.Term.Meta -> metas[term.index] ?: C.Value.Meta(term.index)
         is C.Term.Variable -> this[term.level].value
+        is C.Term.Let -> (this + lazyOf(evaluate(term.init))).evaluate(term.body)
         is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
         is C.Term.ShortOf -> C.Value.ShortOf(term.value)

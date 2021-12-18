@@ -31,6 +31,7 @@ object Surface {
         class Dummy : Term()
         class Meta(val index: KInt) : Term()
         class Variable(val name: KString) : Term()
+        class Let(val name: KString, val init: Term, val body: Term) : Term()
         class BooleanOf(val value: KBoolean) : Term()
         class ByteOf(val value: KByte) : Term()
         class ShortOf(val value: KShort) : Term()

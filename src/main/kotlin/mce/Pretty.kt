@@ -8,6 +8,7 @@ fun delaborate(term: C.Term): S.Term = when (term) {
     is C.Term.Dummy -> S.Term.Dummy()
     is C.Term.Meta -> S.Term.Meta(term.index)
     is C.Term.Variable -> S.Term.Variable(term.name)
+    is C.Term.Let -> S.Term.Let(term.name, delaborate(term.init), delaborate(term.body))
     is C.Term.BooleanOf -> S.Term.BooleanOf(term.value)
     is C.Term.ByteOf -> S.Term.ByteOf(term.value)
     is C.Term.ShortOf -> S.Term.ShortOf(term.value)

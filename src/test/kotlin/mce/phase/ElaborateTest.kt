@@ -56,4 +56,19 @@ class ElaborateTest {
 
         assert(diagnostics.isEmpty())
     }
+
+    @Test
+    fun testLet() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            S.Item.Definition(
+                "a",
+                emptyList(),
+                S.Term.Boolean(),
+                S.Term.Let("x", S.Term.BooleanOf(false), S.Term.Variable("x"))
+            )
+        )
+
+        assert(diagnostics.isEmpty())
+    }
 }

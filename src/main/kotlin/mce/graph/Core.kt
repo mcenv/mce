@@ -24,6 +24,7 @@ object Core {
         object Dummy : Term()
         data class Meta(val index: KInt) : Term()
         data class Variable(val name: KString, val level: KInt) : Term()
+        data class Let(val name: KString, val init: Term, val body: Term) : Term()
         data class BooleanOf(val value: KBoolean) : Term()
         data class ByteOf(val value: KByte) : Term()
         data class ShortOf(val value: KShort) : Term()
