@@ -12,13 +12,11 @@ class Server {
     private val cores: MutableMap<String, Elaborate.Output> = mutableMapOf()
 
     fun register(surface: S.Item) {
-        surface.imports.forEach {
-            dependencies.computeIfAbsent(it) { mutableListOf() } += surface.name
-        }
+        dependencies[surface.name] = surface.imports.toMutableList()
         surfaces[surface.name] = surface
     }
 
-    suspend fun fetch(name: String): Elaborate.Output = cores.getOrElse(name) {
+    private suspend fun fetch(name: String): Elaborate.Output = cores.getOrElse(name) {
         Elaborate(dependencies[name]!!.associateWith { fetch(it).item }, surfaces[name]!!)
     }
 

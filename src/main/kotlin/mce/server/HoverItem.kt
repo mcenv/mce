@@ -2,6 +2,6 @@ package mce.server
 
 import mce.graph.Surface as S
 
-class HoverItem(
+data class HoverItem(
     val type: S.Term
 )

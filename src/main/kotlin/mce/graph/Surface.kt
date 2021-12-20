@@ -16,7 +16,7 @@ object Surface {
         abstract val name: KString
         abstract val imports: KList<KString>
 
-        class Definition(
+        data class Definition(
             override val name: KString,
             override val imports: KList<KString>,
             val type: Term,
@@ -25,42 +25,56 @@ object Surface {
     }
 
     sealed class Term {
-        val id: UUID = UUID.randomUUID()
+        abstract val id: UUID
 
-        class Hole : Term()
-        class Dummy : Term()
-        class Meta(val index: KInt) : Term()
-        class Name(val name: KString) : Term()
-        class Let(val name: KString, val init: Term, val body: Term) : Term()
-        class BooleanOf(val value: KBoolean) : Term()
-        class ByteOf(val value: KByte) : Term()
-        class ShortOf(val value: KShort) : Term()
-        class IntOf(val value: KInt) : Term()
-        class LongOf(val value: KLong) : Term()
-        class FloatOf(val value: KFloat) : Term()
-        class DoubleOf(val value: KDouble) : Term()
-        class StringOf(val value: KString) : Term()
-        class ByteArrayOf(val elements: KList<Term>) : Term()
-        class IntArrayOf(val elements: KList<Term>) : Term()
-        class LongArrayOf(val elements: KList<Term>) : Term()
-        class ListOf(val elements: KList<Term>) : Term()
-        class CompoundOf(val elements: KList<Term>) : Term()
-        class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
-        class Apply(val function: Term, val arguments: KList<Term>) : Term()
-        class Boolean : Term()
-        class Byte : Term()
-        class Short : Term()
-        class Int : Term()
-        class Long : Term()
-        class Float : Term()
-        class Double : Term()
-        class String : Term()
-        class ByteArray : Term()
-        class IntArray : Term()
-        class LongArray : Term()
-        class List(val element: Term) : Term()
-        class Compound(val elements: KList<Term>) : Term()
-        class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term()
-        class Type : Term()
+        data class Hole(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Dummy(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Meta(val index: KInt, override val id: UUID = UUID.randomUUID()) : Term()
+        data class Name(val name: KString, override val id: UUID = UUID.randomUUID()) : Term()
+        data class Let(val name: KString, val init: Term, val body: Term, override val id: UUID = UUID.randomUUID()) :
+            Term()
+
+        data class BooleanOf(val value: KBoolean, override val id: UUID = UUID.randomUUID()) : Term()
+        data class ByteOf(val value: KByte, override val id: UUID = UUID.randomUUID()) : Term()
+        data class ShortOf(val value: KShort, override val id: UUID = UUID.randomUUID()) : Term()
+        data class IntOf(val value: KInt, override val id: UUID = UUID.randomUUID()) : Term()
+        data class LongOf(val value: KLong, override val id: UUID = UUID.randomUUID()) : Term()
+        data class FloatOf(val value: KFloat, override val id: UUID = UUID.randomUUID()) : Term()
+        data class DoubleOf(val value: KDouble, override val id: UUID = UUID.randomUUID()) : Term()
+        data class StringOf(val value: KString, override val id: UUID = UUID.randomUUID()) : Term()
+        data class ByteArrayOf(val elements: KList<Term>, override val id: UUID = UUID.randomUUID()) : Term()
+        data class IntArrayOf(val elements: KList<Term>, override val id: UUID = UUID.randomUUID()) : Term()
+        data class LongArrayOf(val elements: KList<Term>, override val id: UUID = UUID.randomUUID()) : Term()
+        data class ListOf(val elements: KList<Term>, override val id: UUID = UUID.randomUUID()) : Term()
+        data class CompoundOf(val elements: KList<Term>, override val id: UUID = UUID.randomUUID()) : Term()
+        data class FunctionOf(
+            val parameters: KList<KString>,
+            val body: Term,
+            override val id: UUID = UUID.randomUUID()
+        ) : Term()
+
+        data class Apply(val function: Term, val arguments: KList<Term>, override val id: UUID = UUID.randomUUID()) :
+            Term()
+
+        data class Boolean(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Byte(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Short(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Int(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Long(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Float(override val id: UUID = UUID.randomUUID()) : Term()
+        data class Double(override val id: UUID = UUID.randomUUID()) : Term()
+        data class String(override val id: UUID = UUID.randomUUID()) : Term()
+        data class ByteArray(override val id: UUID = UUID.randomUUID()) : Term()
+        data class IntArray(override val id: UUID = UUID.randomUUID()) : Term()
+        data class LongArray(override val id: UUID = UUID.randomUUID()) : Term()
+        data class List(val element: Term, override val id: UUID = UUID.randomUUID()) : Term()
+        data class Compound(val elements: KList<Term>, override val id: UUID = UUID.randomUUID()) : Term()
+        data class Function(
+            val parameters: KList<Pair<KString, Term>>,
+            val resultant: Term,
+            override val id: UUID = UUID.randomUUID()
+        ) : Term()
+
+        data class Type(override val id: UUID = UUID.randomUUID()) : Term()
     }
 }

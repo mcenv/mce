@@ -1,24 +1,32 @@
 package mce.phase
 
 import mce.Diagnostic
+import mce.graph.Dsl.boolean
+import mce.graph.Dsl.definition
+import mce.graph.Dsl.ff
+import mce.graph.Dsl.function
+import mce.graph.Dsl.function_of
+import mce.graph.Dsl.invoke
+import mce.graph.Dsl.let_in
+import mce.graph.Dsl.name
+import mce.graph.Dsl.type
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import mce.graph.Core as C
-import mce.graph.Surface as S
 
 class ElaborateTest {
     @Test
     fun testFalse() {
-        val boolean = S.Term.Boolean()
-        val `false` = S.Term.BooleanOf(false)
+        val boolean = boolean()
+        val ff = ff()
         val (elaborated, diagnostics, types) = Elaborate(
             emptyMap(),
-            S.Item.Definition("a", emptyList(), boolean, `false`)
+            definition("a", boolean, ff)
         )
 
         assert(diagnostics.isEmpty())
         assertEquals(C.Value.Type, types[boolean.id])
-        assertEquals(C.Value.Boolean, types[`false`.id])
+        assertEquals(C.Value.Boolean, types[ff.id])
         assertEquals(
             C.Item.Definition(
                 "a",
@@ -34,11 +42,10 @@ class ElaborateTest {
     fun testApply() {
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
-            S.Item.Definition(
+            definition(
                 "a",
-                emptyList(),
-                S.Term.Boolean(),
-                S.Term.Apply(S.Term.FunctionOf(listOf("x"), S.Term.Name("x")), listOf(S.Term.BooleanOf(false)))
+                boolean(),
+                function_of(name("x"), "x")(ff())
             )
         )
 
@@ -49,11 +56,10 @@ class ElaborateTest {
     fun testDependentFunction() {
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
-            S.Item.Definition(
+            definition(
                 "a",
-                emptyList(),
-                S.Term.Function(listOf("x" to S.Term.Type(), "y" to S.Term.Name("x")), S.Term.Name("x")),
-                S.Term.FunctionOf(listOf("x", "y"), S.Term.Name("y"))
+                function(name("x"), "x" to type(), "y" to name("x")),
+                function_of(name("y"), "x", "y")
             )
         )
 
@@ -64,11 +70,10 @@ class ElaborateTest {
     fun testLet() {
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
-            S.Item.Definition(
+            definition(
                 "a",
-                emptyList(),
-                S.Term.Boolean(),
-                S.Term.Let("x", S.Term.BooleanOf(false), S.Term.Name("x"))
+                boolean(),
+                let_in("x", ff(), name("x"))
             )
         )
 
@@ -79,20 +84,18 @@ class ElaborateTest {
     fun testValidDefinition() {
         val (a, _, _) = Elaborate(
             emptyMap(),
-            S.Item.Definition(
+            definition(
                 "a",
-                emptyList(),
-                S.Term.Boolean(),
-                S.Term.BooleanOf(false)
+                boolean(),
+                ff()
             )
         )
         val (_, diagnostics, _) = Elaborate(
             mapOf(a.name to a),
-            S.Item.Definition(
+            definition(
                 "b",
-                emptyList(),
-                S.Term.Boolean(),
-                S.Term.Name("a")
+                boolean(),
+                name("a")
             )
         )
 
@@ -101,13 +104,12 @@ class ElaborateTest {
 
     @Test
     fun testInvalidDefinition() {
-        val a = S.Term.Name("a")
+        val a = name("a")
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
-            S.Item.Definition(
+            definition(
                 "b",
-                emptyList(),
-                S.Term.Boolean(),
+                boolean(),
                 a
             )
         )
