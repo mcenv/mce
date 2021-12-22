@@ -1,8 +1,8 @@
 package mce.server
 
+import mce.graph.Id
 import mce.phase.Elaborate
 import mce.pretty
-import java.util.*
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -27,7 +27,7 @@ class Server {
         dependencies[name]!!.forEach { cores -= it }
     }
 
-    suspend fun hover(name: String, id: UUID): HoverItem =
+    suspend fun hover(name: String, id: Id): HoverItem =
         HoverItem(emptyList<C.Value?>().pretty(fetch(name).types[id]!!))
 
     suspend fun build() {

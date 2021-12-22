@@ -1,8 +1,8 @@
 package mce.phase
 
 import mce.Diagnostic
+import mce.graph.Id
 import mce.pretty
-import java.util.*
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -18,7 +18,7 @@ class Elaborate private constructor(
     data class Output(
         val item: C.Item,
         val diagnostics: List<Diagnostic>,
-        val types: Map<UUID, C.Value>
+        val types: Map<Id, C.Value>
     )
 
     data class Typing(
@@ -27,7 +27,7 @@ class Elaborate private constructor(
     )
 
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
-    private val types: MutableMap<UUID, C.Value> = mutableMapOf()
+    private val types: MutableMap<Id, C.Value> = mutableMapOf()
     private val metas: MutableList<C.Value?> = mutableListOf()
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
