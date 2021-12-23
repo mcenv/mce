@@ -2,6 +2,8 @@ package mce.phase
 
 import mce.Diagnostic
 import mce.graph.Dsl.boolean
+import mce.graph.Dsl.compound
+import mce.graph.Dsl.compound_of
 import mce.graph.Dsl.definition
 import mce.graph.Dsl.ff
 import mce.graph.Dsl.function
@@ -138,5 +140,19 @@ class ElaborateTest {
         )
 
         assert(diagnostics.contains(Diagnostic.NameNotFound("a", a.id)))
+    }
+
+    @Test
+    fun testDependentCompound() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                compound("α" to type(), "a" to name("α")),
+                compound_of(boolean(), ff())
+            )
+        )
+
+        assert(diagnostics.isEmpty())
     }
 }

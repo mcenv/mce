@@ -37,7 +37,7 @@ fun delaborate(term: C.Term): S.Term = when (term) {
     is C.Term.IntArray -> S.Term.IntArray()
     is C.Term.LongArray -> S.Term.LongArray()
     is C.Term.List -> S.Term.List(delaborate(term.element))
-    is C.Term.Compound -> S.Term.Compound(term.elements.map(::delaborate))
+    is C.Term.Compound -> S.Term.Compound(term.elements.map { (name, element) -> name to delaborate(element) })
     is C.Term.Function ->
         S.Term.Function(term.parameters.map { it.first to delaborate(it.second) }, delaborate(term.resultant))
     is C.Term.Type -> S.Term.Type()
@@ -76,7 +76,7 @@ fun List<C.Value?>.pretty(value: C.Value): S.Term = when (value) {
     is C.Value.IntArray -> S.Term.IntArray()
     is C.Value.LongArray -> S.Term.LongArray()
     is C.Value.List -> S.Term.List(pretty(value.element.value))
-    is C.Value.Compound -> S.Term.Compound(value.elements.map { pretty(it.value) })
+    is C.Value.Compound -> S.Term.Compound(value.elements.map { (name, element) -> name to delaborate(element) })
     is C.Value.Function -> S.Term.Function(
         value.parameters.map { it.first to delaborate(it.second) },
         delaborate(value.resultant)

@@ -40,7 +40,7 @@ object Dsl {
     fun int_array() = Term.IntArray()
     fun long_array() = Term.LongArray()
     fun list(element: Term) = Term.List(element)
-    fun compound(vararg elements: Term) = Term.Compound(elements.toList())
+    fun compound(vararg elements: Pair<String, Term>) = Term.Compound(elements.toList())
     fun function(resultant: Term, vararg parameters: Pair<String, Term>) = Term.Function(parameters.toList(), resultant)
     fun type() = Term.Type()
 }

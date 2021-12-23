@@ -86,7 +86,7 @@ class Elaborate private constructor(
         }
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { inferTerm(it) }
-            Typing(C.Term.CompoundOf(elements.map { it.term }), C.Value.Compound(elements.map { lazyOf(it.type) }))
+            Typing(C.Term.CompoundOf(elements.map { it.term }), C.Value.Compound(elements.map { "" to quote(it.type) }))
         }
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
@@ -126,7 +126,16 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray, C.Value.Type)
         is S.Term.List -> Typing(C.Term.List(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Compound -> Typing(
-            C.Term.Compound(term.elements.map { checkTerm(it, C.Value.Type) }),
+            C.Term.Compound(mutableListOf<Pair<String, C.Value>>().let { context ->
+                mutableListOf<Lazy<C.Value>>().let { environment ->
+                    term.elements.map { (name, element) ->
+                        name to context.checkTerm(element, C.Value.Type).also {
+                            context += name to environment.evaluate(it)
+                            environment += lazyOf(C.Value.Variable(name, environment.size))
+                        }
+                    }
+                }
+            }),
             C.Value.Type
         )
         is S.Term.Function -> Typing(mutableListOf<Pair<String, C.Value>>().let { context ->
@@ -157,15 +166,21 @@ class Elaborate private constructor(
             term is S.Term.ListOf && forced is C.Value.List ->
                 C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
             term is S.Term.CompoundOf && forced is C.Value.Compound ->
-                C.Term.CompoundOf((term.elements zip forced.elements).map { checkTerm(it.first, it.second.value) })
+                C.Term.CompoundOf(mutableListOf<Lazy<C.Value>>().let { environment ->
+                    (term.elements zip forced.elements).map {
+                        checkTerm(it.first, environment.evaluate(it.second.second)).also {
+                            environment += lazy { environment.evaluate(it) }
+                        }
+                    }
+                })
             term is S.Term.FunctionOf && forced is C.Value.Function -> C.Term.FunctionOf(
                 term.parameters,
                 mutableListOf<Pair<String, C.Value>>().let { context ->
                     mutableListOf<Lazy<C.Value>>().let { environment ->
-                        (term.parameters zip forced.parameters.map { it.second }).mapIndexed { index, (name, parameter) ->
+                        (term.parameters zip forced.parameters.map { it.second }).map { (name, parameter) ->
                             environment.evaluate(parameter).also {
                                 context += name to it
-                                environment += lazyOf(C.Value.Variable(name, index))
+                                environment += lazyOf(C.Value.Variable(name, environment.size))
                             }
                         }
                         context.checkTerm(term.body, environment.evaluate(forced.resultant))
@@ -220,7 +235,7 @@ class Elaborate private constructor(
         is C.Term.IntArray -> C.Value.IntArray
         is C.Term.LongArray -> C.Value.LongArray
         is C.Term.List -> C.Value.List(lazy { evaluate(term.element) })
-        is C.Term.Compound -> C.Value.Compound(term.elements.map { lazy { evaluate(it) } })
+        is C.Term.Compound -> C.Value.Compound(term.elements)
         is C.Term.Function -> C.Value.Function(term.parameters, term.resultant)
         is C.Term.Type -> C.Value.Type
     }
@@ -263,7 +278,7 @@ class Elaborate private constructor(
         is C.Value.IntArray -> C.Term.IntArray
         is C.Value.LongArray -> C.Term.LongArray
         is C.Value.List -> C.Term.List(quote(forced.element.value))
-        is C.Value.Compound -> C.Term.Compound(forced.elements.map { quote(it.value) })
+        is C.Value.Compound -> C.Term.Compound(forced.elements)
         is C.Value.Function -> C.Term.Function(
             forced.parameters,
             quote(forced.parameters.mapIndexed { index, (name, _) ->
@@ -326,7 +341,15 @@ class Elaborate private constructor(
             forced1 is C.Value.LongArray && forced2 is C.Value.LongArray -> true
             forced1 is C.Value.List && forced2 is C.Value.List -> unify(forced1.element.value, forced2.element.value)
             forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
+                    mutableListOf<Lazy<C.Value>>().let { environment ->
+                        (forced1.elements zip forced2.elements).withIndex().all { (index, elements) ->
+                            val (elements1, elements2) = elements
+                            (this + index).unify(
+                                environment.evaluate(elements1.second),
+                                environment.evaluate(elements2.second)
+                            ).also { environment += lazyOf(C.Value.Variable("", this + index)) }
+                        }
+                    }
             forced1 is C.Value.Function && forced2 is C.Value.Function -> forced1.parameters.size == forced2.parameters.size &&
                     mutableListOf<Lazy<C.Value>>().let { environment ->
                         (forced1.parameters zip forced2.parameters).withIndex().all { (index, parameter) ->

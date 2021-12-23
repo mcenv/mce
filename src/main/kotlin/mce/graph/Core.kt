@@ -57,7 +57,7 @@ object Core {
         object IntArray : Term()
         object LongArray : Term()
         data class List(val element: Term) : Term()
-        data class Compound(val elements: KList<Term>) : Term()
+        data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term()
         object Type : Term()
     }
@@ -95,7 +95,7 @@ object Core {
         object IntArray : Value()
         object LongArray : Value()
         data class List(val element: Lazy<Value>) : Value()
-        data class Compound(val elements: KList<Lazy<Value>>) : Value()
+        data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
         data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Value()
         object Type : Value()
     }
