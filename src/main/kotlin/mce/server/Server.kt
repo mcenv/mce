@@ -1,5 +1,8 @@
 package mce.server
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import mce.graph.Id
 import mce.phase.Elaborate
 import mce.pretty
@@ -18,9 +21,14 @@ class Server {
         counter[surface.name] = 0
     }
 
-    private suspend fun fetch(name: String): Elaborate.Output = cores.getOrPut(name) {
-        counter[name] = counter[name]!! + 1
-        Elaborate(dependencies[name]!!.associateWith { fetch(it).item }, surfaces[name]!!)
+    private suspend fun fetch(name: String): Elaborate.Output = coroutineScope {
+        cores.getOrPut(name) {
+            counter[name] = counter[name]!! + 1
+            Elaborate(
+                dependencies[name]!!.map { async { fetch(it).item } }.awaitAll().associateBy { it.name },
+                surfaces[name]!!
+            )
+        }
     }
 
     fun edit(name: String) {
