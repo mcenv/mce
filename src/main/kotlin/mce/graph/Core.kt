@@ -96,7 +96,7 @@ object Core {
         object LongArray : Value()
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Lazy<Value>>) : Value()
-        data class Function(val parameters: KList<Pair<KString, Lazy<Value>>>, val resultant: Term) : Value()
+        data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Value()
         object Type : Value()
     }
 }

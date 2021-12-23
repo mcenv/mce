@@ -53,7 +53,7 @@ class ElaborateTest {
     }
 
     @Test
-    fun testDependentFunction() {
+    fun testDependentFunctionIntroduction() {
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
             definition(
@@ -64,6 +64,29 @@ class ElaborateTest {
         )
 
         assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun testDependentFunctionElimination() {
+        val (identity, diagnostics1, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "identity",
+                function(name("α"), "α" to type(), "a" to name("α")),
+                function_of(name("a"), "α", "a")
+            )
+        )
+        val (_, diagnostics2, _) = Elaborate(
+            mapOf(identity.name to identity),
+            definition(
+                "f",
+                boolean(),
+                name("identity")(boolean(), ff())
+            )
+        )
+
+        assert(diagnostics1.isEmpty())
+        assert(diagnostics2.isEmpty())
     }
 
     @Test

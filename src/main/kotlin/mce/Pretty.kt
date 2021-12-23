@@ -77,10 +77,9 @@ fun List<C.Value?>.pretty(value: C.Value): S.Term = when (value) {
     is C.Value.LongArray -> S.Term.LongArray()
     is C.Value.List -> S.Term.List(pretty(value.element.value))
     is C.Value.Compound -> S.Term.Compound(value.elements.map { pretty(it.value) })
-    is C.Value.Function ->
-        S.Term.Function(
-            value.parameters.map { it.first to pretty(it.second.value) },
-            delaborate(value.resultant)
-        )
+    is C.Value.Function -> S.Term.Function(
+        value.parameters.map { it.first to delaborate(it.second) },
+        delaborate(value.resultant)
+    )
     is C.Value.Type -> S.Term.Type()
 }
