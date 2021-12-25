@@ -73,7 +73,7 @@ class Elaborate private constructor(
         is S.Term.Apply -> {
             val function = inferTerm(term.function)
             when (val forced = force(function.type)) {
-                is C.Value.Function -> mutableListOf<Lazy<C.Value>>().let { environment ->
+                is C.Value.Function -> withEnvironment { environment ->
                     Typing(
                         C.Term.Apply(
                             function.term,
@@ -108,13 +108,11 @@ class Elaborate private constructor(
         is S.Term.List -> Typing(C.Term.List(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Compound -> Typing(
             C.Term.Compound(
-                mutableListOf<Pair<String, C.Value>>().let { context ->
-                    mutableListOf<Lazy<C.Value>>().let { environment ->
-                        term.elements.map { (name, element) ->
-                            name to context.checkTerm(element, C.Value.Type).also {
-                                context += name to environment.evaluate(it)
-                                environment += lazyOf(C.Value.Variable(name, environment.size))
-                            }
+                withContext { environment, context ->
+                    term.elements.map { (name, element) ->
+                        name to context.checkTerm(element, C.Value.Type).also {
+                            environment += lazyOf(C.Value.Variable(name, environment.size))
+                            context += name to environment.evaluate(it)
                         }
                     }
                 }
@@ -122,14 +120,12 @@ class Elaborate private constructor(
             C.Value.Type
         )
         is S.Term.Function -> Typing(
-            mutableListOf<Pair<String, C.Value>>().let { context ->
+            withContext { environment, context ->
                 C.Term.Function(
-                    mutableListOf<Lazy<C.Value>>().let { environment ->
-                        term.parameters.map { (name, parameter) ->
-                            name to context.checkTerm(parameter, C.Value.Type).also {
-                                context += name to environment.evaluate(it)
-                                environment += lazyOf(C.Value.Variable(name, environment.size))
-                            }
+                    term.parameters.map { (name, parameter) ->
+                        name to context.checkTerm(parameter, C.Value.Type).also {
+                            environment += lazyOf(C.Value.Variable(name, environment.size))
+                            context += name to environment.evaluate(it)
                         }
                     },
                     context.checkTerm(term.resultant, C.Value.Type)
@@ -151,7 +147,7 @@ class Elaborate private constructor(
             term is S.Term.Let -> (this + (term.name to inferTerm(term.init).type)).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List -> C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
             term is S.Term.CompoundOf && forced is C.Value.Compound -> C.Term.CompoundOf(
-                mutableListOf<Lazy<C.Value>>().let { environment ->
+                withEnvironment { environment ->
                     (term.elements zip forced.elements).map {
                         checkTerm(it.first, environment.evaluate(it.second.second)).also {
                             environment += lazy { environment.evaluate(it) }
@@ -161,16 +157,14 @@ class Elaborate private constructor(
             )
             term is S.Term.FunctionOf && forced is C.Value.Function -> C.Term.FunctionOf(
                 term.parameters,
-                mutableListOf<Pair<String, C.Value>>().let { context ->
-                    mutableListOf<Lazy<C.Value>>().let { environment ->
-                        (term.parameters zip forced.parameters.map { it.second }).map { (name, parameter) ->
-                            environment.evaluate(parameter).also {
-                                context += name to it
-                                environment += lazyOf(C.Value.Variable(name, environment.size))
-                            }
+                withContext { environment, context ->
+                    (term.parameters zip forced.parameters.map { it.second }).map { (name, parameter) ->
+                        environment.evaluate(parameter).also {
+                            environment += lazyOf(C.Value.Variable(name, environment.size))
+                            context += name to it
                         }
-                        context.checkTerm(term.body, environment.evaluate(forced.resultant))
                     }
+                    context.checkTerm(term.body, environment.evaluate(forced.resultant))
                 }
             )
             else -> {
@@ -333,7 +327,7 @@ class Elaborate private constructor(
             forced1 is C.Value.LongArray && forced2 is C.Value.LongArray -> true
             forced1 is C.Value.List && forced2 is C.Value.List -> unify(forced1.element.value, forced2.element.value)
             forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
-                    mutableListOf<Lazy<C.Value>>().let { environment ->
+                    withEnvironment { environment ->
                         (forced1.elements zip forced2.elements)
                             .withIndex()
                             .all { (index, elements) ->
@@ -343,7 +337,7 @@ class Elaborate private constructor(
                             }
                     }
             forced1 is C.Value.Function && forced2 is C.Value.Function -> forced1.parameters.size == forced2.parameters.size &&
-                    mutableListOf<Lazy<C.Value>>().let { environment ->
+                    withEnvironment { environment ->
                         (forced1.parameters zip forced2.parameters)
                             .withIndex()
                             .all { (index, parameter) ->
@@ -367,6 +361,10 @@ class Elaborate private constructor(
     }
 
     private fun fresh(): C.Value = C.Value.Meta(metas.size).also { metas += null }
+
+    private inline fun <R> withContext(block: (MutableList<Lazy<C.Value>>, MutableList<Pair<String, C.Value>>) -> R): R = block(mutableListOf(), mutableListOf())
+
+    private inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = block(mutableListOf())
 
     companion object {
         operator fun invoke(items: Map<String, C.Item>, item: S.Item): C.Output = Elaborate(items).run {
