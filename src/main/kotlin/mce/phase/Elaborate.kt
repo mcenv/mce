@@ -15,12 +15,6 @@ typealias Level = Int
 class Elaborate private constructor(
     private val items: Map<String, C.Item>
 ) {
-    data class Output(
-        val item: C.Item,
-        val diagnostics: List<Diagnostic>,
-        val types: Map<Id, C.Value>
-    )
-
     data class Typing(
         val term: C.Term,
         val type: C.Value
@@ -379,8 +373,8 @@ class Elaborate private constructor(
     private fun fresh(): C.Value = C.Value.Meta(metas.size).also { metas += null }
 
     companion object {
-        operator fun invoke(items: Map<String, C.Item>, item: S.Item): Output = Elaborate(items).run {
-            Output(elaborateItem(item), diagnostics, types)
+        operator fun invoke(items: Map<String, C.Item>, item: S.Item): C.Output = Elaborate(items).run {
+            C.Output(elaborateItem(item), diagnostics, types)
         }
     }
 }

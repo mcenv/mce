@@ -1,5 +1,6 @@
 package mce.graph
 
+import mce.Diagnostic
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble
@@ -11,6 +12,12 @@ import kotlin.String as KString
 import kotlin.collections.List as KList
 
 object Core {
+    data class Output(
+        val item: Item,
+        val diagnostics: KList<Diagnostic>,
+        val types: Map<Id, Value>
+    )
+
     sealed class Item {
         abstract val name: KString
         abstract val imports: KList<KString>
