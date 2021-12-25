@@ -15,10 +15,7 @@ typealias Level = Int
 class Elaborate private constructor(
     private val items: Map<String, C.Item>
 ) {
-    data class Typing(
-        val term: C.Term,
-        val type: C.Value
-    )
+    private data class Typing(val term: C.Term, val type: C.Value)
 
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val types: MutableMap<Id, C.Value> = mutableMapOf()
@@ -26,15 +23,8 @@ class Elaborate private constructor(
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
-            val type = emptyList<Lazy<C.Value>>().evaluate(
-                emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type)
-            )
-            C.Item.Definition(
-                item.name,
-                item.imports,
-                emptyList<Pair<String, C.Value>>().checkTerm(item.body, type),
-                type
-            )
+            val type = emptyList<Lazy<C.Value>>().evaluate(emptyList<Pair<String, C.Value>>().checkTerm(item.type, C.Value.Type))
+            C.Item.Definition(item.name, item.imports, emptyList<Pair<String, C.Value>>().checkTerm(item.body, type), type)
         }
     }
 
@@ -44,14 +34,13 @@ class Elaborate private constructor(
             diagnostics += Diagnostic.TermExpected(metas.pretty(type), term.id)
             Typing(C.Term.Hole, type)
         }
-        is S.Term.Dummy -> TODO()
         is S.Term.Meta -> TODO()
         is S.Term.Name -> when (val level = indexOfLast { it.first == term.name }) {
             -1 -> when (val item = items[term.name]) {
                 is C.Item.Definition -> Typing(C.Term.Definition(term.name), item.type)
                 null -> {
                     diagnostics += Diagnostic.NameNotFound(term.name, term.id)
-                    Typing(C.Term.Dummy, fresh())
+                    Typing(C.Term.Variable(term.name, -1), fresh())
                 }
             }
             else -> Typing(C.Term.Variable(term.name, level), this[level].second)
@@ -65,18 +54,12 @@ class Elaborate private constructor(
         is S.Term.FloatOf -> Typing(C.Term.FloatOf(term.value), C.Value.Float)
         is S.Term.DoubleOf -> Typing(C.Term.DoubleOf(term.value), C.Value.Double)
         is S.Term.StringOf -> Typing(C.Term.StringOf(term.value), C.Value.String)
-        is S.Term.ByteArrayOf ->
-            Typing(C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }), C.Value.ByteArray)
-        is S.Term.IntArrayOf -> Typing(C.Term.IntArrayOf(term.elements.map {
-            checkTerm(it, C.Value.Int)
-        }), C.Value.IntArray)
-        is S.Term.LongArrayOf ->
-            Typing(C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }), C.Value.LongArray)
+        is S.Term.ByteArrayOf -> Typing(C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }), C.Value.ByteArray)
+        is S.Term.IntArrayOf -> Typing(C.Term.IntArrayOf(term.elements.map { checkTerm(it, C.Value.Int) }), C.Value.IntArray)
+        is S.Term.LongArrayOf -> Typing(C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }), C.Value.LongArray)
         is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), fresh()) else {
             val first = inferTerm(term.elements.first())
-            Typing(C.Term.ListOf(
-                listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }
-            ), C.Value.List(lazyOf(first.type)))
+            Typing(C.Term.ListOf(listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }), C.Value.List(lazyOf(first.type)))
         }
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { inferTerm(it) }
@@ -85,28 +68,32 @@ class Elaborate private constructor(
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
             val body = (term.parameters zip types).inferTerm(term.body)
-            Typing(
-                C.Term.FunctionOf(term.parameters, body.term),
-                C.Value.Function((term.parameters zip types.map(::quote)), quote(body.type))
-            )
+            Typing(C.Term.FunctionOf(term.parameters, body.term), C.Value.Function((term.parameters zip types.map(::quote)), quote(body.type)))
         }
         is S.Term.Apply -> {
             val function = inferTerm(term.function)
             when (val forced = force(function.type)) {
                 is C.Value.Function -> mutableListOf<Lazy<C.Value>>().let { environment ->
-                    val arguments = (term.arguments zip forced.parameters).map { (argument, parameter) ->
-                        checkTerm(argument, environment.evaluate(parameter.second)).also {
-                            environment += lazy { environment.evaluate(it) }
-                        }
-                    }
-                    Typing(C.Term.Apply(function.term, arguments), environment.evaluate(forced.resultant))
+                    Typing(
+                        C.Term.Apply(
+                            function.term,
+                            (term.arguments zip forced.parameters).map { (argument, parameter) ->
+                                checkTerm(argument, environment.evaluate(parameter.second)).also {
+                                    environment += lazy { environment.evaluate(it) }
+                                }
+                            }
+                        ),
+                        environment.evaluate(forced.resultant)
+                    )
                 }
                 else -> {
                     diagnostics += Diagnostic.FunctionExpected(term.function.id)
-                    Typing(C.Term.Dummy, fresh())
+                    Typing(C.Term.Apply(function.term, term.arguments.map { checkTerm(it, C.Value.Any) }), C.Value.Union(emptyList()))
                 }
             }
         }
+        is S.Term.Union -> Typing(C.Term.Union(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
+        is S.Term.Any -> Typing(C.Term.Any, C.Value.Type)
         is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
         is S.Term.Byte -> Typing(C.Term.Byte, C.Value.Type)
         is S.Term.Short -> Typing(C.Term.Short, C.Value.Type)
@@ -120,31 +107,36 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray, C.Value.Type)
         is S.Term.List -> Typing(C.Term.List(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Compound -> Typing(
-            C.Term.Compound(mutableListOf<Pair<String, C.Value>>().let { context ->
-                mutableListOf<Lazy<C.Value>>().let { environment ->
-                    term.elements.map { (name, element) ->
-                        name to context.checkTerm(element, C.Value.Type).also {
-                            context += name to environment.evaluate(it)
-                            environment += lazyOf(C.Value.Variable(name, environment.size))
+            C.Term.Compound(
+                mutableListOf<Pair<String, C.Value>>().let { context ->
+                    mutableListOf<Lazy<C.Value>>().let { environment ->
+                        term.elements.map { (name, element) ->
+                            name to context.checkTerm(element, C.Value.Type).also {
+                                context += name to environment.evaluate(it)
+                                environment += lazyOf(C.Value.Variable(name, environment.size))
+                            }
                         }
                     }
                 }
-            }),
+            ),
             C.Value.Type
         )
-        is S.Term.Function -> Typing(mutableListOf<Pair<String, C.Value>>().let { context ->
-            C.Term.Function(
-                mutableListOf<Lazy<C.Value>>().let { environment ->
-                    term.parameters.map { (name, parameter) ->
-                        name to context.checkTerm(parameter, C.Value.Type).also {
-                            context += name to environment.evaluate(it)
-                            environment += lazyOf(C.Value.Variable(name, environment.size))
+        is S.Term.Function -> Typing(
+            mutableListOf<Pair<String, C.Value>>().let { context ->
+                C.Term.Function(
+                    mutableListOf<Lazy<C.Value>>().let { environment ->
+                        term.parameters.map { (name, parameter) ->
+                            name to context.checkTerm(parameter, C.Value.Type).also {
+                                context += name to environment.evaluate(it)
+                                environment += lazyOf(C.Value.Variable(name, environment.size))
+                            }
                         }
-                    }
-                },
-                context.checkTerm(term.resultant, C.Value.Type)
-            )
-        }, C.Value.Type)
+                    },
+                    context.checkTerm(term.resultant, C.Value.Type)
+                )
+            },
+            C.Value.Type
+        )
         is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
     }.also { types[term.id] = it.type }
 
@@ -157,16 +149,16 @@ class Elaborate private constructor(
                 C.Term.Hole
             }
             term is S.Term.Let -> (this + (term.name to inferTerm(term.init).type)).checkTerm(term.body, type)
-            term is S.Term.ListOf && forced is C.Value.List ->
-                C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
-            term is S.Term.CompoundOf && forced is C.Value.Compound ->
-                C.Term.CompoundOf(mutableListOf<Lazy<C.Value>>().let { environment ->
+            term is S.Term.ListOf && forced is C.Value.List -> C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
+            term is S.Term.CompoundOf && forced is C.Value.Compound -> C.Term.CompoundOf(
+                mutableListOf<Lazy<C.Value>>().let { environment ->
                     (term.elements zip forced.elements).map {
                         checkTerm(it.first, environment.evaluate(it.second.second)).also {
                             environment += lazy { environment.evaluate(it) }
                         }
                     }
-                })
+                }
+            )
             term is S.Term.FunctionOf && forced is C.Value.Function -> C.Term.FunctionOf(
                 term.parameters,
                 mutableListOf<Pair<String, C.Value>>().let { context ->
@@ -183,18 +175,17 @@ class Elaborate private constructor(
             )
             else -> {
                 val inferred = inferTerm(term)
-                if (size.unify(inferred.type, forced)) inferred.term else {
-                    diagnostics +=
-                        Diagnostic.TypeMismatch(metas.pretty(forced), metas.pretty(inferred.type), term.id)
-                    C.Term.Dummy
+                if (!size.unify(inferred.type, forced)) {
+                    diagnostics += Diagnostic.TypeMismatch(metas.pretty(forced), metas.pretty(inferred.type), term.id)
+                    types[term.id] = C.Value.Union(emptyList())
                 }
+                inferred.term
             }
         }
     }
 
     private fun Environment.evaluate(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
-        is C.Term.Dummy -> C.Value.Dummy
         is C.Term.Meta -> metas[term.index] ?: C.Value.Meta(term.index)
         is C.Term.Variable -> this[term.level].value
         is C.Term.Definition -> C.Value.Definition(term.name)
@@ -217,6 +208,8 @@ class Elaborate private constructor(
             is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
         }
+        is C.Term.Union -> C.Value.Union(term.variants.map { lazy { evaluate(it) } })
+        is C.Term.Any -> C.Value.Any
         is C.Term.Boolean -> C.Value.Boolean
         is C.Term.Byte -> C.Value.Byte
         is C.Term.Short -> C.Value.Short
@@ -236,8 +229,7 @@ class Elaborate private constructor(
 
     private fun quote(value: C.Value): C.Term = when (val forced = force(value)) {
         is C.Value.Hole -> C.Term.Hole
-        is C.Value.Dummy -> C.Term.Dummy
-        is C.Value.Meta -> metas[forced.index]?.let(::quote) ?: C.Term.Meta(forced.index)
+        is C.Value.Meta -> metas[forced.index]?.let { quote(it) } ?: C.Term.Meta(forced.index)
         is C.Value.Variable -> C.Term.Variable(forced.name, forced.level)
         is C.Value.Definition -> C.Term.Definition(forced.name)
         is C.Value.BooleanOf -> C.Term.BooleanOf(forced.value)
@@ -255,11 +247,15 @@ class Elaborate private constructor(
         is C.Value.CompoundOf -> C.Term.CompoundOf(forced.elements.map { quote(it.value) })
         is C.Value.FunctionOf -> C.Term.FunctionOf(
             forced.parameters,
-            quote(forced.parameters.mapIndexed { index, parameter ->
-                lazyOf(C.Value.Variable(parameter, index))
-            }.evaluate(forced.body))
+            quote(
+                forced.parameters
+                    .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, index)) }
+                    .evaluate(forced.body)
+            )
         )
         is C.Value.Apply -> C.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) })
+        is C.Value.Union -> C.Term.Union(forced.variants.map { quote(it.value) })
+        is C.Value.Any -> C.Term.Any
         is C.Value.Boolean -> C.Term.Boolean
         is C.Value.Byte -> C.Term.Byte
         is C.Value.Short -> C.Term.Short
@@ -275,9 +271,11 @@ class Elaborate private constructor(
         is C.Value.Compound -> C.Term.Compound(forced.elements)
         is C.Value.Function -> C.Term.Function(
             forced.parameters,
-            quote(forced.parameters.mapIndexed { index, (name, _) ->
-                lazyOf(C.Value.Variable(name, index))
-            }.evaluate(forced.resultant))
+            quote(
+                forced.parameters
+                    .mapIndexed { index, (name, _) -> lazyOf(C.Value.Variable(name, index)) }
+                    .evaluate(forced.resultant)
+            )
         )
         is C.Value.Type -> C.Term.Type
     }
@@ -315,13 +313,13 @@ class Elaborate private constructor(
             forced1 is C.Value.CompoundOf && forced2 is C.Value.CompoundOf -> forced1.elements.size == forced2.elements.size &&
                     (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
             forced1 is C.Value.FunctionOf && forced2 is C.Value.FunctionOf -> forced1.parameters.size == forced2.parameters.size &&
-                    forced1.parameters.mapIndexed { index, parameter ->
-                        lazyOf(C.Value.Variable(parameter, this + index))
-                    }.let {
-                        (this + forced1.parameters.size).unify(it.evaluate(forced1.body), it.evaluate(forced2.body))
-                    }
+                    forced1.parameters
+                        .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
+                        .let { (this + forced1.parameters.size).unify(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
             forced1 is C.Value.Apply && forced2 is C.Value.Apply -> unify(forced1.function, forced2.function) &&
                     (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.Union && forced2 is C.Value.Union -> TODO()
+            forced1 is C.Value.Any && forced2 is C.Value.Any -> true
             forced1 is C.Value.Boolean && forced2 is C.Value.Boolean -> true
             forced1 is C.Value.Byte && forced2 is C.Value.Byte -> true
             forced1 is C.Value.Short && forced2 is C.Value.Short -> true
@@ -336,26 +334,24 @@ class Elaborate private constructor(
             forced1 is C.Value.List && forced2 is C.Value.List -> unify(forced1.element.value, forced2.element.value)
             forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
                     mutableListOf<Lazy<C.Value>>().let { environment ->
-                        (forced1.elements zip forced2.elements).withIndex().all { (index, elements) ->
-                            val (elements1, elements2) = elements
-                            (this + index).unify(
-                                environment.evaluate(elements1.second),
-                                environment.evaluate(elements2.second)
-                            ).also { environment += lazyOf(C.Value.Variable("", this + index)) }
-                        }
+                        (forced1.elements zip forced2.elements)
+                            .withIndex()
+                            .all { (index, elements) ->
+                                val (elements1, elements2) = elements
+                                (this + index).unify(environment.evaluate(elements1.second), environment.evaluate(elements2.second))
+                                    .also { environment += lazyOf(C.Value.Variable("", this + index)) }
+                            }
                     }
             forced1 is C.Value.Function && forced2 is C.Value.Function -> forced1.parameters.size == forced2.parameters.size &&
                     mutableListOf<Lazy<C.Value>>().let { environment ->
-                        (forced1.parameters zip forced2.parameters).withIndex().all { (index, parameter) ->
-                            val (parameter1, parameter2) = parameter
-                            (this + index).unify(
-                                environment.evaluate(parameter1.second),
-                                environment.evaluate(parameter2.second)
-                            ).also { environment += lazyOf(C.Value.Variable("", this + index)) }
-                        } && (this + forced1.parameters.size).unify(
-                            environment.evaluate(forced1.resultant),
-                            environment.evaluate(forced2.resultant)
-                        )
+                        (forced1.parameters zip forced2.parameters)
+                            .withIndex()
+                            .all { (index, parameter) ->
+                                val (parameter1, parameter2) = parameter
+                                (this + index).unify(environment.evaluate(parameter1.second), environment.evaluate(parameter2.second))
+                                    .also { environment += lazyOf(C.Value.Variable("", this + index)) }
+                            } &&
+                                (this + forced1.parameters.size).unify(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
                     }
             forced1 is C.Value.Type && forced2 is C.Value.Type -> true
             else -> false

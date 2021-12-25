@@ -27,7 +27,6 @@ object Surface {
         abstract val id: Id
 
         data class Hole(override val id: Id = freshId()) : Term()
-        data class Dummy(override val id: Id = freshId()) : Term()
         data class Meta(val index: KInt, override val id: Id = freshId()) : Term()
         data class Name(val name: KString, override val id: Id = freshId()) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id = freshId()) : Term()
@@ -46,6 +45,8 @@ object Surface {
         data class CompoundOf(val elements: KList<Term>, override val id: Id = freshId()) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term, override val id: Id = freshId()) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id = freshId()) : Term()
+        data class Union(val variants: KList<Term>, override val id: Id = freshId()) : Term()
+        data class Any(override val id: Id = freshId()) : Term()
         data class Boolean(override val id: Id = freshId()) : Term()
         data class Byte(override val id: Id = freshId()) : Term()
         data class Short(override val id: Id = freshId()) : Term()
@@ -59,12 +60,7 @@ object Surface {
         data class LongArray(override val id: Id = freshId()) : Term()
         data class List(val element: Term, override val id: Id = freshId()) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id = freshId()) : Term()
-        data class Function(
-            val parameters: KList<Pair<KString, Term>>,
-            val resultant: Term,
-            override val id: Id = freshId()
-        ) : Term()
-
+        data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term, override val id: Id = freshId()) : Term()
         data class Type(override val id: Id = freshId()) : Term()
     }
 }

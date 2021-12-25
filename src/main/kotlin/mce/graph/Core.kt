@@ -32,7 +32,6 @@ object Core {
 
     sealed class Term {
         object Hole : Term()
-        object Dummy : Term()
         data class Meta(val index: KInt) : Term()
         data class Variable(val name: KString, val level: KInt) : Term()
         data class Definition(val name: KString) : Term()
@@ -52,6 +51,8 @@ object Core {
         data class CompoundOf(val elements: KList<Term>) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
+        data class Union(val variants: KList<Term>) : Term()
+        object Any : Term()
         object Boolean : Term()
         object Byte : Term()
         object Short : Term()
@@ -71,7 +72,6 @@ object Core {
 
     sealed class Value {
         object Hole : Value()
-        object Dummy : Value()
         data class Meta(val index: KInt) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
         data class Definition(val name: KString) : Value()
@@ -90,6 +90,8 @@ object Core {
         data class CompoundOf(val elements: KList<Lazy<Value>>) : Value()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
+        data class Union(val variants: KList<Lazy<Value>>) : Value()
+        object Any : Value()
         object Boolean : Value()
         object Byte : Value()
         object Short : Value()

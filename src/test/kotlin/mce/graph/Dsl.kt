@@ -4,11 +4,9 @@ import mce.graph.Surface.Item
 import mce.graph.Surface.Term
 
 object Dsl {
-    fun definition(name: String, type: Term, body: Term, vararg imports: String) =
-        Item.Definition(name, imports.toList(), type, body)
+    fun definition(name: String, type: Term, body: Term, vararg imports: String) = Item.Definition(name, imports.toList(), type, body)
 
     fun hole() = Term.Hole()
-    fun dummy() = Term.Dummy()
     fun meta(index: Int) = Term.Meta(index)
     fun name(name: String) = Term.Name(name)
     fun let_in(name: String, init: Term, body: Term) = Term.Let(name, init, body)
@@ -28,6 +26,8 @@ object Dsl {
     fun compound_of(vararg elements: Term) = Term.CompoundOf(elements.toList())
     fun function_of(body: Term, vararg parameters: String) = Term.FunctionOf(parameters.toList(), body)
     operator fun Term.invoke(vararg arguments: Term) = Term.Apply(this, arguments.toList())
+    fun union(vararg variants: Term) = Term.Union(variants.toList())
+    fun any() = Term.Any()
     fun boolean() = Term.Boolean()
     fun byte() = Term.Byte()
     fun short() = Term.Short()
