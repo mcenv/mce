@@ -1,6 +1,9 @@
 package mce.phase
 
 import mce.Diagnostic
+import mce.graph.Dsl.`∷`
+import mce.graph.Dsl.`≤`
+import mce.graph.Dsl.any
 import mce.graph.Dsl.boolean
 import mce.graph.Dsl.compound
 import mce.graph.Dsl.compound_of
@@ -60,7 +63,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                function(name("x"), "x" to type(), "y" to name("x")),
+                function(name("x"), "x" `≤` any() `∷` type(), "y" `≤` any() `∷` name("x")),
                 function_of(name("y"), "x", "y")
             )
         )
@@ -74,7 +77,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "identity",
-                function(name("α"), "α" to type(), "a" to name("α")),
+                function(name("α"), "α" `≤` any() `∷` type(), "a" `≤` any() `∷` name("α")),
                 function_of(name("a"), "α", "a")
             )
         )

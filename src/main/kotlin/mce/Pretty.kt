@@ -39,7 +39,7 @@ fun delaborate(term: C.Term): S.Term = when (term) {
     is C.Term.LongArray -> S.Term.LongArray()
     is C.Term.List -> S.Term.List(delaborate(term.element))
     is C.Term.Compound -> S.Term.Compound(term.elements.map { (name, element) -> name to delaborate(element) })
-    is C.Term.Function -> S.Term.Function(term.parameters.map { it.first to delaborate(it.second) }, delaborate(term.resultant))
+    is C.Term.Function -> S.Term.Function(term.parameters.map { S.Subtyping(it.name, delaborate(it.bound), delaborate(it.type)) }, delaborate(term.resultant))
     is C.Term.Type -> S.Term.Type()
 }
 
@@ -78,6 +78,6 @@ fun List<C.Value?>.pretty(value: C.Value): S.Term = when (value) {
     is C.Value.LongArray -> S.Term.LongArray()
     is C.Value.List -> S.Term.List(pretty(value.element.value))
     is C.Value.Compound -> S.Term.Compound(value.elements.map { (name, element) -> name to delaborate(element) })
-    is C.Value.Function -> S.Term.Function(value.parameters.map { it.first to delaborate(it.second) }, delaborate(value.resultant))
+    is C.Value.Function -> S.Term.Function(value.parameters.map { S.Subtyping(it.name, delaborate(it.bound), delaborate(it.type)) }, delaborate(value.resultant))
     is C.Value.Type -> S.Term.Type()
 }

@@ -66,7 +66,7 @@ object Core {
         object LongArray : Term()
         data class List(val element: Term) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
-        data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Term()
+        data class Function(val parameters: KList<Subtyping>, val resultant: Term) : Term()
         object Type : Term()
     }
 
@@ -105,7 +105,9 @@ object Core {
         object LongArray : Value()
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
-        data class Function(val parameters: KList<Pair<KString, Term>>, val resultant: Term) : Value()
+        data class Function(val parameters: KList<Subtyping>, val resultant: Term) : Value()
         object Type : Value()
     }
+
+    data class Subtyping(val name: KString, val bound: Term, val type: Term)
 }

@@ -1,8 +1,10 @@
 package mce.graph
 
 import mce.graph.Surface.Item
+import mce.graph.Surface.Subtyping
 import mce.graph.Surface.Term
 
+@Suppress("NonAsciiCharacters")
 object Dsl {
     fun definition(name: String, type: Term, body: Term, vararg imports: String) = Item.Definition(name, imports.toList(), type, body)
 
@@ -41,6 +43,9 @@ object Dsl {
     fun long_array() = Term.LongArray()
     fun list(element: Term) = Term.List(element)
     fun compound(vararg elements: Pair<String, Term>) = Term.Compound(elements.toList())
-    fun function(resultant: Term, vararg parameters: Pair<String, Term>) = Term.Function(parameters.toList(), resultant)
+    fun function(resultant: Term, vararg parameters: Subtyping) = Term.Function(parameters.toList(), resultant)
     fun type() = Term.Type()
+
+    infix fun String.`≤`(that: Term): Pair<String, Term> = this to that
+    infix fun Pair<String, Term>.`∷`(that: Term): Subtyping = Subtyping(this.first, this.second, that)
 }
