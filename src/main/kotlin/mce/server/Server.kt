@@ -20,10 +20,10 @@ class Server {
         counter[surface.name] = 0
     }
 
-    @Suppress("IMPLICIT_CAST_TO_ANY", "UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST")
     private suspend fun <T> fetch(key: Key<T>): T = coroutineScope {
         when (key) {
-            is Key.Item -> getValue(key)
+            is Key.Item -> getValue(key) as T
             is Key.Elaborated -> getValue(Key.Elaborated(key.name)) ?: run {
                 counter[key.name] = counter[key.name]!! + 1
                 Elaborate(
@@ -33,7 +33,7 @@ class Server {
                         .associateBy { it.name },
                     fetch(Key.Item(key.name))
                 ).also { setValue(key, it) }
-            }
+            } as T
         } as T
     }
 
