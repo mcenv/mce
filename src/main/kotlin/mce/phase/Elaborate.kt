@@ -59,7 +59,7 @@ class Elaborate private constructor(
         is S.Term.ByteArrayOf -> Typing(C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }), C.Value.ByteArray)
         is S.Term.IntArrayOf -> Typing(C.Term.IntArrayOf(term.elements.map { checkTerm(it, C.Value.Int) }), C.Value.IntArray)
         is S.Term.LongArrayOf -> Typing(C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }), C.Value.LongArray)
-        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), fresh()) else {
+        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), C.Value.Union(emptyList())) else {
             val first = inferTerm(term.elements.first())
             Typing(C.Term.ListOf(listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }), C.Value.List(lazyOf(first.type)))
         }
