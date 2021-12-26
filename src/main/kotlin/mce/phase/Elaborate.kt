@@ -289,7 +289,7 @@ class Elaborate private constructor(
         is C.Value.Type -> C.Term.Type
     }
 
-    private fun Level.subtype(value1: C.Value, value2: C.Value): Boolean {
+    private fun Level.unify(value1: C.Value, value2: C.Value): Boolean {
         val forced1 = force(value1)
         val forced2 = force(value2)
         return when {
@@ -298,9 +298,9 @@ class Elaborate private constructor(
                     metas[forced1.index] = forced2
                     true
                 }
-                else -> subtype(solved1, forced2)
+                else -> unify(solved1, forced2)
             }
-            forced2 is C.Value.Meta -> subtype(forced2, forced1)
+            forced2 is C.Value.Meta -> unify(forced2, forced1)
             forced1 is C.Value.Variable && forced2 is C.Value.Variable -> forced1.level == forced2.level
             forced1 is C.Value.Definition && forced2 is C.Value.Definition -> forced1.name == forced2.name
             forced1 is C.Value.BooleanOf && forced2 is C.Value.BooleanOf -> forced1.value == forced2.value
@@ -311,6 +311,66 @@ class Elaborate private constructor(
             forced1 is C.Value.FloatOf && forced2 is C.Value.FloatOf -> forced1.value == forced2.value
             forced1 is C.Value.DoubleOf && forced2 is C.Value.DoubleOf -> forced1.value == forced2.value
             forced1 is C.Value.StringOf && forced2 is C.Value.StringOf -> forced1.value == forced2.value
+            forced1 is C.Value.ByteArrayOf && forced2 is C.Value.ByteArrayOf -> forced1.elements.size == forced2.elements.size &&
+                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.IntArrayOf && forced2 is C.Value.IntArrayOf -> forced1.elements.size == forced2.elements.size &&
+                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.LongArrayOf && forced2 is C.Value.LongArrayOf -> forced1.elements.size == forced2.elements.size &&
+                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.ListOf && forced2 is C.Value.ListOf -> forced1.elements.size == forced2.elements.size &&
+                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.CompoundOf && forced2 is C.Value.CompoundOf -> forced1.elements.size == forced2.elements.size &&
+                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.FunctionOf && forced2 is C.Value.FunctionOf -> forced1.parameters.size == forced2.parameters.size &&
+                    forced1.parameters
+                        .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
+                        .let { (this + forced1.parameters.size).unify(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
+            forced1 is C.Value.Apply && forced2 is C.Value.Apply -> unify(forced1.function, forced2.function) &&
+                    (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) }
+            // TODO: unify unions?
+            forced1 is C.Value.Any && forced2 is C.Value.Any -> true
+            forced1 is C.Value.Boolean && forced2 is C.Value.Boolean -> true
+            forced1 is C.Value.Byte && forced2 is C.Value.Byte -> true
+            forced1 is C.Value.Short && forced2 is C.Value.Short -> true
+            forced1 is C.Value.Int && forced2 is C.Value.Int -> true
+            forced1 is C.Value.Long && forced2 is C.Value.Long -> true
+            forced1 is C.Value.Float && forced2 is C.Value.Float -> true
+            forced1 is C.Value.Double && forced2 is C.Value.Double -> true
+            forced1 is C.Value.String && forced2 is C.Value.String -> true
+            forced1 is C.Value.ByteArray && forced2 is C.Value.ByteArray -> true
+            forced1 is C.Value.IntArray && forced2 is C.Value.IntArray -> true
+            forced1 is C.Value.LongArray && forced2 is C.Value.LongArray -> true
+            forced1 is C.Value.List && forced2 is C.Value.List -> unify(forced1.element.value, forced2.element.value)
+            forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
+                    withEnvironment { environment ->
+                        (forced1.elements zip forced2.elements)
+                            .withIndex()
+                            .all { (index, elements) ->
+                                val (elements1, elements2) = elements
+                                (this + index).unify(environment.evaluate(elements1.second), environment.evaluate(elements2.second))
+                                    .also { environment += lazyOf(C.Value.Variable("", this + index)) }
+                            }
+                    }
+            forced1 is C.Value.Function && forced2 is C.Value.Function -> forced1.parameters.size == forced2.parameters.size &&
+                    withEnvironment { environment ->
+                        (forced1.parameters zip forced2.parameters)
+                            .withIndex()
+                            .all { (index, parameter) ->
+                                val (parameter1, parameter2) = parameter
+                                (this + index).unify(environment.evaluate(parameter2.type), environment.evaluate(parameter1.type))
+                                    .also { environment += lazyOf(C.Value.Variable("", this + index)) }
+                            } &&
+                                (this + forced1.parameters.size).unify(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
+                    }
+            forced1 is C.Value.Type && forced2 is C.Value.Type -> true
+            else -> false
+        }
+    }
+
+    private fun Level.subtype(value1: C.Value, value2: C.Value): Boolean {
+        val forced1 = force(value1)
+        val forced2 = force(value2)
+        return when {
             forced1 is C.Value.ByteArrayOf && forced2 is C.Value.ByteArrayOf -> forced1.elements.size == forced2.elements.size &&
                     (forced1.elements zip forced2.elements).all { subtype(it.first.value, it.second.value) }
             forced1 is C.Value.IntArrayOf && forced2 is C.Value.IntArrayOf -> forced1.elements.size == forced2.elements.size &&
@@ -326,21 +386,10 @@ class Elaborate private constructor(
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
                         .let { (this + forced1.parameters.size).subtype(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
             forced1 is C.Value.Apply && forced2 is C.Value.Apply -> subtype(forced1.function, forced2.function) &&
-                    (forced1.arguments zip forced2.arguments).all { subtype(it.first.value, it.second.value) }
+                    (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
             forced1 is C.Value.Union -> forced1.variants.all { subtype(it.value, forced2) }
             forced2 is C.Value.Union -> forced2.variants.any { subtype(forced1, it.value) }
             forced2 is C.Value.Any -> true
-            forced1 is C.Value.Boolean && forced2 is C.Value.Boolean -> true
-            forced1 is C.Value.Byte && forced2 is C.Value.Byte -> true
-            forced1 is C.Value.Short && forced2 is C.Value.Short -> true
-            forced1 is C.Value.Int && forced2 is C.Value.Int -> true
-            forced1 is C.Value.Long && forced2 is C.Value.Long -> true
-            forced1 is C.Value.Float && forced2 is C.Value.Float -> true
-            forced1 is C.Value.Double && forced2 is C.Value.Double -> true
-            forced1 is C.Value.String && forced2 is C.Value.String -> true
-            forced1 is C.Value.ByteArray && forced2 is C.Value.ByteArray -> true
-            forced1 is C.Value.IntArray && forced2 is C.Value.IntArray -> true
-            forced1 is C.Value.LongArray && forced2 is C.Value.LongArray -> true
             forced1 is C.Value.List && forced2 is C.Value.List -> subtype(forced1.element.value, forced2.element.value)
             forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
                     withEnvironment { environment ->
@@ -363,8 +412,7 @@ class Elaborate private constructor(
                             } &&
                                 (this + forced1.parameters.size).subtype(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
                     }
-            forced1 is C.Value.Type && forced2 is C.Value.Type -> true
-            else -> false
+            else -> unify(forced1, forced2)
         }
     }
 
