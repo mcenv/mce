@@ -5,6 +5,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.graph.Id
 import mce.phase.Elaborate
+import mce.phase.Erase
 import mce.pretty
 import mce.graph.Core as C
 import mce.graph.Surface as S
@@ -21,10 +22,10 @@ class Server {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private suspend fun <T> fetch(key: Key<T>): T = coroutineScope {
+    private suspend fun <V> fetch(key: Key<V>): V = coroutineScope {
         when (key) {
-            is Key.Item -> getValue(key) as T
-            is Key.Elaborated -> getValue(Key.Elaborated(key.name)) ?: run {
+            is Key.Item -> getValue(key)
+            is Key.Elaborated -> getValue(key) ?: run {
                 counter[key.name] = counter[key.name]!! + 1
                 Elaborate(
                     dependencies[key.name]!!
@@ -33,14 +34,17 @@ class Server {
                         .associateBy { it.name },
                     fetch(Key.Item(key.name))
                 ).also { setValue(key, it) }
-            } as T
-        } as T
+            } as V
+            is Key.ErasedItem -> getValue(key) ?: run {
+                counter[key.name] = counter[key.name]!! + 1
+                Erase(fetch(Key.Elaborated(key.name)).item)
+            }
+        } as V
     }
 
     fun edit(name: String): Nothing = TODO()
 
-    suspend fun hover(name: String, id: Id): HoverItem =
-        HoverItem(emptyList<C.Value?>().pretty(fetch(Key.Elaborated(name)).types[id]!!))
+    suspend fun hover(name: String, id: Id): HoverItem = HoverItem(emptyList<C.Value?>().pretty(fetch(Key.Elaborated(name)).types[id]!!))
 
     suspend fun build(): Nothing = TODO()
 
@@ -48,9 +52,9 @@ class Server {
 
     fun getCount(name: String): Int? = counter[name]
 
-    private inline fun <reified T> getValue(key: Key<T>): T? = values[key] as T?
+    private inline fun <reified V> getValue(key: Key<V>): V? = values[key] as V?
 
-    private inline fun <reified T> setValue(key: Key<T>, value: T) {
+    private inline fun <reified V> setValue(key: Key<V>, value: V) {
         values[key] = value!!
     }
 }
