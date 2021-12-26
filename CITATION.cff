@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+title: mce
+abstract: A programming environment for Minecraft
+authors:
+  - name: intsuc
+version: 0.1.0
+license: MIT
