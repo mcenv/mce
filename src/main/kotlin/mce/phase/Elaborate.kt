@@ -23,6 +23,9 @@ class Elaborate private constructor(
     private val types: MutableMap<Id, C.Value> = mutableMapOf()
     private val metas: MutableList<C.Value?> = mutableListOf()
 
+    private val end: C.Value.Union = C.Value.Union(emptyList())
+    private val any: C.Value.Intersection = C.Value.Intersection(emptyList())
+
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
             val type = emptyList<Lazy<C.Value>>().evaluate(emptyList<Subtyping>().checkTerm(item.type, C.Value.Type))
@@ -47,7 +50,7 @@ class Elaborate private constructor(
             }
             else -> Typing(C.Term.Variable(term.name, level), this[level].type)
         }
-        is S.Term.Let -> (this + Subtyping(term.name, C.Value.Any, inferTerm(term.init).type)).inferTerm(term.body)
+        is S.Term.Let -> (this + Subtyping(term.name, any, inferTerm(term.init).type)).inferTerm(term.body)
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)
@@ -59,7 +62,7 @@ class Elaborate private constructor(
         is S.Term.ByteArrayOf -> Typing(C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }), C.Value.ByteArray)
         is S.Term.IntArrayOf -> Typing(C.Term.IntArrayOf(term.elements.map { checkTerm(it, C.Value.Int) }), C.Value.IntArray)
         is S.Term.LongArrayOf -> Typing(C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }), C.Value.LongArray)
-        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), C.Value.Union(emptyList())) else {
+        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), end) else {
             val first = inferTerm(term.elements.first())
             Typing(C.Term.ListOf(listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }), C.Value.List(lazyOf(first.type)))
         }
@@ -69,10 +72,10 @@ class Elaborate private constructor(
         }
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
-            val body = (term.parameters zip types).map { Subtyping(it.first, C.Value.Any, it.second) }.inferTerm(term.body)
+            val body = (term.parameters zip types).map { Subtyping(it.first, any, it.second) }.inferTerm(term.body)
             Typing(
                 C.Term.FunctionOf(term.parameters, body.term),
-                C.Value.Function((term.parameters zip types).map { C.Subtyping(it.first, C.Term.Any, quote(it.second)) }, quote(body.type))
+                C.Value.Function((term.parameters zip types).map { C.Subtyping(it.first, C.Term.Intersection(emptyList()), quote(it.second)) }, quote(body.type))
             )
         }
         is S.Term.Apply -> {
@@ -98,12 +101,12 @@ class Elaborate private constructor(
                 }
                 else -> {
                     diagnostics += Diagnostic.FunctionExpected(term.function.id)
-                    Typing(C.Term.Apply(function.term, term.arguments.map { checkTerm(it, C.Value.Any) }), C.Value.Union(emptyList()))
+                    Typing(C.Term.Apply(function.term, term.arguments.map { checkTerm(it, any) }), end)
                 }
             }
         }
         is S.Term.Union -> Typing(C.Term.Union(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
-        is S.Term.Any -> Typing(C.Term.Any, C.Value.Type)
+        is S.Term.Intersection -> Typing(C.Term.Intersection(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
         is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
         is S.Term.Byte -> Typing(C.Term.Byte, C.Value.Type)
         is S.Term.Short -> Typing(C.Term.Short, C.Value.Type)
@@ -121,7 +124,7 @@ class Elaborate private constructor(
                 withContext { environment, context ->
                     term.elements.map { (name, element) ->
                         name to context.checkTerm(element, C.Value.Type).also {
-                            context += Subtyping(name, C.Value.Any, environment.evaluate(it))
+                            context += Subtyping(name, any, environment.evaluate(it))
                             environment += lazyOf(C.Value.Variable(name, environment.size))
                         }
                     }
@@ -158,7 +161,7 @@ class Elaborate private constructor(
                 diagnostics += Diagnostic.TermExpected(metas.pretty(forced), term.id)
                 C.Term.Hole
             }
-            term is S.Term.Let -> (this + Subtyping(term.name, C.Value.Any, inferTerm(term.init).type)).checkTerm(term.body, type)
+            term is S.Term.Let -> (this + Subtyping(term.name, any, inferTerm(term.init).type)).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List -> C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
             term is S.Term.CompoundOf && forced is C.Value.Compound -> C.Term.CompoundOf(
                 withEnvironment { environment ->
@@ -181,12 +184,13 @@ class Elaborate private constructor(
                     context.checkTerm(term.body, environment.evaluate(forced.resultant))
                 }
             )
-            term is S.Term.Any -> C.Term.Any
+            // generalized top type
+            term is S.Term.Intersection && term.variants.isEmpty() -> C.Term.Intersection(emptyList())
             else -> {
                 val inferred = inferTerm(term)
                 if (!size.subtype(inferred.type, forced)) {
                     diagnostics += Diagnostic.TypeMismatch(metas.pretty(forced), metas.pretty(inferred.type), term.id)
-                    types[term.id] = C.Value.Union(emptyList())
+                    types[term.id] = end
                 }
                 inferred.term
             }
@@ -218,7 +222,7 @@ class Elaborate private constructor(
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
         }
         is C.Term.Union -> C.Value.Union(term.variants.map { lazy { evaluate(it) } })
-        is C.Term.Any -> C.Value.Any
+        is C.Term.Intersection -> C.Value.Intersection(term.variants.map { lazy { evaluate(it) } })
         is C.Term.Boolean -> C.Value.Boolean
         is C.Term.Byte -> C.Value.Byte
         is C.Term.Short -> C.Value.Short
@@ -264,7 +268,7 @@ class Elaborate private constructor(
         )
         is C.Value.Apply -> C.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) })
         is C.Value.Union -> C.Term.Union(forced.variants.map { quote(it.value) })
-        is C.Value.Any -> C.Term.Any
+        is C.Value.Intersection -> C.Term.Intersection(forced.variants.map { quote(it.value) })
         is C.Value.Boolean -> C.Term.Boolean
         is C.Value.Byte -> C.Term.Byte
         is C.Value.Short -> C.Term.Short
@@ -327,8 +331,9 @@ class Elaborate private constructor(
                         .let { (this + forced1.parameters.size).unify(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
             forced1 is C.Value.Apply && forced2 is C.Value.Apply -> unify(forced1.function, forced2.function) &&
                     (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) }
-            // TODO: unify unions?
-            forced1 is C.Value.Any && forced2 is C.Value.Any -> true
+            // TODO: unify non-empty unions and intersections?
+            forced1 is C.Value.Union && forced1.variants.isEmpty() && forced2 is C.Value.Union && forced2.variants.isEmpty() -> true
+            forced1 is C.Value.Intersection && forced1.variants.isEmpty() && forced2 is C.Value.Intersection && forced2.variants.isEmpty() -> true
             forced1 is C.Value.Boolean && forced2 is C.Value.Boolean -> true
             forced1 is C.Value.Byte && forced2 is C.Value.Byte -> true
             forced1 is C.Value.Short && forced2 is C.Value.Short -> true
@@ -389,7 +394,8 @@ class Elaborate private constructor(
                     (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
             forced1 is C.Value.Union -> forced1.variants.all { subtype(it.value, forced2) }
             forced2 is C.Value.Union -> forced2.variants.any { subtype(forced1, it.value) }
-            forced2 is C.Value.Any -> true
+            forced1 is C.Value.Intersection -> forced1.variants.any { subtype(it.value, forced2) }
+            forced2 is C.Value.Intersection -> forced2.variants.all { subtype(forced1, it.value) }
             forced1 is C.Value.List && forced2 is C.Value.List -> subtype(forced1.element.value, forced2.element.value)
             forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
                     withEnvironment { environment ->

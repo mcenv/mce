@@ -46,7 +46,7 @@ object Surface {
         data class FunctionOf(val parameters: KList<KString>, val body: Term, override val id: Id = freshId()) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id = freshId()) : Term()
         data class Union(val variants: KList<Term>, override val id: Id = freshId()) : Term()
-        data class Any(override val id: Id = freshId()) : Term()
+        data class Intersection(val variants: KList<Term>, override val id: Id = freshId()) : Term()
         data class Boolean(override val id: Id = freshId()) : Term()
         data class Byte(override val id: Id = freshId()) : Term()
         data class Short(override val id: Id = freshId()) : Term()

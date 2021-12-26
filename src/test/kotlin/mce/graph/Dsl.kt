@@ -29,7 +29,7 @@ object Dsl {
     fun function_of(body: Term, vararg parameters: String) = Term.FunctionOf(parameters.toList(), body)
     operator fun Term.invoke(vararg arguments: Term) = Term.Apply(this, arguments.toList())
     fun union(vararg variants: Term) = Term.Union(variants.toList())
-    fun any() = Term.Any()
+    fun intersection(vararg variants: Term) = Term.Intersection(variants.toList())
     fun boolean() = Term.Boolean()
     fun byte() = Term.Byte()
     fun short() = Term.Short()
@@ -45,6 +45,9 @@ object Dsl {
     fun compound(vararg elements: Pair<String, Term>) = Term.Compound(elements.toList())
     fun function(resultant: Term, vararg parameters: Subtyping) = Term.Function(parameters.toList(), resultant)
     fun type() = Term.Type()
+
+    fun end() = union()
+    fun any() = intersection()
 
     infix fun String.`≤`(that: Term): Pair<String, Term> = this to that
     infix fun Pair<String, Term>.`∷`(that: Term): Subtyping = Subtyping(this.first, this.second, that)
