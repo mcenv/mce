@@ -75,7 +75,6 @@ class Elaborate private constructor(
                 C.Value.Function((term.parameters zip types).map { C.Subtyping(it.first, C.Term.Any, quote(it.second)) }, quote(body.type))
             )
         }
-        // TODO: use bound
         is S.Term.Apply -> {
             val function = inferTerm(term.function)
             when (val forced = force(function.type)) {
@@ -85,7 +84,12 @@ class Elaborate private constructor(
                             function.term,
                             (term.arguments zip forced.parameters).map { (argument, parameter) ->
                                 checkTerm(argument, environment.evaluate(parameter.type)).also {
-                                    environment += lazy { environment.evaluate(it) }
+                                    val argument1 = environment.evaluate(it)
+                                    val bound1 = environment.evaluate(parameter.bound)
+                                    if (!size.subtype(argument1, bound1)) {
+                                        diagnostics += Diagnostic.TypeMismatch(metas.pretty(bound1), metas.pretty(argument1), argument.id)
+                                    }
+                                    environment += lazyOf(argument1)
                                 }
                             }
                         ),
@@ -285,7 +289,6 @@ class Elaborate private constructor(
         is C.Value.Type -> C.Term.Type
     }
 
-    // TODO: use context
     private fun Level.subtype(value1: C.Value, value2: C.Value): Boolean {
         val forced1 = force(value1)
         val forced2 = force(value2)
