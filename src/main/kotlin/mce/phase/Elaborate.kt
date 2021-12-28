@@ -6,7 +6,7 @@ import mce.pretty
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
-private data class Subtyping(val name: String, val bound: C.Value, val type: C.Value)
+private data class Subtyping(val name: String, val lower: C.Value, val upper: C.Value, val type: C.Value)
 
 private typealias Context = List<Subtyping>
 
@@ -50,7 +50,7 @@ class Elaborate private constructor(
             }
             else -> Typing(C.Term.Variable(term.name, level), this[level].type)
         }
-        is S.Term.Let -> (this + Subtyping(term.name, any, inferTerm(term.init).type)).inferTerm(term.body)
+        is S.Term.Let -> (this + Subtyping(term.name, end, any, inferTerm(term.init).type)).inferTerm(term.body)
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)
@@ -72,10 +72,10 @@ class Elaborate private constructor(
         }
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
-            val body = (term.parameters zip types).map { Subtyping(it.first, any, it.second) }.inferTerm(term.body)
+            val body = (term.parameters zip types).map { Subtyping(it.first, end, any, it.second) }.inferTerm(term.body)
             Typing(
                 C.Term.FunctionOf(term.parameters, body.term),
-                C.Value.Function((term.parameters zip types).map { C.Subtyping(it.first, C.Term.Intersection(emptyList()), quote(it.second)) }, quote(body.type))
+                C.Value.Function((term.parameters zip types).map { C.Subtyping(it.first, C.Term.Union(emptyList()), C.Term.Intersection(emptyList()), quote(it.second)) }, quote(body.type))
             )
         }
         is S.Term.Apply -> {
@@ -88,9 +88,15 @@ class Elaborate private constructor(
                             (term.arguments zip forced.parameters).map { (argument, parameter) ->
                                 checkTerm(argument, environment.evaluate(parameter.type)).also {
                                     val argument1 = environment.evaluate(it)
-                                    val bound1 = environment.evaluate(parameter.bound)
-                                    if (!size.subtype(argument1, bound1)) {
-                                        diagnostics += Diagnostic.TypeMismatch(metas.pretty(bound1), metas.pretty(argument1), argument.id)
+                                    environment.evaluate(parameter.lower).let { lower ->
+                                        if (!size.subtype(lower, argument1)) {
+                                            diagnostics += Diagnostic.TypeMismatch(metas.pretty(argument1), metas.pretty(lower), argument.id)
+                                        }
+                                    }
+                                    environment.evaluate(parameter.upper).let { upper ->
+                                        if (!size.subtype(argument1, upper)) {
+                                            diagnostics += Diagnostic.TypeMismatch(metas.pretty(upper), metas.pretty(argument1), argument.id)
+                                        }
                                     }
                                     environment += lazyOf(argument1)
                                 }
@@ -124,7 +130,7 @@ class Elaborate private constructor(
                 withContext { environment, context ->
                     term.elements.map { (name, element) ->
                         name to context.checkTerm(element, C.Value.Type).also {
-                            context += Subtyping(name, any, environment.evaluate(it))
+                            context += Subtyping(name, end, any, environment.evaluate(it))
                             environment += lazyOf(C.Value.Variable(name, environment.size))
                         }
                     }
@@ -135,13 +141,15 @@ class Elaborate private constructor(
         is S.Term.Function -> Typing(
             withContext { environment, context ->
                 C.Term.Function(
-                    term.parameters.map { (name, bound, parameter) ->
+                    term.parameters.map { (name, lower, upper, parameter) ->
                         val parameter1 = context.checkTerm(parameter, C.Value.Type)
                         val parameter2 = environment.evaluate(parameter1)
-                        val bound1 = context.checkTerm(bound, parameter2)
-                        val bound2 = environment.evaluate(bound1)
-                        C.Subtyping(name, bound1, parameter1).also {
-                            context += Subtyping(name, bound2, parameter2)
+                        val lower1 = context.checkTerm(lower, parameter2)
+                        val lower2 = environment.evaluate(lower1)
+                        val upper1 = context.checkTerm(upper, parameter2)
+                        val upper2 = environment.evaluate(upper1)
+                        C.Subtyping(name, lower1, upper1, parameter1).also {
+                            context += Subtyping(name, lower2, upper2, parameter2)
                             environment += lazyOf(C.Value.Variable(name, environment.size))
                         }
                     },
@@ -161,7 +169,7 @@ class Elaborate private constructor(
                 diagnostics += Diagnostic.TermExpected(metas.pretty(forced), term.id)
                 C.Term.Hole
             }
-            term is S.Term.Let -> (this + Subtyping(term.name, any, inferTerm(term.init).type)).checkTerm(term.body, type)
+            term is S.Term.Let -> (this + Subtyping(term.name, end, any, inferTerm(term.init).type)).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List -> C.Term.ListOf(term.elements.map { checkTerm(it, forced.element.value) })
             term is S.Term.CompoundOf && forced is C.Value.Compound -> C.Term.CompoundOf(
                 withEnvironment { environment ->
@@ -177,13 +185,15 @@ class Elaborate private constructor(
                 withContext { environment, context ->
                     (term.parameters zip forced.parameters).map { (name, parameter) ->
                         environment.evaluate(parameter.type).also {
-                            context += Subtyping(name, environment.evaluate(parameter.bound), it)
+                            context += Subtyping(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), it)
                             environment += lazyOf(C.Value.Variable(name, environment.size))
                         }
                     }
                     context.checkTerm(term.body, environment.evaluate(forced.resultant))
                 }
             )
+            // generalized bottom type
+            term is S.Term.Union && term.variants.isEmpty() -> C.Term.Union(emptyList())
             // generalized top type
             term is S.Term.Intersection && term.variants.isEmpty() -> C.Term.Intersection(emptyList())
             else -> {

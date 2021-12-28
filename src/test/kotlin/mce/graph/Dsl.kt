@@ -49,6 +49,5 @@ object Dsl {
     fun end() = union()
     fun any() = intersection()
 
-    infix fun String.`≤`(that: Term): Pair<String, Term> = this to that
-    infix fun Pair<String, Term>.`∷`(that: Term): Subtyping = Subtyping(this.first, this.second, that)
+    fun subtyping(name: String, lower: Term, upper: Term, type: Term): Subtyping = Subtyping(name, lower, upper, type)
 }

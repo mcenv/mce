@@ -1,19 +1,19 @@
 package mce.phase
 
 import mce.Diagnostic
-import mce.graph.Dsl.`∷`
-import mce.graph.Dsl.`≤`
 import mce.graph.Dsl.any
 import mce.graph.Dsl.boolean
 import mce.graph.Dsl.compound
 import mce.graph.Dsl.compound_of
 import mce.graph.Dsl.definition
+import mce.graph.Dsl.end
 import mce.graph.Dsl.ff
 import mce.graph.Dsl.function
 import mce.graph.Dsl.function_of
 import mce.graph.Dsl.invoke
 import mce.graph.Dsl.let_in
 import mce.graph.Dsl.name
+import mce.graph.Dsl.subtyping
 import mce.graph.Dsl.type
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,7 +63,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                function(name("x"), "x" `≤` any() `∷` type(), "y" `≤` any() `∷` name("x")),
+                function(name("x"), subtyping("x", end(), any(), type()), subtyping("y", end(), any(), name("x"))),
                 function_of(name("y"), "x", "y")
             )
         )
@@ -77,7 +77,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "identity",
-                function(name("α"), "α" `≤` any() `∷` type(), "a" `≤` any() `∷` name("α")),
+                function(name("α"), subtyping("α", end(), any(), type()), subtyping("a", end(), any(), name("α"))),
                 function_of(name("a"), "α", "a")
             )
         )

@@ -109,5 +109,5 @@ object Core {
         object Type : Value()
     }
 
-    data class Subtyping(val name: KString, val bound: Term, val type: Term)
+    data class Subtyping(val name: KString, val lower: Term, val upper: Term, val type: Term)
 }
