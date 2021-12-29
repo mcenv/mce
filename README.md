@@ -4,6 +4,11 @@
 
 A programming environment for Minecraft.
 
+## Goals
+
+- As static as possible
+- Predictable output
+
 ## Features
 
 - [ ] Structural editing
