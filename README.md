@@ -14,6 +14,9 @@ A programming environment for Minecraft.
 - [ ] Structural editing
 - [x] Dependent types
 - [x] Subtyping
+- [ ] Staging
+- [ ] Algebraic effects
+- [ ] Cost analysis
 
 <div align="center">
 
