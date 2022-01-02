@@ -111,6 +111,20 @@ class Elaborate private constructor(
                 }
             }
         }
+        is S.Term.CodeOf -> {
+            val element = inferTerm(term.element)
+            Typing(C.Term.CodeOf(element.term), C.Value.Code(lazyOf(element.type)))
+        }
+        is S.Term.Splice -> {
+            val element = inferTerm(term.element)
+            when (val forced = force(element.type)) {
+                is C.Value.Code -> Typing(C.Term.Splice(element.term), forced.element.value)
+                else -> {
+                    diagnostics += Diagnostic.CodeExpected(term.id)
+                    Typing(C.Term.Splice(element.term), end)
+                }
+            }
+        }
         is S.Term.Union -> Typing(C.Term.Union(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
         is S.Term.Intersection -> Typing(C.Term.Intersection(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
         is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
@@ -158,6 +172,7 @@ class Elaborate private constructor(
             },
             C.Value.Type
         )
+        is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
     }.also { types[term.id] = it.type }
 
@@ -192,6 +207,7 @@ class Elaborate private constructor(
                     context.checkTerm(term.body, environment.evaluate(forced.resultant))
                 }
             )
+            term is S.Term.CodeOf && forced is C.Value.Code -> C.Term.CodeOf(checkTerm(term.element, forced.element.value))
             // generalized bottom type
             term is S.Term.Union && term.variants.isEmpty() -> C.Term.Union(emptyList())
             // generalized top type
@@ -231,6 +247,11 @@ class Elaborate private constructor(
             is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
         }
+        is C.Term.CodeOf -> C.Value.CodeOf(lazy { evaluate(term.element) })
+        is C.Term.Splice -> when (val element = evaluate(term.element)) {
+            is C.Value.CodeOf -> element.element.value
+            else -> C.Value.Splice(lazyOf(element))
+        }
         is C.Term.Union -> C.Value.Union(term.variants.map { lazy { evaluate(it) } })
         is C.Term.Intersection -> C.Value.Intersection(term.variants.map { lazy { evaluate(it) } })
         is C.Term.Boolean -> C.Value.Boolean
@@ -247,6 +268,7 @@ class Elaborate private constructor(
         is C.Term.List -> C.Value.List(lazy { evaluate(term.element) })
         is C.Term.Compound -> C.Value.Compound(term.elements)
         is C.Term.Function -> C.Value.Function(term.parameters, term.resultant)
+        is C.Term.Code -> C.Value.Code(lazy { evaluate(term.element) })
         is C.Term.Type -> C.Value.Type
     }
 
@@ -277,6 +299,8 @@ class Elaborate private constructor(
             )
         )
         is C.Value.Apply -> C.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) })
+        is C.Value.CodeOf -> C.Term.CodeOf(quote(forced.element.value))
+        is C.Value.Splice -> C.Term.Splice(quote(forced.element.value))
         is C.Value.Union -> C.Term.Union(forced.variants.map { quote(it.value) })
         is C.Value.Intersection -> C.Term.Intersection(forced.variants.map { quote(it.value) })
         is C.Value.Boolean -> C.Term.Boolean
@@ -300,6 +324,7 @@ class Elaborate private constructor(
                     .evaluate(forced.resultant)
             )
         )
+        is C.Value.Code -> C.Term.Code(quote(forced.element.value))
         is C.Value.Type -> C.Term.Type
     }
 
@@ -341,6 +366,8 @@ class Elaborate private constructor(
                         .let { (this + forced1.parameters.size).unify(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
             forced1 is C.Value.Apply && forced2 is C.Value.Apply -> unify(forced1.function, forced2.function) &&
                     (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) }
+            forced1 is C.Value.CodeOf && forced2 is C.Value.CodeOf -> unify(forced1.element.value, forced2.element.value)
+            forced1 is C.Value.Splice && forced2 is C.Value.Splice -> unify(forced1.element.value, forced2.element.value)
             // TODO: unify non-empty unions and intersections?
             forced1 is C.Value.Union && forced1.variants.isEmpty() && forced2 is C.Value.Union && forced2.variants.isEmpty() -> true
             forced1 is C.Value.Intersection && forced1.variants.isEmpty() && forced2 is C.Value.Intersection && forced2.variants.isEmpty() -> true
@@ -377,6 +404,7 @@ class Elaborate private constructor(
                             } &&
                                 (this + forced1.parameters.size).unify(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
                     }
+            forced1 is C.Value.Code && forced2 is C.Value.Code -> unify(forced1.element.value, forced2.element.value)
             forced1 is C.Value.Type && forced2 is C.Value.Type -> true
             else -> false
         }
@@ -428,6 +456,7 @@ class Elaborate private constructor(
                             } &&
                                 (this + forced1.parameters.size).subtype(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
                     }
+            forced1 is C.Value.Code && forced2 is C.Value.Code -> subtype(forced1.element.value, forced2.element.value)
             else -> unify(forced1, forced2)
         }
     }

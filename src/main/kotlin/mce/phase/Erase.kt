@@ -46,6 +46,7 @@ class Erase private constructor() {
         is C.Term.Compound -> E.Term.Type
         is C.Term.Function -> E.Term.Type
         is C.Term.Type -> E.Term.Type
+        else -> TODO()
     }
 
     companion object {

@@ -51,6 +51,8 @@ object Core {
         data class CompoundOf(val elements: KList<Term>) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
+        data class CodeOf(val element: Term) : Term()
+        data class Splice(val element: Term) : Term()
         data class Union(val variants: KList<Term>) : Term()
         data class Intersection(val variants: KList<Term>) : Term()
         object Boolean : Term()
@@ -67,6 +69,7 @@ object Core {
         data class List(val element: Term) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Function(val parameters: KList<Subtyping>, val resultant: Term) : Term()
+        data class Code(val element: Term) : Term()
         object Type : Term()
     }
 
@@ -90,6 +93,8 @@ object Core {
         data class CompoundOf(val elements: KList<Lazy<Value>>) : Value()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
+        data class CodeOf(val element: Lazy<Value>) : Value()
+        data class Splice(val element: Lazy<Value>) : Value()
         data class Union(val variants: KList<Lazy<Value>>) : Value()
         data class Intersection(val variants: KList<Lazy<Value>>) : Value()
         object Boolean : Value()
@@ -106,6 +111,7 @@ object Core {
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
         data class Function(val parameters: KList<Subtyping>, val resultant: Term) : Value()
+        data class Code(val element: Lazy<Value>) : Value()
         object Type : Value()
     }
 

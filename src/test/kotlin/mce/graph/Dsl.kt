@@ -4,7 +4,6 @@ import mce.graph.Surface.Item
 import mce.graph.Surface.Subtyping
 import mce.graph.Surface.Term
 
-@Suppress("NonAsciiCharacters")
 object Dsl {
     fun definition(name: String, type: Term, body: Term, vararg imports: String) = Item.Definition(name, imports.toList(), type, body)
 
@@ -28,6 +27,8 @@ object Dsl {
     fun compound_of(vararg elements: Term) = Term.CompoundOf(elements.toList())
     fun function_of(body: Term, vararg parameters: String) = Term.FunctionOf(parameters.toList(), body)
     operator fun Term.invoke(vararg arguments: Term) = Term.Apply(this, arguments.toList())
+    fun code_of(element: Term) = Term.CodeOf(element)
+    operator fun Term.not() = Term.Splice(this)
     fun union(vararg variants: Term) = Term.Union(variants.toList())
     fun intersection(vararg variants: Term) = Term.Intersection(variants.toList())
     fun boolean() = Term.Boolean()
@@ -44,6 +45,7 @@ object Dsl {
     fun list(element: Term) = Term.List(element)
     fun compound(vararg elements: Pair<String, Term>) = Term.Compound(elements.toList())
     fun function(resultant: Term, vararg parameters: Subtyping) = Term.Function(parameters.toList(), resultant)
+    fun code(element: Term) = Term.Code(element)
     fun type() = Term.Type()
 
     fun end() = union()

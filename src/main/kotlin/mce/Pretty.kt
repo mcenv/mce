@@ -24,6 +24,8 @@ fun delaborate(term: C.Term): S.Term = when (term) {
     is C.Term.CompoundOf -> S.Term.CompoundOf(term.elements.map { delaborate(it) })
     is C.Term.FunctionOf -> S.Term.FunctionOf(term.parameters, delaborate(term.body))
     is C.Term.Apply -> S.Term.Apply(delaborate(term.function), term.arguments.map { delaborate(it) })
+    is C.Term.CodeOf -> S.Term.CodeOf(delaborate(term.element))
+    is C.Term.Splice -> S.Term.Splice(delaborate(term.element))
     is C.Term.Union -> S.Term.Union(term.variants.map { delaborate(it) })
     is C.Term.Intersection -> S.Term.Intersection(term.variants.map { delaborate(it) })
     is C.Term.Boolean -> S.Term.Boolean()
@@ -40,6 +42,7 @@ fun delaborate(term: C.Term): S.Term = when (term) {
     is C.Term.List -> S.Term.List(delaborate(term.element))
     is C.Term.Compound -> S.Term.Compound(term.elements.map { (name, element) -> name to delaborate(element) })
     is C.Term.Function -> S.Term.Function(term.parameters.map { S.Subtyping(it.name, delaborate(it.lower), delaborate(it.upper), delaborate(it.type)) }, delaborate(term.resultant))
+    is C.Term.Code -> S.Term.Code(delaborate(term.element))
     is C.Term.Type -> S.Term.Type()
 }
 
@@ -63,6 +66,8 @@ fun List<C.Value?>.pretty(value: C.Value): S.Term = when (value) {
     is C.Value.CompoundOf -> S.Term.CompoundOf(value.elements.map { pretty(it.value) })
     is C.Value.FunctionOf -> S.Term.FunctionOf(value.parameters, delaborate(value.body))
     is C.Value.Apply -> S.Term.Apply(pretty(value.function), value.arguments.map { pretty(it.value) })
+    is C.Value.CodeOf -> S.Term.CodeOf(pretty(value.element.value))
+    is C.Value.Splice -> S.Term.Splice(pretty(value.element.value))
     is C.Value.Union -> S.Term.Union(value.variants.map { pretty(it.value) })
     is C.Value.Intersection -> S.Term.Intersection(value.variants.map { pretty(it.value) })
     is C.Value.Boolean -> S.Term.Boolean()
@@ -79,5 +84,6 @@ fun List<C.Value?>.pretty(value: C.Value): S.Term = when (value) {
     is C.Value.List -> S.Term.List(pretty(value.element.value))
     is C.Value.Compound -> S.Term.Compound(value.elements.map { (name, element) -> name to delaborate(element) })
     is C.Value.Function -> S.Term.Function(value.parameters.map { S.Subtyping(it.name, delaborate(it.lower), delaborate(it.upper), delaborate(it.type)) }, delaborate(value.resultant))
+    is C.Value.Code -> S.Term.Code(pretty(value.element.value))
     is C.Value.Type -> S.Term.Type()
 }

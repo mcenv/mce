@@ -3,6 +3,8 @@ package mce.phase
 import mce.Diagnostic
 import mce.graph.Dsl.any
 import mce.graph.Dsl.boolean
+import mce.graph.Dsl.code
+import mce.graph.Dsl.code_of
 import mce.graph.Dsl.compound
 import mce.graph.Dsl.compound_of
 import mce.graph.Dsl.definition
@@ -13,6 +15,7 @@ import mce.graph.Dsl.function_of
 import mce.graph.Dsl.invoke
 import mce.graph.Dsl.let_in
 import mce.graph.Dsl.name
+import mce.graph.Dsl.not
 import mce.graph.Dsl.subtyping
 import mce.graph.Dsl.type
 import kotlin.test.Test
@@ -153,6 +156,34 @@ class ElaborateTest {
                 "a",
                 compound("α" to type(), "a" to name("α")),
                 compound_of(boolean(), ff())
+            )
+        )
+
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun testCodeIntroduction() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                code(boolean()),
+                code_of(ff())
+            )
+        )
+
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun testCodeElimination() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                boolean(),
+                !code_of(ff())
             )
         )
 

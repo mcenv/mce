@@ -45,6 +45,8 @@ object Surface {
         data class CompoundOf(val elements: KList<Term>, override val id: Id = freshId()) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term, override val id: Id = freshId()) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id = freshId()) : Term()
+        data class CodeOf(val element: Term, override val id: Id = freshId()) : Term()
+        data class Splice(val element: Term, override val id: Id = freshId()) : Term()
         data class Union(val variants: KList<Term>, override val id: Id = freshId()) : Term()
         data class Intersection(val variants: KList<Term>, override val id: Id = freshId()) : Term()
         data class Boolean(override val id: Id = freshId()) : Term()
@@ -61,6 +63,7 @@ object Surface {
         data class List(val element: Term, override val id: Id = freshId()) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id = freshId()) : Term()
         data class Function(val parameters: KList<Subtyping>, val resultant: Term, override val id: Id = freshId()) : Term()
+        data class Code(val element: Term, override val id: Id = freshId()) : Term()
         data class Type(override val id: Id = freshId()) : Term()
     }
 
