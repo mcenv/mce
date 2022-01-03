@@ -5,7 +5,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.graph.Id
 import mce.phase.Elaborate
-import mce.phase.Erase
 import mce.pretty
 import mce.graph.Core as C
 import mce.graph.Surface as S
@@ -35,10 +34,6 @@ class Server {
                     fetch(Key.Item(key.name))
                 ).also { setValue(key, it) }
             } as V
-            is Key.ErasedItem -> getValue(key) ?: run {
-                counter[key.name] = counter[key.name]!! + 1
-                Erase(fetch(Key.Elaborated(key.name)).item)
-            }
         } as V
     }
 
