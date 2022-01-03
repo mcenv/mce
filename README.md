@@ -2,7 +2,7 @@
 
 [![test](https://github.com/mcenv/mce/actions/workflows/test.yml/badge.svg)](https://github.com/mcenv/mce/actions/workflows/test.yml)
 
-A programming environment for Minecraft.
+A programming environment for Minecraft[^1].
 
 ## Goals
 
@@ -19,8 +19,4 @@ A programming environment for Minecraft.
 - [ ] Algebraic effects
 - [ ] Cost analysis
 
-<div align="center">
-
-###### NOT OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG.
-
-</div>
+[^1]: NOT OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG.
