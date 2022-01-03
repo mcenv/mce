@@ -7,6 +7,7 @@ A programming environment for Minecraft.
 ## Goals
 
 - As static as possible
+- Logically consistent
 - Predictable output
 
 ## Features
