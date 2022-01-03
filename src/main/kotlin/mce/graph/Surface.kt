@@ -28,7 +28,8 @@ object Surface {
 
         data class Hole(override val id: Id = freshId()) : Term()
         data class Meta(val index: KInt, override val id: Id = freshId()) : Term()
-        data class Name(val name: KString, override val id: Id = freshId()) : Term()
+        data class Variable(val name: KString, val level: KInt, override val id: Id = freshId()) : Term()
+        data class Definition(val name: KString, override val id: Id = freshId()) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id = freshId()) : Term()
         data class BooleanOf(val value: KBoolean, override val id: Id = freshId()) : Term()
         data class ByteOf(val value: KByte, override val id: Id = freshId()) : Term()

@@ -9,7 +9,8 @@ object Dsl {
 
     fun hole() = Term.Hole()
     fun meta(index: Int) = Term.Meta(index)
-    fun name(name: String) = Term.Name(name)
+    fun variable(name: String, level: Int) = Term.Variable(name, level)
+    fun definition(name: String) = Term.Definition(name)
     fun let_in(name: String, init: Term, body: Term) = Term.Let(name, init, body)
     fun ff() = Term.BooleanOf(false)
     fun tt() = Term.BooleanOf(true)

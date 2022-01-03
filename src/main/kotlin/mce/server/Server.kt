@@ -5,8 +5,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.graph.Id
 import mce.phase.Elaborate
-import mce.pretty
-import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class Server {
@@ -39,7 +37,7 @@ class Server {
 
     fun edit(name: String): Nothing = TODO()
 
-    suspend fun hover(name: String, id: Id): HoverItem = HoverItem(emptyList<C.Value?>().pretty(fetch(Key.Elaborated(name)).types[id]!!))
+    suspend fun hover(name: String, id: Id): HoverItem = HoverItem(fetch(Key.Elaborated(name)).types[id]!!.value)
 
     suspend fun build(): Nothing = TODO()
 

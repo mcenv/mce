@@ -14,13 +14,15 @@ import mce.graph.Dsl.function
 import mce.graph.Dsl.function_of
 import mce.graph.Dsl.invoke
 import mce.graph.Dsl.let_in
-import mce.graph.Dsl.name
 import mce.graph.Dsl.not
 import mce.graph.Dsl.subtyping
 import mce.graph.Dsl.type
+import mce.graph.Dsl.variable
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import mce.graph.Core as C
+import mce.graph.Surface as S
 
 class ElaborateTest {
     @Test
@@ -33,17 +35,9 @@ class ElaborateTest {
         )
 
         assert(diagnostics.isEmpty())
-        assertEquals(C.Value.Type, types[boolean.id])
-        assertEquals(C.Value.Boolean, types[ff.id])
-        assertEquals(
-            C.Item.Definition(
-                "a",
-                emptyList(),
-                C.Term.BooleanOf(false),
-                C.Value.Boolean
-            ),
-            elaborated
-        )
+        assertIs<S.Term.Type>(types[boolean.id]!!.value)
+        assertIs<S.Term.Boolean>(types[ff.id]!!.value)
+        assertEquals(C.Item.Definition("a", emptyList(), ff, C.Value.Boolean), elaborated)
     }
 
     @Test
@@ -53,7 +47,7 @@ class ElaborateTest {
             definition(
                 "a",
                 boolean(),
-                function_of(name("x"), "x")(ff())
+                function_of(variable("x", 0), "x")(ff())
             )
         )
 
@@ -66,8 +60,8 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                function(name("x"), subtyping("x", end(), any(), type()), subtyping("y", end(), any(), name("x"))),
-                function_of(name("y"), "x", "y")
+                function(variable("x", 0), subtyping("x", end(), any(), type()), subtyping("y", end(), any(), variable("x", 0))),
+                function_of(variable("y", 1), "x", "y")
             )
         )
 
@@ -80,8 +74,8 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "identity",
-                function(name("α"), subtyping("α", end(), any(), type()), subtyping("a", end(), any(), name("α"))),
-                function_of(name("a"), "α", "a")
+                function(variable("α", 0), subtyping("α", end(), any(), type()), subtyping("a", end(), any(), variable("α", 0))),
+                function_of(variable("a", 1), "α", "a")
             )
         )
         val (_, diagnostics2, _) = Elaborate(
@@ -89,7 +83,7 @@ class ElaborateTest {
             definition(
                 "f",
                 boolean(),
-                name("identity")(boolean(), ff())
+                definition("identity")(boolean(), ff())
             )
         )
 
@@ -104,7 +98,7 @@ class ElaborateTest {
             definition(
                 "a",
                 boolean(),
-                let_in("x", ff(), name("x"))
+                let_in("x", ff(), variable("x", 0))
             )
         )
 
@@ -126,7 +120,7 @@ class ElaborateTest {
             definition(
                 "b",
                 boolean(),
-                name("a")
+                definition("a")
             )
         )
 
@@ -135,7 +129,7 @@ class ElaborateTest {
 
     @Test
     fun testInvalidDefinition() {
-        val a = name("a")
+        val a = definition("a")
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
             definition(
@@ -145,7 +139,7 @@ class ElaborateTest {
             )
         )
 
-        assert(diagnostics.contains(Diagnostic.NameNotFound("a", a.id)))
+        assert(diagnostics.contains(Diagnostic.DefinitionNotFound("a", a.id)))
     }
 
     @Test
@@ -154,7 +148,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                compound("α" to type(), "a" to name("α")),
+                compound("α" to type(), "a" to variable("α", 0)),
                 compound_of(boolean(), ff())
             )
         )
