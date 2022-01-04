@@ -43,7 +43,7 @@ class Elaborate private constructor(
             diagnostics += Diagnostic.TermExpected(S.Term.Union(emptyList()), term.id)
             end
         }
-        is S.Term.Meta -> TODO()
+        is S.Term.Meta -> fresh()
         is S.Term.Variable -> when (val level = indexOfLast { it.name == term.name }) {
             -1 -> {
                 diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
