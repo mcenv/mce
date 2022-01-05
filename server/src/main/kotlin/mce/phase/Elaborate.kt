@@ -2,6 +2,7 @@ package mce.phase
 
 import mce.Diagnostic
 import mce.graph.Id
+import mce.graph.freshId
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -40,7 +41,7 @@ class Elaborate private constructor(
 
     private fun Context.inferTerm(term: S.Term): C.Value = when (term) {
         is S.Term.Hole -> {
-            diagnostics += Diagnostic.TermExpected(S.Term.Union(emptyList()), term.id)
+            diagnostics += Diagnostic.TermExpected(S.Term.Union(emptyList(), freshId()), term.id)
             end
         }
         is S.Term.Meta -> fresh()
@@ -88,7 +89,7 @@ class Elaborate private constructor(
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
             val body = (term.parameters zip types).map { Subtyping(it.first, end, any, it.second) }.inferTerm(term.body)
-            C.Value.Function((term.parameters zip types).map { S.Subtyping(it.first, S.Term.Union(emptyList()), S.Term.Intersection(emptyList()), quote(it.second)) }, quote(body))
+            C.Value.Function((term.parameters zip types).map { S.Subtyping(it.first, S.Term.Union(emptyList(), freshId()), S.Term.Intersection(emptyList(), freshId()), quote(it.second)) }, quote(body))
         }
         is S.Term.Apply -> {
             when (val function = force(inferTerm(term.function))) {
@@ -201,14 +202,14 @@ class Elaborate private constructor(
             }
             term is S.Term.CodeOf && forced is C.Value.Code -> checkTerm(term.element, forced.element.value)
             // generalized bottom type
-            term is S.Term.Union && term.variants.isEmpty() -> S.Term.Union(emptyList())
+            term is S.Term.Union && term.variants.isEmpty() -> S.Term.Union(emptyList(), freshId())
             // generalized top type
-            term is S.Term.Intersection && term.variants.isEmpty() -> S.Term.Intersection(emptyList())
+            term is S.Term.Intersection && term.variants.isEmpty() -> S.Term.Intersection(emptyList(), freshId())
             else -> {
                 val inferred = inferTerm(term)
                 if (!size.subtype(inferred, forced)) {
                     diagnostics += Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id)
-                    types[term.id] = lazyOf(S.Term.Union(emptyList()))
+                    types[term.id] = lazyOf(S.Term.Union(emptyList(), freshId()))
                 }
             }
         }
@@ -264,59 +265,61 @@ class Elaborate private constructor(
     }
 
     private fun quote(value: C.Value): S.Term = when (val forced = force(value)) {
-        is C.Value.Hole -> S.Term.Hole()
-        is C.Value.Meta -> metas[forced.index]?.let { quote(it) } ?: S.Term.Meta(forced.index)
-        is C.Value.Variable -> S.Term.Variable(forced.name, forced.level)
-        is C.Value.Definition -> S.Term.Definition(forced.name)
-        is C.Value.BooleanOf -> S.Term.BooleanOf(forced.value)
-        is C.Value.ByteOf -> S.Term.ByteOf(forced.value)
-        is C.Value.ShortOf -> S.Term.ShortOf(forced.value)
-        is C.Value.IntOf -> S.Term.IntOf(forced.value)
-        is C.Value.LongOf -> S.Term.LongOf(forced.value)
-        is C.Value.FloatOf -> S.Term.FloatOf(forced.value)
-        is C.Value.DoubleOf -> S.Term.DoubleOf(forced.value)
-        is C.Value.StringOf -> S.Term.StringOf(forced.value)
-        is C.Value.ByteArrayOf -> S.Term.ByteArrayOf(forced.elements.map { quote(it.value) })
-        is C.Value.IntArrayOf -> S.Term.IntArrayOf(forced.elements.map { quote(it.value) })
-        is C.Value.LongArrayOf -> S.Term.LongArrayOf(forced.elements.map { quote(it.value) })
-        is C.Value.ListOf -> S.Term.ListOf(forced.elements.map { quote(it.value) })
-        is C.Value.CompoundOf -> S.Term.CompoundOf(forced.elements.map { quote(it.value) })
+        is C.Value.Hole -> S.Term.Hole(freshId())
+        is C.Value.Meta -> metas[forced.index]?.let { quote(it) } ?: S.Term.Meta(forced.index, freshId())
+        is C.Value.Variable -> S.Term.Variable(forced.name, forced.level, freshId())
+        is C.Value.Definition -> S.Term.Definition(forced.name, freshId())
+        is C.Value.BooleanOf -> S.Term.BooleanOf(forced.value, freshId())
+        is C.Value.ByteOf -> S.Term.ByteOf(forced.value, freshId())
+        is C.Value.ShortOf -> S.Term.ShortOf(forced.value, freshId())
+        is C.Value.IntOf -> S.Term.IntOf(forced.value, freshId())
+        is C.Value.LongOf -> S.Term.LongOf(forced.value, freshId())
+        is C.Value.FloatOf -> S.Term.FloatOf(forced.value, freshId())
+        is C.Value.DoubleOf -> S.Term.DoubleOf(forced.value, freshId())
+        is C.Value.StringOf -> S.Term.StringOf(forced.value, freshId())
+        is C.Value.ByteArrayOf -> S.Term.ByteArrayOf(forced.elements.map { quote(it.value) }, freshId())
+        is C.Value.IntArrayOf -> S.Term.IntArrayOf(forced.elements.map { quote(it.value) }, freshId())
+        is C.Value.LongArrayOf -> S.Term.LongArrayOf(forced.elements.map { quote(it.value) }, freshId())
+        is C.Value.ListOf -> S.Term.ListOf(forced.elements.map { quote(it.value) }, freshId())
+        is C.Value.CompoundOf -> S.Term.CompoundOf(forced.elements.map { quote(it.value) }, freshId())
         is C.Value.FunctionOf -> S.Term.FunctionOf(
             forced.parameters,
             quote(
                 forced.parameters
                     .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, index)) }
                     .evaluate(forced.body)
-            )
+            ),
+            freshId()
         )
-        is C.Value.Apply -> S.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) })
-        is C.Value.CodeOf -> S.Term.CodeOf(quote(forced.element.value))
-        is C.Value.Splice -> S.Term.Splice(quote(forced.element.value))
-        is C.Value.Union -> S.Term.Union(forced.variants.map { quote(it.value) })
-        is C.Value.Intersection -> S.Term.Intersection(forced.variants.map { quote(it.value) })
-        is C.Value.Boolean -> S.Term.Boolean()
-        is C.Value.Byte -> S.Term.Byte()
-        is C.Value.Short -> S.Term.Short()
-        is C.Value.Int -> S.Term.Int()
-        is C.Value.Long -> S.Term.Long()
-        is C.Value.Float -> S.Term.Float()
-        is C.Value.Double -> S.Term.Double()
-        is C.Value.String -> S.Term.String()
-        is C.Value.ByteArray -> S.Term.ByteArray()
-        is C.Value.IntArray -> S.Term.IntArray()
-        is C.Value.LongArray -> S.Term.LongArray()
-        is C.Value.List -> S.Term.List(quote(forced.element.value))
-        is C.Value.Compound -> S.Term.Compound(forced.elements)
+        is C.Value.Apply -> S.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) }, freshId())
+        is C.Value.CodeOf -> S.Term.CodeOf(quote(forced.element.value), freshId())
+        is C.Value.Splice -> S.Term.Splice(quote(forced.element.value), freshId())
+        is C.Value.Union -> S.Term.Union(forced.variants.map { quote(it.value) }, freshId())
+        is C.Value.Intersection -> S.Term.Intersection(forced.variants.map { quote(it.value) }, freshId())
+        is C.Value.Boolean -> S.Term.Boolean(freshId())
+        is C.Value.Byte -> S.Term.Byte(freshId())
+        is C.Value.Short -> S.Term.Short(freshId())
+        is C.Value.Int -> S.Term.Int(freshId())
+        is C.Value.Long -> S.Term.Long(freshId())
+        is C.Value.Float -> S.Term.Float(freshId())
+        is C.Value.Double -> S.Term.Double(freshId())
+        is C.Value.String -> S.Term.String(freshId())
+        is C.Value.ByteArray -> S.Term.ByteArray(freshId())
+        is C.Value.IntArray -> S.Term.IntArray(freshId())
+        is C.Value.LongArray -> S.Term.LongArray(freshId())
+        is C.Value.List -> S.Term.List(quote(forced.element.value), freshId())
+        is C.Value.Compound -> S.Term.Compound(forced.elements, freshId())
         is C.Value.Function -> S.Term.Function(
             forced.parameters,
             quote(
                 forced.parameters
                     .mapIndexed { index, (name, _) -> lazyOf(C.Value.Variable(name, index)) }
                     .evaluate(forced.resultant)
-            )
+            ),
+            freshId()
         )
-        is C.Value.Code -> S.Term.Code(quote(forced.element.value))
-        is C.Value.Type -> S.Term.Type()
+        is C.Value.Code -> S.Term.Code(quote(forced.element.value), freshId())
+        is C.Value.Type -> S.Term.Type(freshId())
     }
 
     private fun Level.unify(value1: C.Value, value2: C.Value): Boolean {
