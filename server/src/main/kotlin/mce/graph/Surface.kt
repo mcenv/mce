@@ -12,10 +12,12 @@ import kotlin.collections.List as KList
 
 object Surface {
     sealed class Item {
+        abstract val id: Id
         abstract val name: KString
         abstract val imports: KList<KString>
 
         data class Definition(
+            override val id: Id,
             override val name: KString,
             override val imports: KList<KString>,
             val type: Term,

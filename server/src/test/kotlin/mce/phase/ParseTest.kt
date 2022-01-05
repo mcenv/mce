@@ -10,10 +10,11 @@ import kotlin.test.assertEquals
 @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class ParseTest {
     @Test
-    fun hole() {
+    fun testFalse() {
         ParseTest::class.java.getResourceAsStream("/false.mce").use {
             assertEquals(
                 Item.Definition(
+                    UUID(0, 1),
                     "false",
                     emptyList(),
                     Term.Boolean(UUID(0, 3)),

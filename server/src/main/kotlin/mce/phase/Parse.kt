@@ -42,7 +42,7 @@ class Parse private constructor(source: String) {
     }
 
     private fun Node.parseItem(): Item = when (type) {
-        "item:definition" -> Item.Definition(label, this["imports"].parseList { parseString() }, this["type"].parseTerm(), this["body"].parseTerm())
+        "item:definition" -> Item.Definition(id, label, this["imports"].parseList { parseString() }, this["type"].parseTerm(), this["body"].parseTerm())
         else -> error()
     }
 

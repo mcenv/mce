@@ -5,7 +5,7 @@ import mce.graph.Surface.Subtyping
 import mce.graph.Surface.Term
 
 object Dsl {
-    fun definition(name: String, type: Term, body: Term, vararg imports: String) = Item.Definition(name, imports.toList(), type, body)
+    fun definition(name: String, type: Term, body: Term, vararg imports: String) = Item.Definition(freshId(), name, imports.toList(), type, body)
 
     fun hole() = Term.Hole(freshId())
     fun meta(index: Int) = Term.Meta(index, freshId())
