@@ -14,6 +14,7 @@ A programming environment for Minecraft[^1].
 
 - [ ] Structural editing
 - [x] Dependent types
+- [x] Structural types
 - [ ] Ordered types
 - [x] Subtyping
 - [ ] Staging
