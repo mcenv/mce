@@ -6,9 +6,9 @@ A programming environment for Minecraft[^1].
 
 ## Goals
 
-- As static as possible
-- Logically consistent
-- Predictable output
+1. Logically consistent
+2. Predictable output
+3. As static as possible
 
 ## Features
 
