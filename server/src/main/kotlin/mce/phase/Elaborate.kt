@@ -40,23 +40,14 @@ class Elaborate private constructor(
     }
 
     private fun Context.inferTerm(term: S.Term): C.Value = when (term) {
-        is S.Term.Hole -> {
-            diagnostics += Diagnostic.TermExpected(S.Term.Union(emptyList(), freshId()), term.id)
-            end
-        }
+        is S.Term.Hole -> diagnose(Diagnostic.TermExpected(S.Term.Union(emptyList(), freshId()), term.id))
         is S.Term.Meta -> fresh()
         is S.Term.Variable -> when (val level = indexOfLast { it.name == term.name }) {
-            -1 -> {
-                diagnostics += Diagnostic.VariableNotFound(term.name, term.id)
-                end
-            }
+            -1 -> diagnose(Diagnostic.VariableNotFound(term.name, term.id))
             else -> this[level].type
         }
         is S.Term.Definition -> when (val item = items[term.name]) {
-            null -> {
-                diagnostics += Diagnostic.DefinitionNotFound(term.name, term.id)
-                end
-            }
+            null -> diagnose(Diagnostic.DefinitionNotFound(term.name, term.id))
             is C.Item.Definition -> item.type
         }
         is S.Term.Let -> (this + Subtyping(term.name, end, any, inferTerm(term.init))).inferTerm(term.body)
@@ -98,33 +89,25 @@ class Elaborate private constructor(
                         checkTerm(argument, environment.evaluate(parameter.type))
                         val argument1 = environment.evaluate(argument)
                         environment.evaluate(parameter.lower).let { lower ->
-                            if (!size.subtype(lower, argument1)) {
-                                diagnostics += Diagnostic.TypeMismatch(quote(argument1), quote(lower), argument.id)
-                            }
+                            if (!size.subtype(lower, argument1)) diagnose(Diagnostic.TypeMismatch(quote(argument1), quote(lower), argument.id))
                         }
                         environment.evaluate(parameter.upper).let { upper ->
-                            if (!size.subtype(argument1, upper)) {
-                                diagnostics += Diagnostic.TypeMismatch(quote(upper), quote(argument1), argument.id)
-                            }
+                            if (!size.subtype(argument1, upper)) diagnose(Diagnostic.TypeMismatch(quote(upper), quote(argument1), argument.id))
                         }
                         environment += lazyOf(argument1)
                     }
                     environment.evaluate(function.resultant)
                 }
                 else -> {
-                    diagnostics += Diagnostic.FunctionExpected(term.function.id)
                     term.arguments.forEach { checkTerm(it, any) }
-                    end
+                    diagnose(Diagnostic.FunctionExpected(term.function.id))
                 }
             }
         }
         is S.Term.CodeOf -> C.Value.Code(lazyOf(inferTerm(term.element)))
         is S.Term.Splice -> when (val element = force(inferTerm(term.element))) {
             is C.Value.Code -> element.element.value
-            else -> {
-                diagnostics += Diagnostic.CodeExpected(term.id)
-                end
-            }
+            else -> diagnose(Diagnostic.CodeExpected(term.id))
         }
         is S.Term.Union -> {
             term.variants.forEach { checkTerm(it, C.Value.Type) }
@@ -184,7 +167,7 @@ class Elaborate private constructor(
         val forced = force(type)
         types[term.id] = lazy { quote(forced) }
         when {
-            term is S.Term.Hole -> diagnostics += Diagnostic.TermExpected(quote(forced), term.id)
+            term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(forced), term.id))
             term is S.Term.Let -> (this + Subtyping(term.name, end, any, inferTerm(term.init))).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List -> term.elements.forEach { checkTerm(it, forced.element.value) }
             term is S.Term.CompoundOf && forced is C.Value.Compound -> withEnvironment { environment ->
@@ -208,8 +191,8 @@ class Elaborate private constructor(
             else -> {
                 val inferred = inferTerm(term)
                 if (!size.subtype(inferred, forced)) {
-                    diagnostics += Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id)
                     types[term.id] = lazyOf(S.Term.Union(emptyList(), freshId()))
+                    diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id))
                 }
             }
         }
@@ -468,6 +451,11 @@ class Elaborate private constructor(
     private inline fun <R> withContext(block: (MutableList<Lazy<C.Value>>, MutableList<Subtyping>) -> R): R = block(mutableListOf(), mutableListOf())
 
     private inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = block(mutableListOf())
+
+    private fun diagnose(diagnostic: Diagnostic): C.Value {
+        diagnostics += diagnostic
+        return end
+    }
 
     companion object {
         operator fun invoke(items: Map<String, C.Item>, item: S.Item): Output = Elaborate(items).run {
