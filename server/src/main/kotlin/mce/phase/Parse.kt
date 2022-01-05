@@ -25,14 +25,13 @@ class Parse private constructor(source: String) {
 
             while (lines.hasNext()) {
                 val next = lines.next()
-                if (next.isEmpty()) {
-                    break
-                }
+                if (next.isEmpty()) break
                 stack.add(readNode(next))
             }
 
             while (stack.isNotEmpty() && depth + 1 == stack.last().depth) {
                 val node = stack.removeLast()
+                if (id != node.parent) error()
                 children[node.label] = node
             }
 
@@ -44,7 +43,7 @@ class Parse private constructor(source: String) {
 
     private fun Node.parseItem(): Item = when (type) {
         "item:definition" -> Item.Definition(label, this["imports"].parseList { parseString() }, this["type"].parseTerm(), this["body"].parseTerm())
-        else -> throw Exception("malformed source")
+        else -> error()
     }
 
     private fun Node.parseTerm(): Term = when (type) {
@@ -88,7 +87,7 @@ class Parse private constructor(source: String) {
         "term:function" -> Term.Function(this["parameters"].parseList { parseSubtyping() }, this["resultant"].parseTerm(), id)
         "term:code" -> Term.Code(this["element"].parseTerm(), id)
         "term:type" -> Term.Type(id)
-        else -> throw Exception("malformed source")
+        else -> error()
     }
 
     private fun Node.parseSubtyping(): Subtyping = Subtyping(this["name"].parseString(), this["lower"].parseTerm(), this["upper"].parseTerm(), this["type"].parseTerm())
@@ -110,6 +109,8 @@ class Parse private constructor(source: String) {
     private fun Node.parseDouble(): Double = value!!.toDouble()
 
     private fun Node.parseString(): String = value!!
+
+    private fun error(): Nothing = throw Exception("malformed source")
 
     private data class Node(
         val depth: Int,
