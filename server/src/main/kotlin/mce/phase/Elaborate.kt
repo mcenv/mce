@@ -40,7 +40,7 @@ class Elaborate private constructor(
     }
 
     private fun Context.inferTerm(term: S.Term): C.Value = when (term) {
-        is S.Term.Hole -> diagnose(Diagnostic.TermExpected(S.Term.Union(emptyList(), freshId()), term.id))
+        is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(end), term.id))
         is S.Term.Meta -> fresh()
         is S.Term.Variable -> when (val level = indexOfLast { it.name == term.name }) {
             -1 -> diagnose(Diagnostic.VariableNotFound(term.name, term.id))
@@ -80,7 +80,7 @@ class Elaborate private constructor(
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
             val body = (term.parameters zip types).map { Subtyping(it.first, end, any, it.second) }.inferTerm(term.body)
-            C.Value.Function((term.parameters zip types).map { S.Subtyping(it.first, S.Term.Union(emptyList(), freshId()), S.Term.Intersection(emptyList(), freshId()), quote(it.second)) }, quote(body))
+            C.Value.Function((term.parameters zip types).map { S.Subtyping(it.first, quote(end), quote(any), quote(it.second)) }, quote(body))
         }
         is S.Term.Apply -> {
             when (val function = force(inferTerm(term.function))) {
@@ -185,13 +185,13 @@ class Elaborate private constructor(
             }
             term is S.Term.CodeOf && forced is C.Value.Code -> checkTerm(term.element, forced.element.value)
             // generalized bottom type
-            term is S.Term.Union && term.variants.isEmpty() -> S.Term.Union(emptyList(), freshId())
+            term is S.Term.Union && term.variants.isEmpty() -> {}
             // generalized top type
-            term is S.Term.Intersection && term.variants.isEmpty() -> S.Term.Intersection(emptyList(), freshId())
+            term is S.Term.Intersection && term.variants.isEmpty() -> {}
             else -> {
                 val inferred = inferTerm(term)
                 if (!size.subtype(inferred, forced)) {
-                    types[term.id] = lazyOf(S.Term.Union(emptyList(), freshId()))
+                    types[term.id] = lazyOf(quote(end))
                     diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id))
                 }
             }
