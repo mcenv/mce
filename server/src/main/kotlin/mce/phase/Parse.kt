@@ -10,7 +10,7 @@ class Parse private constructor(source: String) {
 
     init {
         val pattern = Regex("([ ]*)([a-z_:]+) ([a-z_:]+) ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}) ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?: (.*))?")
-        val lines = source.lineSequence().iterator()
+        val lines = source.lines().dropLast(1).iterator()
         val stack = mutableListOf<Node>()
 
         fun readNode(line: String): Node {
@@ -21,21 +21,20 @@ class Parse private constructor(source: String) {
             val id = UUID.fromString(values[4])
             val parent = UUID.fromString(values[5])
             val value = values.getOrNull(6)
-            val children = linkedMapOf<String, Node>()
 
-            while (lines.hasNext()) {
-                val next = lines.next()
-                if (next.isEmpty()) break
-                stack.add(readNode(next))
+            lines.forEach {
+                stack.add(readNode(it))
             }
 
-            while (stack.isNotEmpty() && depth + 1 == stack.last().depth) {
-                val node = stack.removeLast()
-                if (id != node.parent) error()
-                children[node.label] = node
-            }
+            linkedMapOf<String, Node>().let { children ->
+                while (stack.isNotEmpty() && depth + 1 == stack.last().depth) {
+                    val node = stack.removeLast()
+                    if (id != node.parent) error()
+                    children[node.label] = node
+                }
 
-            return Node(depth, label, type, id, parent, value, children)
+                return Node(depth, label, type, id, parent, value, children)
+            }
         }
 
         node = readNode(lines.next())
