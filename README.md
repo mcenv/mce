@@ -6,9 +6,11 @@ A programming environment for Minecraft[^1].
 
 ## Goals
 
-1. Logically consistent
-2. Predictable output
-3. As static as possible
+1. Logical consistency
+2. Output predictability
+3. Static expressiveness
+4. High performance
+5. Low footprint
 
 ## Features
 
