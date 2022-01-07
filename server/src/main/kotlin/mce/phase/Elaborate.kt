@@ -6,23 +6,15 @@ import mce.graph.freshId
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
-private data class Subtyping(val name: String, val lower: C.Value, val upper: C.Value, val type: C.Value)
-
-private typealias Context = List<Subtyping>
-
 private typealias Environment = List<Lazy<C.Value>>
 
 private typealias Level = Int
 
+private typealias Stage = Int
+
 class Elaborate private constructor(
     private val items: Map<String, C.Item>
 ) {
-    data class Output(
-        val item: C.Item,
-        val diagnostics: List<Diagnostic>,
-        val types: Map<Id, Lazy<S.Term>>
-    )
-
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val types: MutableMap<Id, Lazy<S.Term>> = mutableMapOf()
     private val metas: MutableList<C.Value?> = mutableListOf()
@@ -32,9 +24,9 @@ class Elaborate private constructor(
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
-            emptyList<Subtyping>().checkTerm(item.type, C.Value.Type)
-            val type = emptyList<Lazy<C.Value>>().evaluate(item.type)
-            emptyList<Subtyping>().checkTerm(item.body, type)
+            emptyContext().checkTerm(item.type, C.Value.Type)
+            val type = emptyEnvironment().evaluate(item.type)
+            emptyContext().checkTerm(item.body, type)
             C.Item.Definition(item.name, item.imports, item.body, type)
         }
     }
@@ -42,15 +34,18 @@ class Elaborate private constructor(
     private fun Context.inferTerm(term: S.Term): C.Value = when (term) {
         is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(end), term.id))
         is S.Term.Meta -> fresh()
-        is S.Term.Variable -> when (val level = indexOfLast { it.name == term.name }) {
+        is S.Term.Variable -> when (val level = entries.indexOfLast { it.name == term.name }) {
             -1 -> diagnose(Diagnostic.VariableNotFound(term.name, term.id))
-            else -> this[level].type
+            else -> {
+                val entry = entries[level]
+                if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
+            }
         }
         is S.Term.Definition -> when (val item = items[term.name]) {
             null -> diagnose(Diagnostic.DefinitionNotFound(term.name, term.id))
             is C.Item.Definition -> item.type
         }
-        is S.Term.Let -> (this + Subtyping(term.name, end, any, inferTerm(term.init))).inferTerm(term.body)
+        is S.Term.Let -> bind(Entry(term.name, end, any, inferTerm(term.init), stage)).inferTerm(term.body)
         is S.Term.BooleanOf -> C.Value.Boolean
         is S.Term.ByteOf -> C.Value.Byte
         is S.Term.ShortOf -> C.Value.Short
@@ -79,7 +74,7 @@ class Elaborate private constructor(
         is S.Term.CompoundOf -> C.Value.Compound(term.elements.map { "" to quote(inferTerm(it)) })
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
-            val body = (term.parameters zip types).map { Subtyping(it.first, end, any, it.second) }.inferTerm(term.body)
+            val body = Context((term.parameters zip types).map { Entry(it.first, end, any, it.second, stage) }.toMutableList(), stage).inferTerm(term.body)
             C.Value.Function((term.parameters zip types).map { S.Subtyping(it.first, quote(end), quote(any), quote(it.second)) }, quote(body))
         }
         is S.Term.Apply -> {
@@ -89,10 +84,10 @@ class Elaborate private constructor(
                         checkTerm(argument, environment.evaluate(parameter.type))
                         val argument1 = environment.evaluate(argument)
                         environment.evaluate(parameter.lower).let { lower ->
-                            if (!size.subtype(lower, argument1)) diagnose(Diagnostic.TypeMismatch(quote(argument1), quote(lower), argument.id))
+                            if (!entries.size.subtype(lower, argument1)) diagnose(Diagnostic.TypeMismatch(quote(argument1), quote(lower), argument.id))
                         }
                         environment.evaluate(parameter.upper).let { upper ->
-                            if (!size.subtype(argument1, upper)) diagnose(Diagnostic.TypeMismatch(quote(upper), quote(argument1), argument.id))
+                            if (!entries.size.subtype(argument1, upper)) diagnose(Diagnostic.TypeMismatch(quote(upper), quote(argument1), argument.id))
                         }
                         environment += lazyOf(argument1)
                     }
@@ -104,8 +99,8 @@ class Elaborate private constructor(
                 }
             }
         }
-        is S.Term.CodeOf -> C.Value.Code(lazyOf(inferTerm(term.element)))
-        is S.Term.Splice -> when (val element = force(inferTerm(term.element))) {
+        is S.Term.CodeOf -> C.Value.Code(lazyOf(up().inferTerm(term.element)))
+        is S.Term.Splice -> when (val element = force(down().inferTerm(term.element))) {
             is C.Value.Code -> element.element.value
             else -> diagnose(Diagnostic.CodeExpected(term.id))
         }
@@ -136,7 +131,7 @@ class Elaborate private constructor(
             withContext { environment, context ->
                 term.elements.forEach { (name, element) ->
                     name to context.checkTerm(element, C.Value.Type)
-                    context += Subtyping(name, end, any, environment.evaluate(element))
+                    context.bind(Entry(name, end, any, environment.evaluate(element), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
             }
@@ -149,7 +144,7 @@ class Elaborate private constructor(
                     val parameter1 = environment.evaluate(parameter)
                     context.checkTerm(lower, parameter1)
                     context.checkTerm(upper, parameter1)
-                    context += Subtyping(name, environment.evaluate(lower), environment.evaluate(upper), parameter1)
+                    context.bind(Entry(name, environment.evaluate(lower), environment.evaluate(upper), parameter1, stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
                 context.checkTerm(term.resultant, C.Value.Type)
@@ -168,7 +163,7 @@ class Elaborate private constructor(
         types[term.id] = lazy { quote(forced) }
         when {
             term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(forced), term.id))
-            term is S.Term.Let -> (this + Subtyping(term.name, end, any, inferTerm(term.init))).checkTerm(term.body, type)
+            term is S.Term.Let -> bind(Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List -> term.elements.forEach { checkTerm(it, forced.element.value) }
             term is S.Term.CompoundOf && forced is C.Value.Compound -> withEnvironment { environment ->
                 (term.elements zip forced.elements).forEach {
@@ -178,20 +173,20 @@ class Elaborate private constructor(
             }
             term is S.Term.FunctionOf && forced is C.Value.Function -> withContext { environment, context ->
                 (term.parameters zip forced.parameters).forEach { (name, parameter) ->
-                    context += Subtyping(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type))
+                    context.bind(Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
                 context.checkTerm(term.body, environment.evaluate(forced.resultant))
             }
-            term is S.Term.CodeOf && forced is C.Value.Code -> checkTerm(term.element, forced.element.value)
+            term is S.Term.CodeOf && forced is C.Value.Code -> up().checkTerm(term.element, forced.element.value)
             // generalized bottom type
             term is S.Term.Union && term.variants.isEmpty() -> {}
             // generalized top type
             term is S.Term.Intersection && term.variants.isEmpty() -> {}
             else -> {
                 val inferred = inferTerm(term)
-                if (!size.subtype(inferred, forced)) {
-                    types[term.id] = lazyOf(quote(end))
+                if (!entries.size.subtype(inferred, forced)) {
+                    types[term.id] = lazy { quote(end) }
                     diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id))
                 }
             }
@@ -448,13 +443,42 @@ class Elaborate private constructor(
 
     private fun fresh(): C.Value = C.Value.Meta(metas.size).also { metas += null }
 
-    private inline fun <R> withContext(block: (MutableList<Lazy<C.Value>>, MutableList<Subtyping>) -> R): R = block(mutableListOf(), mutableListOf())
+    private fun emptyContext(): Context = Context(mutableListOf(), 0)
+
+    private fun emptyEnvironment(): Environment = mutableListOf()
+
+    private inline fun <R> withContext(block: (MutableList<Lazy<C.Value>>, Context) -> R): R = block(mutableListOf(), emptyContext())
 
     private inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = block(mutableListOf())
 
     private fun diagnose(diagnostic: Diagnostic): C.Value {
         diagnostics += diagnostic
         return end
+    }
+
+    data class Output(
+        val item: C.Item,
+        val diagnostics: List<Diagnostic>,
+        val types: Map<Id, Lazy<S.Term>>
+    )
+
+    private data class Entry(
+        val name: String,
+        val lower: C.Value,
+        val upper: C.Value,
+        val type: C.Value,
+        val stage: Stage
+    )
+
+    private class Context(
+        val entries: MutableList<Entry>,
+        var stage: Stage
+    ) {
+        fun bind(entry: Entry): Context = apply { entries += entry }
+
+        fun up(): Context = apply { ++stage }
+
+        fun down(): Context = apply { --stage }
     }
 
     companion object {

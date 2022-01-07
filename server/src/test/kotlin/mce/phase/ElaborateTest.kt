@@ -183,4 +183,19 @@ class ElaborateTest {
 
         assert(diagnostics.isEmpty())
     }
+
+    @Test
+    fun testStageMismatch() {
+        val b = variable("b", 0)
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                code(boolean()),
+                let_in("b", ff(), code_of(b))
+            )
+        )
+
+        assert(diagnostics.contains(Diagnostic.StageMismatch(1, 0, b.id)))
+    }
 }

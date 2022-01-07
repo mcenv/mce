@@ -19,7 +19,7 @@ A programming environment for Minecraft[^1].
 - [x] Structural types
 - [ ] Ordered types
 - [x] Subtyping
-- [ ] Staging
+- [x] Staging
 - [ ] Algebraic effects
 - [ ] Cost analysis
 
