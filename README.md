@@ -14,12 +14,16 @@ A programming environment for Minecraft[^1].
 
 ## Features
 
-- [ ] Structural editing
-- [x] Dependent types
-- [x] Structural types
-- [ ] Ordered types
-- [x] Subtyping
-- [x] Staging
+- [ ] Projectional editor
+  - [x] Textual encoding
+- [ ] Static types
+  - [x] Dependent types
+  - [x] Structural types
+  - [ ] Ordered types
+  - [x] Subtyping
+- [ ] Metaprogramming
+  - [ ] Two-level types
+  - [x] Staging
 - [ ] Algebraic effects
 - [ ] Cost analysis
 
