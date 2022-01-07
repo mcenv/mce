@@ -18,6 +18,8 @@ import mce.graph.Dsl.not
 import mce.graph.Dsl.subtyping
 import mce.graph.Dsl.type
 import mce.graph.Dsl.variable
+import mce.read
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -27,30 +29,16 @@ import mce.graph.Surface as S
 class ElaborateTest {
     @Test
     fun testFalse() {
-        val boolean = boolean()
-        val ff = ff()
-        val (elaborated, diagnostics, types) = Elaborate(
-            emptyMap(),
-            definition("a", boolean, ff)
-        )
-
+        val (elaborated, diagnostics, types) = Elaborate(emptyMap(), Parse(read("/false.mce")))
         assert(diagnostics.isEmpty())
-        assertIs<S.Term.Type>(types[boolean.id]!!.value)
-        assertIs<S.Term.Boolean>(types[ff.id]!!.value)
-        assertEquals(C.Item.Definition("a", emptyList(), ff, C.Value.Boolean), elaborated)
+        assertIs<S.Term.Type>(types[UUID(0, 3)]!!.value)
+        assertIs<S.Term.Boolean>(types[UUID(0, 4)]!!.value)
+        assertEquals(C.Item.Definition("false", emptyList(), S.Term.BooleanOf(false, UUID(0, 4)), C.Value.Boolean), elaborated)
     }
 
     @Test
     fun testApply() {
-        val (_, diagnostics, _) = Elaborate(
-            emptyMap(),
-            definition(
-                "a",
-                boolean(),
-                function_of(variable("x", 0), "x")(ff())
-            )
-        )
-
+        val (_, diagnostics, _) = Elaborate(emptyMap(), Parse(read("/apply.mce")))
         assert(diagnostics.isEmpty())
     }
 

@@ -9,7 +9,7 @@ class Parse private constructor(source: String) {
     private val node: Node
 
     init {
-        val pattern = Regex("([ ]*)([a-z_]+) ([a-z_]+) ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}) ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?: (.*))?")
+        val pattern = Regex("([ ]*)([^ ]+) ([^ ]+) ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}) ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?: (.*))?")
         val lines = source.lines().dropLast(1).iterator()
         val stack = mutableListOf<Node>()
 
