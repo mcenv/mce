@@ -75,7 +75,7 @@ class Elaborate private constructor(
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
             val body = Context((term.parameters zip types).map { Entry(it.first, end, any, it.second, stage) }.toMutableList(), stage).inferTerm(term.body)
-            C.Value.Function((term.parameters zip types).map { S.Subtyping(it.first, quote(end), quote(any), quote(it.second)) }, quote(body))
+            C.Value.Function((term.parameters zip types).map { S.Parameter(it.first, quote(end), quote(any), quote(it.second)) }, quote(body))
         }
         is S.Term.Apply -> {
             when (val function = force(inferTerm(term.function))) {

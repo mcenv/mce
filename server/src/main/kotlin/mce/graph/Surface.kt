@@ -65,10 +65,10 @@ object Surface {
         data class LongArray(override val id: Id) : Term()
         data class List(val element: Term, override val id: Id) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
-        data class Function(val parameters: KList<Subtyping>, val resultant: Term, override val id: Id) : Term()
+        data class Function(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
         data class Type(override val id: Id) : Term()
     }
 
-    data class Subtyping(val name: KString, val lower: Term, val upper: Term, val type: Term)
+    data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
 }

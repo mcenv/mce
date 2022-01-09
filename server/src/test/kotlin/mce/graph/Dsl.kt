@@ -1,7 +1,7 @@
 package mce.graph
 
 import mce.graph.Surface.Item
-import mce.graph.Surface.Subtyping
+import mce.graph.Surface.Parameter
 import mce.graph.Surface.Term
 
 object Dsl {
@@ -45,12 +45,12 @@ object Dsl {
     fun long_array() = Term.LongArray(freshId())
     fun list(element: Term) = Term.List(element, freshId())
     fun compound(vararg elements: Pair<String, Term>) = Term.Compound(elements.toList(), freshId())
-    fun function(resultant: Term, vararg parameters: Subtyping) = Term.Function(parameters.toList(), resultant, freshId())
+    fun function(resultant: Term, vararg parameters: Parameter) = Term.Function(parameters.toList(), resultant, freshId())
     fun code(element: Term) = Term.Code(element, freshId())
     fun type() = Term.Type(freshId())
 
     fun end() = union()
     fun any() = intersection()
 
-    fun subtyping(name: String, lower: Term, upper: Term, type: Term): Subtyping = Subtyping(name, lower, upper, type)
+    fun parameter(name: String, lower: Term, upper: Term, type: Term): Parameter = Parameter(name, lower, upper, type)
 }

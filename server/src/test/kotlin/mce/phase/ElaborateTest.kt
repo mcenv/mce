@@ -15,7 +15,7 @@ import mce.graph.Dsl.function_of
 import mce.graph.Dsl.invoke
 import mce.graph.Dsl.let_in
 import mce.graph.Dsl.not
-import mce.graph.Dsl.subtyping
+import mce.graph.Dsl.parameter
 import mce.graph.Dsl.type
 import mce.graph.Dsl.variable
 import mce.read
@@ -48,7 +48,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                function(variable("x", 0), subtyping("x", end(), any(), type()), subtyping("y", end(), any(), variable("x", 0))),
+                function(variable("x", 0), parameter("x", end(), any(), type()), parameter("y", end(), any(), variable("x", 0))),
                 function_of(variable("y", 1), "x", "y")
             )
         )
@@ -62,7 +62,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "identity",
-                function(variable("α", 0), subtyping("α", end(), any(), type()), subtyping("a", end(), any(), variable("α", 0))),
+                function(variable("α", 0), parameter("α", end(), any(), type()), parameter("a", end(), any(), variable("α", 0))),
                 function_of(variable("a", 1), "α", "a")
             )
         )

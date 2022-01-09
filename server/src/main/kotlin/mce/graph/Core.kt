@@ -61,7 +61,7 @@ object Core {
         object LongArray : Value()
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Pair<KString, S.Term>>) : Value()
-        data class Function(val parameters: KList<S.Subtyping>, val resultant: S.Term) : Value()
+        data class Function(val parameters: KList<S.Parameter>, val resultant: S.Term) : Value()
         data class Code(val element: Lazy<Value>) : Value()
         object Type : Value()
     }

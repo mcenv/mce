@@ -1,7 +1,7 @@
 package mce.phase
 
 import mce.graph.Surface.Item
-import mce.graph.Surface.Subtyping
+import mce.graph.Surface.Parameter
 import mce.graph.Surface.Term
 import java.util.*
 
@@ -89,7 +89,7 @@ class Parse private constructor(source: String) {
         else -> error()
     }
 
-    private fun Node.parseSubtyping(): Subtyping = Subtyping(this["name"].parseString(), this["lower"].parseTerm(), this["upper"].parseTerm(), this["type"].parseTerm())
+    private fun Node.parseSubtyping(): Parameter = Parameter(this["name"].parseString(), this["lower"].parseTerm(), this["upper"].parseTerm(), this["type"].parseTerm())
 
     private fun <E> Node.parseList(parse: Node.() -> E): List<E> = children.values.map(parse)
 
