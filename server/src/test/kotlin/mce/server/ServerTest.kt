@@ -15,7 +15,7 @@ class ServerTest {
         runBlocking {
             val server = Server()
             val ff = ff()
-            server.register(definition("a", boolean(), ff))
+            server.register(definition("a", false, boolean(), ff))
             assertIs<Surface.Term.Boolean>(server.hover("a", ff.id).type)
         }
     }
@@ -25,7 +25,7 @@ class ServerTest {
         runBlocking {
             val server = Server()
             val ff = ff()
-            server.register(definition("a", boolean(), ff))
+            server.register(definition("a", false, boolean(), ff))
             server.hover("a", ff.id)
             assertEquals(1, server.getCount("a"))
             server.hover("a", ff.id)

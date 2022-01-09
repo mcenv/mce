@@ -24,9 +24,9 @@ class Elaborate private constructor(
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
-            emptyContext().checkTerm(item.type, C.Value.Type)
+            emptyContext(item.meta).checkTerm(item.type, C.Value.Type)
             val type = emptyEnvironment().evaluate(item.type)
-            emptyContext().checkTerm(item.body, type)
+            emptyContext(item.meta).checkTerm(item.body, type)
             C.Item.Definition(item.name, item.imports, item.body, type)
         }
     }
@@ -74,7 +74,7 @@ class Elaborate private constructor(
         is S.Term.CompoundOf -> C.Value.Compound(term.elements.map { "" to quote(inferTerm(it)) })
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
-            val body = Context((term.parameters zip types).map { Entry(it.first, end, any, it.second, stage) }.toMutableList(), stage).inferTerm(term.body)
+            val body = Context((term.parameters zip types).map { Entry(it.first, end, any, it.second, stage) }.toMutableList(), meta, stage).inferTerm(term.body)
             C.Value.Function((term.parameters zip types).map { S.Parameter(it.first, quote(end), quote(any), quote(it.second)) }, quote(body))
         }
         is S.Term.Apply -> {
@@ -128,7 +128,7 @@ class Elaborate private constructor(
             C.Value.Type
         }
         is S.Term.Compound -> {
-            withContext { environment, context ->
+            withContext(meta) { environment, context ->
                 term.elements.forEach { (name, element) ->
                     name to context.checkTerm(element, C.Value.Type)
                     context.bind(Entry(name, end, any, environment.evaluate(element), stage))
@@ -138,7 +138,7 @@ class Elaborate private constructor(
             C.Value.Type
         }
         is S.Term.Function -> {
-            withContext { environment, context ->
+            withContext(meta) { environment, context ->
                 term.parameters.forEach { (name, lower, upper, parameter) ->
                     context.checkTerm(parameter, C.Value.Type)
                     val parameter1 = environment.evaluate(parameter)
@@ -171,7 +171,7 @@ class Elaborate private constructor(
                     environment += lazy { environment.evaluate(it.first) }
                 }
             }
-            term is S.Term.FunctionOf && forced is C.Value.Function -> withContext { environment, context ->
+            term is S.Term.FunctionOf && forced is C.Value.Function -> withContext(meta) { environment, context ->
                 (term.parameters zip forced.parameters).forEach { (name, parameter) ->
                     context.bind(Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
@@ -443,11 +443,11 @@ class Elaborate private constructor(
 
     private fun fresh(): C.Value = C.Value.Meta(metas.size).also { metas += null }
 
-    private fun emptyContext(): Context = Context(mutableListOf(), 0)
+    private fun emptyContext(meta: Boolean): Context = Context(mutableListOf(), meta, 0)
 
     private fun emptyEnvironment(): Environment = mutableListOf()
 
-    private inline fun <R> withContext(block: (MutableList<Lazy<C.Value>>, Context) -> R): R = block(mutableListOf(), emptyContext())
+    private inline fun <R> withContext(meta: Boolean, block: (MutableList<Lazy<C.Value>>, Context) -> R): R = block(mutableListOf(), emptyContext(meta))
 
     private inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = block(mutableListOf())
 
@@ -472,6 +472,7 @@ class Elaborate private constructor(
 
     private class Context(
         val entries: MutableList<Entry>,
+        val meta: Boolean,
         var stage: Stage
     ) {
         fun bind(entry: Entry): Context = apply { entries += entry }

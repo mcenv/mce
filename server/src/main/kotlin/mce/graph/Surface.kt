@@ -20,6 +20,7 @@ object Surface {
             override val id: Id,
             override val name: KString,
             override val imports: KList<KString>,
+            val meta: KBoolean,
             val type: Term,
             val body: Term,
         ) : Item()

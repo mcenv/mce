@@ -31,9 +31,9 @@ class ElaborateTest {
     fun testFalse() {
         val (elaborated, diagnostics, types) = Elaborate(emptyMap(), Parse(read("/false.mce")))
         assert(diagnostics.isEmpty())
-        assertIs<S.Term.Type>(types[UUID(0, 3)]!!.value)
-        assertIs<S.Term.Boolean>(types[UUID(0, 4)]!!.value)
-        assertEquals(C.Item.Definition("false", emptyList(), S.Term.BooleanOf(false, UUID(0, 4)), C.Value.Boolean), elaborated)
+        assertIs<S.Term.Type>(types[UUID(0, 4)]!!.value)
+        assertIs<S.Term.Boolean>(types[UUID(0, 5)]!!.value)
+        assertEquals(C.Item.Definition("false", emptyList(), S.Term.BooleanOf(false, UUID(0, 5)), C.Value.Boolean), elaborated)
     }
 
     @Test
@@ -48,6 +48,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 function(variable("x", 0), parameter("x", end(), any(), type()), parameter("y", end(), any(), variable("x", 0))),
                 function_of(variable("y", 1), "x", "y")
             )
@@ -62,6 +63,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "identity",
+                false,
                 function(variable("α", 0), parameter("α", end(), any(), type()), parameter("a", end(), any(), variable("α", 0))),
                 function_of(variable("a", 1), "α", "a")
             )
@@ -70,6 +72,7 @@ class ElaborateTest {
             mapOf(identity.name to identity),
             definition(
                 "f",
+                false,
                 boolean(),
                 definition("identity")(boolean(), ff())
             )
@@ -85,6 +88,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 boolean(),
                 let_in("x", ff(), variable("x", 0))
             )
@@ -99,6 +103,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 boolean(),
                 ff()
             )
@@ -107,6 +112,7 @@ class ElaborateTest {
             mapOf(a.name to a),
             definition(
                 "b",
+                false,
                 boolean(),
                 definition("a")
             )
@@ -122,6 +128,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "b",
+                false,
                 boolean(),
                 a
             )
@@ -136,6 +143,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 compound("α" to type(), "a" to variable("α", 0)),
                 compound_of(boolean(), ff())
             )
@@ -150,6 +158,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 code(boolean()),
                 code_of(ff())
             )
@@ -164,6 +173,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 boolean(),
                 !code_of(ff())
             )
@@ -179,6 +189,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
+                false,
                 code(boolean()),
                 let_in("b", ff(), code_of(b))
             )

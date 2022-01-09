@@ -15,8 +15,9 @@ class ParseTest {
                 UUID(0, 1),
                 "false",
                 emptyList(),
-                Term.Boolean(UUID(0, 3)),
-                Term.BooleanOf(false, UUID(0, 4))
+                false,
+                Term.Boolean(UUID(0, 4)),
+                Term.BooleanOf(false, UUID(0, 5))
             ),
             Parse(read("/false.mce"))
         )
