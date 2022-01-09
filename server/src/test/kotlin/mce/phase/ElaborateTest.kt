@@ -18,8 +18,6 @@ import mce.graph.Dsl.not
 import mce.graph.Dsl.parameter
 import mce.graph.Dsl.type
 import mce.graph.Dsl.variable
-import mce.read
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -29,19 +27,33 @@ import mce.graph.Surface as S
 class ElaborateTest {
     @Test
     fun testFalse() {
-        val (elaborated, diagnostics, types) = Elaborate(emptyMap(), Parse(read("/false.mce")))
+        val boolean = boolean()
+        val ff = ff()
+        val (elaborated, diagnostics, types) = Elaborate(
+            emptyMap(),
+            definition("a", false, boolean, ff)
+        )
+
         assert(diagnostics.isEmpty())
-        assertIs<S.Term.Type>(types[UUID(0, 4)]!!.value)
-        assertIs<S.Term.Boolean>(types[UUID(0, 5)]!!.value)
-        assertEquals(C.Item.Definition("false", emptyList(), S.Term.BooleanOf(false, UUID(0, 5)), C.Value.Boolean), elaborated)
+        assertIs<S.Term.Type>(types[boolean.id]!!.value)
+        assertIs<S.Term.Boolean>(types[ff.id]!!.value)
+        assertEquals(C.Item.Definition("a", emptyList(), ff, C.Value.Boolean), elaborated)
     }
 
     @Test
     fun testApply() {
-        val (_, diagnostics, _) = Elaborate(emptyMap(), Parse(read("/apply.mce")))
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                false,
+                boolean(),
+                function_of(variable("x", 0), "x")(ff())
+            )
+        )
+
         assert(diagnostics.isEmpty())
     }
-
     @Test
     fun testDependentFunctionIntroduction() {
         val (_, diagnostics, _) = Elaborate(

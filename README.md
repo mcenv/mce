@@ -15,7 +15,7 @@ A programming environment for Minecraft[^1].
 ## Features
 
 - [ ] Projectional editor
-  - [x] Textual encoding
+  - [ ] Binary representation
 - [ ] Static types
   - [x] Dependent types
   - [x] Structural types
