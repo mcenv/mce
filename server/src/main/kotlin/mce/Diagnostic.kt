@@ -12,5 +12,6 @@ sealed class Diagnostic {
     data class FunctionExpected(override val id: Id) : Diagnostic()
     data class CodeExpected(override val id: Id) : Diagnostic()
     data class TypeMismatch(val expected: Term, val actual: Term, override val id: Id) : Diagnostic()
+    data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
 }

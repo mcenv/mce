@@ -151,10 +151,10 @@ class Elaborate private constructor(
             }
             C.Value.Type
         }
-        is S.Term.Code -> {
+        is S.Term.Code -> if (meta) {
             checkTerm(term.element, C.Value.Type)
             C.Value.Type
-        }
+        } else diagnose(Diagnostic.PhaseMismatch(term.id))
         is S.Term.Type -> C.Value.Type
     }.also { types[term.id] = lazy { quote(it) } }
 

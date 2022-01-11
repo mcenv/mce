@@ -170,7 +170,7 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                false,
+                true,
                 code(boolean()),
                 code_of(ff())
             )
@@ -201,12 +201,28 @@ class ElaborateTest {
             emptyMap(),
             definition(
                 "a",
-                false,
+                true,
                 code(boolean()),
                 let_in("b", ff(), code_of(b))
             )
         )
 
         assert(diagnostics.contains(Diagnostic.StageMismatch(1, 0, b.id)))
+    }
+
+    @Test
+    fun testPhaseMismatch() {
+        val t = code(boolean())
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                false,
+                t,
+                code_of(ff())
+            )
+        )
+
+        assert(diagnostics.contains(Diagnostic.PhaseMismatch(t.id)))
     }
 }
