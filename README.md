@@ -22,7 +22,7 @@ A programming environment for Minecraft[^1].
   - [ ] Ordered types
   - [x] Subtyping
 - [ ] Metaprogramming
-  - [ ] Two-level types
+  - [ ] Two-phase types
   - [x] Staging
 - [ ] Algebraic effects
 - [ ] Cost analysis
