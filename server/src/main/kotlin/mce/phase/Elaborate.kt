@@ -27,6 +27,7 @@ class Elaborate private constructor(
             emptyContext(item.meta).checkTerm(item.type, C.Value.Type)
             val type = emptyEnvironment().evaluate(item.type)
             emptyContext(item.meta).checkTerm(item.body, type)
+            emptyContext(item.meta).checkPhase(item.id, type)
             C.Item.Definition(item.name, item.imports, item.body, type)
         }
     }
@@ -45,7 +46,7 @@ class Elaborate private constructor(
             null -> diagnose(Diagnostic.DefinitionNotFound(term.name, term.id))
             is C.Item.Definition -> item.type
         }
-        is S.Term.Let -> bind(Entry(term.name, end, any, inferTerm(term.init), stage)).inferTerm(term.body)
+        is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).inferTerm(term.body)
         is S.Term.BooleanOf -> C.Value.Boolean
         is S.Term.ByteOf -> C.Value.Byte
         is S.Term.ShortOf -> C.Value.Short
@@ -131,7 +132,7 @@ class Elaborate private constructor(
             withContext(meta) { environment, context ->
                 term.elements.forEach { (name, element) ->
                     name to context.checkTerm(element, C.Value.Type)
-                    context.bind(Entry(name, end, any, environment.evaluate(element), stage))
+                    context.bind(term.id, Entry(name, end, any, environment.evaluate(element), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
             }
@@ -144,17 +145,17 @@ class Elaborate private constructor(
                     val parameter1 = environment.evaluate(parameter)
                     context.checkTerm(lower, parameter1)
                     context.checkTerm(upper, parameter1)
-                    context.bind(Entry(name, environment.evaluate(lower), environment.evaluate(upper), parameter1, stage))
+                    context.bind(term.id, Entry(name, environment.evaluate(lower), environment.evaluate(upper), parameter1, stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
                 context.checkTerm(term.resultant, C.Value.Type)
             }
             C.Value.Type
         }
-        is S.Term.Code -> if (meta) {
+        is S.Term.Code -> {
             checkTerm(term.element, C.Value.Type)
             C.Value.Type
-        } else diagnose(Diagnostic.PhaseMismatch(term.id))
+        }
         is S.Term.Type -> C.Value.Type
     }.also { types[term.id] = lazy { quote(it) } }
 
@@ -163,7 +164,7 @@ class Elaborate private constructor(
         types[term.id] = lazy { quote(forced) }
         when {
             term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(forced), term.id))
-            term is S.Term.Let -> bind(Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, type)
+            term is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, type)
             term is S.Term.ListOf && forced is C.Value.List -> term.elements.forEach { checkTerm(it, forced.element.value) }
             term is S.Term.CompoundOf && forced is C.Value.Compound -> withEnvironment { environment ->
                 (term.elements zip forced.elements).forEach {
@@ -173,7 +174,7 @@ class Elaborate private constructor(
             }
             term is S.Term.FunctionOf && forced is C.Value.Function -> withContext(meta) { environment, context ->
                 (term.parameters zip forced.parameters).forEach { (name, parameter) ->
-                    context.bind(Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
+                    context.bind(term.id, Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
                 context.checkTerm(term.body, environment.evaluate(forced.resultant))
@@ -470,12 +471,19 @@ class Elaborate private constructor(
         val stage: Stage
     )
 
-    private class Context(
+    private inner class Context(
         val entries: MutableList<Entry>,
         val meta: Boolean,
         var stage: Stage
     ) {
-        fun bind(entry: Entry): Context = apply { entries += entry }
+        fun checkPhase(id: Id, type: C.Value) {
+            if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
+        }
+
+        fun bind(id: Id, entry: Entry): Context = apply {
+            checkPhase(id, entry.type)
+            entries += entry
+        }
 
         fun up(): Context = apply { ++stage }
 
