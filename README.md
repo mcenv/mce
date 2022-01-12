@@ -24,7 +24,7 @@ A programming environment for Minecraft[^1].
 - [x] Metaprogramming
   - [x] Two-phase types
   - [x] Staging
-- [ ] Ordered modalities
+- [ ] Stacked modalities
 - [ ] Algebraic effects
 - [ ] Cost analysis
 
