@@ -17,10 +17,11 @@ A programming environment for Minecraft[^1].
 - [ ] Projectional editing
   - [ ] Binary representation
   - [ ] Editor
-- [x] Static types
+- [x] Static typing
   - [x] Dependent types
-  - [x] Structural types
   - [x] Subtyping
+  - [x] Structural typing
+  - [ ] Occurrence typing
 - [x] Metaprogramming
   - [x] Two-phase types
   - [x] Staging
