@@ -35,6 +35,7 @@ A programming environment for Minecraft[^1].
 2. Mokhov, A., Mitchell, N., & PEYTON JONES, S. (2020). Build systems à la carte: Theory and practice. Journal of Functional Programming, 30.
 3. András Kovács. (2021). [Using Two-Level Type Theory for Staged Compilation](https://github.com/AndrasKovacs/staged/blob/main/types2021/abstract.pdf).
 4. Dunfield, J., & Krishnaswami, N.R. (2021). Bidirectional Typing. ACM Computing Surveys (CSUR), 54, 1 - 38.
-5. Daniel Marshall, Michael Vollmer, & Dominic Orchard. (2022). [Linearity and Uniqueness: An Entente Cordiale](https://starsandspira.ls/docs/esop22-draft.pdf).
+5. Castagna, G., Laurent, M., Nguyễn, K., & Lutze, M. (2022). On type-cases, union elimination, and occurrence typing. Proceedings of the ACM on Programming Languages, 6, 1 - 31.
+6. Daniel Marshall, Michael Vollmer, & Dominic Orchard. (2022). [Linearity and Uniqueness: An Entente Cordiale](https://starsandspira.ls/docs/esop22-draft.pdf).
 
 [^1]: NOT OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG.
