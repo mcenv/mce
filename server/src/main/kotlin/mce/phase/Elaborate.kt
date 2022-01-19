@@ -47,6 +47,10 @@ class Elaborate private constructor(
             is C.Item.Definition -> item.type
         }
         is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).inferTerm(term.body)
+        is S.Term.Match -> fresh().also { type ->
+            inferTerm(term.scrutinee)
+            term.clauses.forEach { checkTerm(it.second, type) } // TODO: check patterns
+        }
         is S.Term.BooleanOf -> C.Value.Boolean
         is S.Term.ByteOf -> C.Value.Byte
         is S.Term.ShortOf -> C.Value.Short
@@ -164,7 +168,11 @@ class Elaborate private constructor(
         types[term.id] = lazy { quote(forced) }
         when {
             term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(forced), term.id))
-            term is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, type)
+            term is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, forced)
+            term is S.Term.Match -> {
+                inferTerm(term.scrutinee)
+                term.clauses.forEach { checkTerm(it.second, forced) } // TODO: check patterns
+            }
             term is S.Term.ListOf && forced is C.Value.List -> term.elements.forEach { checkTerm(it, forced.element.value) }
             term is S.Term.CompoundOf && forced is C.Value.Compound -> withEnvironment { environment ->
                 (term.elements zip forced.elements).forEach {
@@ -200,6 +208,7 @@ class Elaborate private constructor(
         is S.Term.Variable -> this[term.level].value
         is S.Term.Definition -> C.Value.Definition(term.name)
         is S.Term.Let -> (this + lazyOf(evaluate(term.init))).evaluate(term.body)
+        is S.Term.Match -> C.Value.Match(evaluate(term.scrutinee), term.clauses.map { it.first to lazy { evaluate(it.second) /* TODO: collect variables */ } })
         is S.Term.BooleanOf -> C.Value.BooleanOf(term.value)
         is S.Term.ByteOf -> C.Value.ByteOf(term.value)
         is S.Term.ShortOf -> C.Value.ShortOf(term.value)
@@ -248,6 +257,7 @@ class Elaborate private constructor(
         is C.Value.Meta -> metas[forced.index]?.let { quote(it) } ?: S.Term.Meta(forced.index, freshId())
         is C.Value.Variable -> S.Term.Variable(forced.name, forced.level, freshId())
         is C.Value.Definition -> S.Term.Definition(forced.name, freshId())
+        is C.Value.Match -> S.Term.Match(quote(forced.scrutinee), forced.clauses.map { it.first to quote(it.second.value) }, freshId())
         is C.Value.BooleanOf -> S.Term.BooleanOf(forced.value, freshId())
         is C.Value.ByteOf -> S.Term.ByteOf(forced.value, freshId())
         is C.Value.ShortOf -> S.Term.ShortOf(forced.value, freshId())
@@ -315,6 +325,8 @@ class Elaborate private constructor(
             forced2 is C.Value.Meta -> unify(forced2, forced1)
             forced1 is C.Value.Variable && forced2 is C.Value.Variable -> forced1.level == forced2.level
             forced1 is C.Value.Definition && forced2 is C.Value.Definition -> forced1.name == forced2.name
+            forced1 is C.Value.Match && forced2 is C.Value.Match -> unify(forced1.scrutinee, forced2.scrutinee) &&
+                    (forced1.clauses zip forced2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
             forced1 is C.Value.BooleanOf && forced2 is C.Value.BooleanOf -> forced1.value == forced2.value
             forced1 is C.Value.ByteOf && forced2 is C.Value.ByteOf -> forced1.value == forced2.value
             forced1 is C.Value.ShortOf && forced2 is C.Value.ShortOf -> forced1.value == forced2.value

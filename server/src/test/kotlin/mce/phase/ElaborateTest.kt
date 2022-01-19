@@ -14,8 +14,12 @@ import mce.graph.Dsl.function
 import mce.graph.Dsl.function_of
 import mce.graph.Dsl.invoke
 import mce.graph.Dsl.let_in
+import mce.graph.Dsl.match
 import mce.graph.Dsl.not
+import mce.graph.Dsl.p_ff
+import mce.graph.Dsl.p_tt
 import mce.graph.Dsl.parameter
+import mce.graph.Dsl.tt
 import mce.graph.Dsl.type
 import mce.graph.Dsl.variable
 import kotlin.test.Test
@@ -240,5 +244,23 @@ class ElaborateTest {
         )
 
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(l.id)))
+    }
+
+    @Test
+    fun testMatchBoolean() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "not",
+                false,
+                boolean(),
+                ff().match(
+                    p_ff() to tt(),
+                    p_tt() to ff()
+                )
+            )
+        )
+
+        assert(diagnostics.isEmpty())
     }
 }

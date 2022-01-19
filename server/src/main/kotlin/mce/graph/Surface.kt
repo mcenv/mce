@@ -34,6 +34,7 @@ object Surface {
         data class Variable(val name: KString, val level: KInt, override val id: Id) : Term()
         data class Definition(val name: KString, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
+        data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
         data class BooleanOf(val value: KBoolean, override val id: Id) : Term()
         data class ByteOf(val value: KByte, override val id: Id) : Term()
         data class ShortOf(val value: KShort, override val id: Id) : Term()
@@ -72,4 +73,23 @@ object Surface {
     }
 
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
+
+    sealed class Pattern {
+        abstract val id: Id
+
+        data class Variable(val name: KString, override val id: Id) : Pattern()
+        data class BooleanOf(val value: KBoolean, override val id: Id) : Pattern()
+        data class ByteOf(val value: KByte, override val id: Id) : Pattern()
+        data class ShortOf(val value: KShort, override val id: Id) : Pattern()
+        data class IntOf(val value: KInt, override val id: Id) : Pattern()
+        data class LongOf(val value: KLong, override val id: Id) : Pattern()
+        data class FloatOf(val value: KFloat, override val id: Id) : Pattern()
+        data class DoubleOf(val value: KDouble, override val id: Id) : Pattern()
+        data class StringOf(val value: KString, override val id: Id) : Pattern()
+        data class ByteArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class IntArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+    }
 }

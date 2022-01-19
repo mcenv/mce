@@ -2,6 +2,7 @@ package mce.graph
 
 import mce.graph.Surface.Item
 import mce.graph.Surface.Parameter
+import mce.graph.Surface.Pattern
 import mce.graph.Surface.Term
 
 object Dsl {
@@ -12,6 +13,7 @@ object Dsl {
     fun variable(name: String, level: Int) = Term.Variable(name, level, freshId())
     fun definition(name: String) = Term.Definition(name, freshId())
     fun let_in(name: String, init: Term, body: Term) = Term.Let(name, init, body, freshId())
+    fun Term.match(vararg clauses: Pair<Pattern, Term>) = Term.Match(this, clauses.toList(), freshId())
     fun ff() = Term.BooleanOf(false, freshId())
     fun tt() = Term.BooleanOf(true, freshId())
     fun byte_of(value: Byte) = Term.ByteOf(value, freshId())
@@ -53,4 +55,19 @@ object Dsl {
     fun any() = intersection()
 
     fun parameter(name: String, lower: Term, upper: Term, type: Term): Parameter = Parameter(name, lower, upper, type)
+
+    fun p_ff() = Pattern.BooleanOf(false, freshId())
+    fun p_tt() = Pattern.BooleanOf(true, freshId())
+    fun p_byte_of(value: Byte) = Pattern.ByteOf(value, freshId())
+    fun p_short_of(value: Short) = Pattern.ShortOf(value, freshId())
+    fun p_int_of(value: Int) = Pattern.IntOf(value, freshId())
+    fun p_long_of(value: Long) = Pattern.LongOf(value, freshId())
+    fun p_float_of(value: Float) = Pattern.FloatOf(value, freshId())
+    fun p_double_of(value: Double) = Pattern.DoubleOf(value, freshId())
+    fun p_string_of(value: String) = Pattern.StringOf(value, freshId())
+    fun p_byte_array_of(vararg elements: Pattern) = Pattern.ByteArrayOf(elements.toList(), freshId())
+    fun p_int_array_of(vararg elements: Pattern) = Pattern.IntArrayOf(elements.toList(), freshId())
+    fun p_long_array_of(vararg elements: Pattern) = Pattern.LongArrayOf(elements.toList(), freshId())
+    fun p_list_of(vararg elements: Pattern) = Pattern.ListOf(elements.toList(), freshId())
+    fun p_compound_of(vararg elements: Pattern) = Pattern.CompoundOf(elements.toList(), freshId())
 }

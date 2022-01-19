@@ -29,6 +29,7 @@ object Core {
         data class Meta(val index: KInt) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
         data class Definition(val name: KString) : Value()
+        data class Match(val scrutinee: Value, val clauses: KList<Pair<S.Pattern, Lazy<Value>>>) : Value()
         data class BooleanOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()
         data class ShortOf(val value: KShort) : Value()
