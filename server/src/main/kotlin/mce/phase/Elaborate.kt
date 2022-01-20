@@ -48,8 +48,11 @@ class Elaborate private constructor(
         }
         is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).inferTerm(term.body)
         is S.Term.Match -> fresh().also { type ->
-            inferTerm(term.scrutinee)
-            term.clauses.forEach { checkTerm(it.second, type) } // TODO: check patterns
+            val scrutinee = inferTerm(term.scrutinee)
+            term.clauses.forEach {
+                checkPattern(it.first, scrutinee)
+                checkTerm(it.second, type)
+            }
         }
         is S.Term.BooleanOf -> C.Value.Boolean
         is S.Term.ByteOf -> C.Value.Byte
@@ -170,8 +173,11 @@ class Elaborate private constructor(
             term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(forced), term.id))
             term is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, forced)
             term is S.Term.Match -> {
-                inferTerm(term.scrutinee)
-                term.clauses.forEach { checkTerm(it.second, forced) } // TODO: check patterns
+                val scrutinee = inferTerm(term.scrutinee)
+                term.clauses.forEach {
+                    checkPattern(it.first, scrutinee)
+                    checkTerm(it.second, forced)
+                }
             }
             term is S.Term.ListOf && forced is C.Value.List -> term.elements.forEach { checkTerm(it, forced.element.value) }
             term is S.Term.CompoundOf && forced is C.Value.Compound -> withEnvironment { environment ->
@@ -197,6 +203,44 @@ class Elaborate private constructor(
                 if (!entries.size.subtype(inferred, forced)) {
                     types[term.id] = lazy { quote(end) }
                     diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id))
+                }
+            }
+        }
+    }
+
+    private fun inferPattern(pattern: S.Pattern): C.Value = when (pattern) {
+        is S.Pattern.Variable -> fresh()
+        is S.Pattern.BooleanOf -> C.Value.Boolean
+        is S.Pattern.ByteOf -> C.Value.Byte
+        is S.Pattern.ShortOf -> C.Value.Short
+        is S.Pattern.IntOf -> C.Value.Int
+        is S.Pattern.LongOf -> C.Value.Long
+        is S.Pattern.FloatOf -> C.Value.Float
+        is S.Pattern.DoubleOf -> C.Value.Double
+        is S.Pattern.StringOf -> C.Value.String
+        is S.Pattern.ByteArrayOf -> C.Value.ByteArray
+        is S.Pattern.IntArrayOf -> C.Value.IntArray
+        is S.Pattern.LongArrayOf -> C.Value.LongArray
+        is S.Pattern.ListOf -> if (pattern.elements.isEmpty()) end else {
+            val first = inferPattern(pattern.elements.first())
+            pattern.elements.drop(1).forEach { checkPattern(it, first) }
+            C.Value.List(lazyOf(first))
+        }
+        is S.Pattern.CompoundOf -> C.Value.Compound(pattern.elements.map { "" to quote(inferPattern(it)) })
+    }.also { types[pattern.id] = lazy { quote(it) } }
+
+    private fun checkPattern(pattern: S.Pattern, type: C.Value) {
+        val forced = force(type)
+        types[pattern.id] = lazy { quote(forced) }
+        when {
+            pattern is S.Pattern.Variable -> {}
+            pattern is S.Pattern.ListOf && forced is C.Value.List -> pattern.elements.forEach { checkPattern(it, forced.element.value) }
+            pattern is S.Pattern.CompoundOf && forced is C.Value.Compound -> (pattern.elements zip forced.elements).forEach { checkPattern(it.first, emptyEnvironment().evaluate(it.second.second)) }
+            else -> {
+                val inferred = inferPattern(pattern)
+                if (!0.subtype(inferred, forced)) {
+                    types[pattern.id] = lazy { quote(end) }
+                    diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), pattern.id))
                 }
             }
         }
