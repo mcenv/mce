@@ -208,8 +208,8 @@ class Elaborate private constructor(
         }
     }
 
-    private fun inferPattern(pattern: S.Pattern): C.Value = when (pattern) {
-        is S.Pattern.Variable -> fresh()
+    private fun Context.inferPattern(pattern: S.Pattern): C.Value = when (pattern) {
+        is S.Pattern.Variable -> fresh().also { bind(pattern.id, Entry(pattern.name, end, any, it, stage)) }
         is S.Pattern.BooleanOf -> C.Value.Boolean
         is S.Pattern.ByteOf -> C.Value.Byte
         is S.Pattern.ShortOf -> C.Value.Short
@@ -229,11 +229,11 @@ class Elaborate private constructor(
         is S.Pattern.CompoundOf -> C.Value.Compound(pattern.elements.map { "" to quote(inferPattern(it)) })
     }.also { types[pattern.id] = lazy { quote(it) } }
 
-    private fun checkPattern(pattern: S.Pattern, type: C.Value) {
+    private fun Context.checkPattern(pattern: S.Pattern, type: C.Value) {
         val forced = force(type)
         types[pattern.id] = lazy { quote(forced) }
         when {
-            pattern is S.Pattern.Variable -> {}
+            pattern is S.Pattern.Variable -> bind(pattern.id, Entry(pattern.name, end, any, type, stage))
             pattern is S.Pattern.ListOf && forced is C.Value.List -> pattern.elements.forEach { checkPattern(it, forced.element.value) }
             pattern is S.Pattern.CompoundOf && forced is C.Value.Compound -> (pattern.elements zip forced.elements).forEach { checkPattern(it.first, emptyEnvironment().evaluate(it.second.second)) }
             else -> {

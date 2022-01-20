@@ -18,6 +18,7 @@ import mce.graph.Dsl.match
 import mce.graph.Dsl.not
 import mce.graph.Dsl.p_ff
 import mce.graph.Dsl.p_tt
+import mce.graph.Dsl.p_variable
 import mce.graph.Dsl.parameter
 import mce.graph.Dsl.tt
 import mce.graph.Dsl.type
@@ -96,6 +97,22 @@ class ElaborateTest {
 
         assert(diagnostics1.isEmpty())
         assert(diagnostics2.isEmpty())
+    }
+
+    @Test
+    fun testFunctionClosed() {
+        val a = variable("a", 0)
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                false,
+                function(function(boolean(), parameter("b", end(), any(), boolean())), parameter("a", end(), any(), boolean())),
+                function_of(function_of(a, "b"), "a")
+            )
+        )
+
+        assert(diagnostics.contains(Diagnostic.VariableNotFound("a", a.id)))
     }
 
     @Test
@@ -257,6 +274,23 @@ class ElaborateTest {
                 ff().match(
                     p_ff() to tt(),
                     p_tt() to ff()
+                )
+            )
+        )
+
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun testMatchVariable() {
+        val (_, diagnostics, _) = Elaborate(
+            emptyMap(),
+            definition(
+                "a",
+                false,
+                boolean(),
+                ff().match(
+                    p_variable("b") to variable("b", 0)
                 )
             )
         )

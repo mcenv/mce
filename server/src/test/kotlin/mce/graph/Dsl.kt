@@ -56,6 +56,7 @@ object Dsl {
 
     fun parameter(name: String, lower: Term, upper: Term, type: Term): Parameter = Parameter(name, lower, upper, type)
 
+    fun p_variable(name: String) = Pattern.Variable(name, freshId())
     fun p_ff() = Pattern.BooleanOf(false, freshId())
     fun p_tt() = Pattern.BooleanOf(true, freshId())
     fun p_byte_of(value: Byte) = Pattern.ByteOf(value, freshId())
