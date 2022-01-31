@@ -21,8 +21,7 @@ A programming environment for Minecraft[^1].
 - [ ] Occurrence typing
 - [x] Two-phase types
 - [x] Staging
-- [ ] Stacked modalities
-- [ ] Algebraic effects
+- [ ] Effect system
 - [ ] Cost analysis
 
 ## References
