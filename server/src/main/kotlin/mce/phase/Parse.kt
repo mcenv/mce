@@ -132,7 +132,7 @@ class Parse private constructor(
         skipWhitespace()
         val start = cursor
         while (canRead() && peek().let { it != ' ' && it != '(' && it != ')' }) skip()
-        return source.substring(start, cursor).also { if (it.isEmpty()) throw Error("$cursor") }
+        return source.substring(start, cursor).also { if (it.isEmpty()) throw Error() }
     }
 
     // TODO: handle escape
@@ -143,7 +143,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    companion object : Phase<String, S.Item> {
+    companion object {
         private val BYTE_EXPRESSION = Regex("[-+]?(?:0|[1-9][0-9]*)b")
         private val SHORT_EXPRESSION = Regex("[-+]?(?:0|[1-9][0-9]*)s")
         private val INT_EXPRESSION = Regex("[-+]?(?:0|[1-9][0-9]*)")
@@ -151,6 +151,6 @@ class Parse private constructor(
         private val FLOAT_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?f")
         private val DOUBLE_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?d")
 
-        override operator fun invoke(input: String): S.Item = Parse(input).parseItem()
+        operator fun invoke(input: String): S.Item = Parse(input).parseItem()
     }
 }
