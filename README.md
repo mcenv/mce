@@ -30,10 +30,11 @@ A programming environment for Minecraft[^1].
 2. Le Fessant, F., & Maranget, L. (2001). Optimizing pattern matching. ICFP '01.
 3. Maranget, L. (2008). Compiling pattern matching to good decision trees. ML '08.
 4. Yang, Y., & Oliveira, B.C. (2017). Unifying typing and subtyping. Proceedings of the ACM on Programming Languages, 1, 1 - 26.
-5. Mokhov, A., Mitchell, N., & PEYTON JONES, S. (2020). Build systems à la carte: Theory and practice. Journal of Functional Programming, 30.
-6. András Kovács. (2021). [Using Two-Level Type Theory for Staged Compilation](https://github.com/AndrasKovacs/staged/blob/main/types2021/abstract.pdf).
-7. Dunfield, J., & Krishnaswami, N.R. (2021). Bidirectional Typing. ACM Computing Surveys (CSUR), 54, 1 - 38.
-8. Castagna, G., Laurent, M., Nguyễn, K., & Lutze, M. (2022). On type-cases, union elimination, and occurrence typing. Proceedings of the ACM on Programming Languages, 6, 1 - 31.
-9. Daniel Marshall, Michael Vollmer, & Dominic Orchard. (2022). [Linearity and Uniqueness: An Entente Cordiale](https://starsandspira.ls/docs/esop22-draft.pdf).
+5. Pédrot, P., & Tabareau, N. (2020). The fire triangle: how to mix substitution, dependent elimination, and effects. Proceedings of the ACM on Programming Languages, 4, 1 - 28.
+6. Mokhov, A., Mitchell, N., & PEYTON JONES, S. (2020). Build systems à la carte: Theory and practice. Journal of Functional Programming, 30.
+7. András Kovács. (2021). [Using Two-Level Type Theory for Staged Compilation](https://github.com/AndrasKovacs/staged/blob/main/types2021/abstract.pdf).
+8. Dunfield, J., & Krishnaswami, N.R. (2021). Bidirectional Typing. ACM Computing Surveys (CSUR), 54, 1 - 38.
+9. Castagna, G., Laurent, M., Nguyễn, K., & Lutze, M. (2022). On type-cases, union elimination, and occurrence typing. Proceedings of the ACM on Programming Languages, 6, 1 - 31.
+10. Daniel Marshall, Michael Vollmer, & Dominic Orchard. (2022). [Linearity and Uniqueness: An Entente Cordiale](https://starsandspira.ls/docs/esop22-draft.pdf).
 
 [^1]: NOT OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG.
