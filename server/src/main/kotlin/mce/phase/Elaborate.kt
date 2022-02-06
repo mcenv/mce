@@ -32,6 +32,9 @@ class Elaborate private constructor(
         }
     }
 
+    /**
+     * Infers the type of the [term] under this context.
+     */
     private fun Context.inferTerm(term: S.Term): C.Value = when (term) {
         is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(end), term.id))
         is S.Term.Meta -> fresh()
@@ -80,6 +83,7 @@ class Elaborate private constructor(
             C.Value.List(lazyOf(first))
         }
         is S.Term.CompoundOf -> C.Value.Compound(term.elements.map { "" to quote(inferTerm(it)) })
+        is S.Term.ReferenceOf -> C.Value.Reference(lazyOf(inferTerm(term.element)))
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
             val body = Context((term.parameters zip types).map { Entry(it.first, end, any, it.second, stage) }.toMutableList(), meta, stage).inferTerm(term.body)
@@ -145,6 +149,10 @@ class Elaborate private constructor(
             }
             C.Value.Type
         }
+        is S.Term.Reference -> {
+            checkTerm(term.element, C.Value.Type)
+            C.Value.Type
+        }
         is S.Term.Function -> {
             withContext(meta) { environment, context ->
                 term.parameters.forEach { (name, lower, upper, parameter) ->
@@ -166,6 +174,9 @@ class Elaborate private constructor(
         is S.Term.Type -> C.Value.Type
     }.also { types[term.id] = lazy { quote(it) } }
 
+    /**
+     * Checks the [term] against the [type] under this context.
+     */
     private fun Context.checkTerm(term: S.Term, type: C.Value) {
         val forced = force(type)
         types[term.id] = lazy { quote(forced) }
@@ -186,6 +197,7 @@ class Elaborate private constructor(
                     environment += lazy { environment.evaluate(it.first) }
                 }
             }
+            term is S.Term.ReferenceOf && forced is C.Value.Reference -> checkTerm(term.element, forced.element.value)
             term is S.Term.FunctionOf && forced is C.Value.Function -> withContext(meta) { environment, context ->
                 (term.parameters zip forced.parameters).forEach { (name, parameter) ->
                     context.bind(term.id, Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
@@ -227,6 +239,7 @@ class Elaborate private constructor(
             C.Value.List(lazyOf(first))
         }
         is S.Pattern.CompoundOf -> C.Value.Compound(pattern.elements.map { "" to quote(inferPattern(it)) })
+        is S.Pattern.ReferenceOf -> C.Value.Reference(lazyOf(inferPattern(pattern.element)))
     }.also { types[pattern.id] = lazy { quote(it) } }
 
     private fun Context.checkPattern(pattern: S.Pattern, type: C.Value) {
@@ -236,6 +249,7 @@ class Elaborate private constructor(
             pattern is S.Pattern.Variable -> bind(pattern.id, Entry(pattern.name, end, any, type, stage))
             pattern is S.Pattern.ListOf && forced is C.Value.List -> pattern.elements.forEach { checkPattern(it, forced.element.value) }
             pattern is S.Pattern.CompoundOf && forced is C.Value.Compound -> (pattern.elements zip forced.elements).forEach { checkPattern(it.first, emptyEnvironment().evaluate(it.second.second)) }
+            pattern is S.Pattern.ReferenceOf && forced is C.Value.Reference -> checkPattern(pattern.element, forced.element.value)
             else -> {
                 val inferred = inferPattern(pattern)
                 if (!0.subtype(inferred, forced)) {
@@ -266,6 +280,7 @@ class Elaborate private constructor(
         is S.Term.LongArrayOf -> C.Value.LongArrayOf(term.elements.map { lazy { evaluate(it) } })
         is S.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { evaluate(it) } })
         is S.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { evaluate(it) } })
+        is S.Term.ReferenceOf -> C.Value.ReferenceOf(lazy { evaluate(term.element) })
         is S.Term.FunctionOf -> C.Value.FunctionOf(term.parameters, term.body)
         is S.Term.Apply -> when (val function = evaluate(term.function)) {
             is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
@@ -291,6 +306,7 @@ class Elaborate private constructor(
         is S.Term.LongArray -> C.Value.LongArray
         is S.Term.List -> C.Value.List(lazy { evaluate(term.element) })
         is S.Term.Compound -> C.Value.Compound(term.elements)
+        is S.Term.Reference -> C.Value.Reference(lazy { evaluate(term.element) })
         is S.Term.Function -> C.Value.Function(term.parameters, term.resultant)
         is S.Term.Code -> C.Value.Code(lazy { evaluate(term.element) })
         is S.Term.Type -> C.Value.Type
@@ -315,6 +331,7 @@ class Elaborate private constructor(
         is C.Value.LongArrayOf -> S.Term.LongArrayOf(forced.elements.map { quote(it.value) }, freshId())
         is C.Value.ListOf -> S.Term.ListOf(forced.elements.map { quote(it.value) }, freshId())
         is C.Value.CompoundOf -> S.Term.CompoundOf(forced.elements.map { quote(it.value) }, freshId())
+        is C.Value.ReferenceOf -> S.Term.ReferenceOf(quote(forced.element.value), freshId())
         is C.Value.FunctionOf -> S.Term.FunctionOf(
             forced.parameters,
             quote(
@@ -342,6 +359,7 @@ class Elaborate private constructor(
         is C.Value.LongArray -> S.Term.LongArray(freshId())
         is C.Value.List -> S.Term.List(quote(forced.element.value), freshId())
         is C.Value.Compound -> S.Term.Compound(forced.elements, freshId())
+        is C.Value.Reference -> S.Term.Reference(quote(forced.element.value), freshId())
         is C.Value.Function -> S.Term.Function(
             forced.parameters,
             quote(

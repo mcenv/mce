@@ -48,6 +48,7 @@ object Surface {
         data class LongArrayOf(val elements: KList<Term>, override val id: Id) : Term()
         data class ListOf(val elements: KList<Term>, override val id: Id) : Term()
         data class CompoundOf(val elements: KList<Term>, override val id: Id) : Term()
+        data class ReferenceOf(val element: Term, override val id: Id) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term, override val id: Id) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id) : Term()
         data class CodeOf(val element: Term, override val id: Id) : Term()
@@ -67,6 +68,7 @@ object Surface {
         data class LongArray(override val id: Id) : Term()
         data class List(val element: Term, override val id: Id) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
+        data class Reference(val element: Term, override val id: Id) : Term()
         data class Function(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
         data class Type(override val id: Id) : Term()
@@ -91,5 +93,6 @@ object Surface {
         data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class ReferenceOf(val element: Pattern, override val id: Id) : Pattern()
     }
 }

@@ -28,6 +28,7 @@ object Dsl {
     fun long_array_of(vararg elements: Term) = Term.LongArrayOf(elements.toList(), freshId())
     fun list_of(vararg elements: Term) = Term.ListOf(elements.toList(), freshId())
     fun compound_of(vararg elements: Term) = Term.CompoundOf(elements.toList(), freshId())
+    fun reference_of(element: Term) = Term.ReferenceOf(element, freshId())
     fun function_of(body: Term, vararg parameters: String) = Term.FunctionOf(parameters.toList(), body, freshId())
     operator fun Term.invoke(vararg arguments: Term) = Term.Apply(this, arguments.toList(), freshId())
     fun code_of(element: Term) = Term.CodeOf(element, freshId())
@@ -47,6 +48,7 @@ object Dsl {
     fun long_array() = Term.LongArray(freshId())
     fun list(element: Term) = Term.List(element, freshId())
     fun compound(vararg elements: Pair<String, Term>) = Term.Compound(elements.toList(), freshId())
+    fun reference(element: Term) = Term.Reference(element, freshId())
     fun function(resultant: Term, vararg parameters: Parameter) = Term.Function(parameters.toList(), resultant, freshId())
     fun code(element: Term) = Term.Code(element, freshId())
     fun type() = Term.Type(freshId())
@@ -71,4 +73,5 @@ object Dsl {
     fun p_long_array_of(vararg elements: Pattern) = Pattern.LongArrayOf(elements.toList(), freshId())
     fun p_list_of(vararg elements: Pattern) = Pattern.ListOf(elements.toList(), freshId())
     fun p_compound_of(vararg elements: Pattern) = Pattern.CompoundOf(elements.toList(), freshId())
+    fun p_reference_of(element: Pattern) = Pattern.ReferenceOf(element, freshId())
 }
