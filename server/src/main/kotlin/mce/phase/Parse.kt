@@ -1,6 +1,7 @@
 package mce.phase
 
 import mce.graph.freshId
+import java.util.*
 import mce.graph.Surface as S
 
 class Parse private constructor(
@@ -9,62 +10,65 @@ class Parse private constructor(
     private var cursor: Int = 0
 
     private fun parseItem(): S.Item = parseParen {
-        when (val word = readWord()) {
+        when (readWord()) {
             "definition" -> S.Item.Definition(freshId(), readWord(), parseList(::readWord), readWord().toBooleanStrict(), parseTerm(), parseTerm())
-            else -> throw Error("'$word' unexpected")
+            else -> throw Error()
         }
     }
 
-    private fun parseTerm(): S.Term = when (run { skipWhitespace(); peek() }) {
-        '(' -> parseParen(::parseTerm)
-        '"' -> S.Term.StringOf(readString(), freshId())
+    private fun parseTerm(id: () -> UUID = ::freshId): S.Term = when (run { skipWhitespace(); peek() }) {
+        '(' -> parseParen { parseTerm() }
+        '"' -> S.Term.StringOf(readString(), id())
+        '#' -> {
+            skip()
+            val explicitId = UUID.fromString(readWord())
+            parseTerm { explicitId }
+        }
         else -> when (val word = readWord()) {
-            "hole" -> S.Term.Hole(freshId())
-            "meta" -> S.Term.Meta(readWord().toInt(), freshId())
-            "definition" -> S.Term.Definition(readWord(), freshId())
-            "let" -> S.Term.Let(readWord(), parseTerm(), parseTerm(), freshId())
-            "match" -> S.Term.Match(parseTerm(), parseList { parsePair(::parsePattern, ::parseTerm) }, freshId())
-            "false" -> S.Term.BooleanOf(false, freshId())
-            "true" -> S.Term.BooleanOf(true, freshId())
-            "byte_array_of" -> S.Term.ByteArrayOf(parseList(::parseTerm), freshId())
-            "int_array_of" -> S.Term.IntArrayOf(parseList(::parseTerm), freshId())
-            "long_array_of" -> S.Term.LongArrayOf(parseList(::parseTerm), freshId())
-            "list_of" -> S.Term.ListOf(parseList(::parseTerm), freshId())
-            "compound_of" -> S.Term.CompoundOf(parseList(::parseTerm), freshId())
-            "reference_of" -> S.Term.ReferenceOf(parseTerm(), freshId())
-            "function_of" -> S.Term.FunctionOf(parseList(::readWord), parseTerm(), freshId())
-            "apply" -> S.Term.Apply(parseTerm(), parseList(::parseTerm), freshId())
-            "code_of" -> S.Term.CodeOf(parseTerm(), freshId())
-            "splice" -> S.Term.Splice(parseTerm(), freshId())
-            "union" -> S.Term.Union(parseList(::parseTerm), freshId())
-            "intersection" -> S.Term.Intersection(parseList(::parseTerm), freshId())
-            "boolean" -> S.Term.Boolean(freshId())
-            "byte" -> S.Term.Byte(freshId())
-            "short" -> S.Term.Short(freshId())
-            "int" -> S.Term.Int(freshId())
-            "long" -> S.Term.Long(freshId())
-            "float" -> S.Term.Float(freshId())
-            "double" -> S.Term.Double(freshId())
-            "string" -> S.Term.String(freshId())
-            "byte_array" -> S.Term.ByteArray(freshId())
-            "int_array" -> S.Term.IntArray(freshId())
-            "long_array" -> S.Term.LongArray(freshId())
-            "list" -> S.Term.List(parseTerm(), freshId())
-            "compound" -> S.Term.Compound(parseList { parsePair(::readWord, ::parseTerm) }, freshId())
-            "reference" -> S.Term.Reference(parseTerm(), freshId())
-            "function" -> S.Term.Function(parseList { parseParen { S.Parameter(readWord(), parseTerm(), parseTerm(), parseTerm()) } }, parseTerm(), freshId())
-            "code" -> S.Term.Code(parseTerm(), freshId())
-            "type" -> S.Term.Type(freshId())
+            "hole" -> S.Term.Hole(id())
+            "meta" -> S.Term.Meta(readWord().toInt(), id())
+            "definition" -> S.Term.Definition(readWord(), id())
+            "let" -> S.Term.Let(readWord(), parseTerm(), parseTerm(), id())
+            "match" -> S.Term.Match(parseTerm(), parseList { parsePair(::parsePattern, ::parseTerm) }, id())
+            "false" -> S.Term.BooleanOf(false, id())
+            "true" -> S.Term.BooleanOf(true, id())
+            "byte_array_of" -> S.Term.ByteArrayOf(parseList { parseTerm() }, id())
+            "int_array_of" -> S.Term.IntArrayOf(parseList { parseTerm() }, id())
+            "long_array_of" -> S.Term.LongArrayOf(parseList { parseTerm() }, id())
+            "list_of" -> S.Term.ListOf(parseList { parseTerm() }, id())
+            "compound_of" -> S.Term.CompoundOf(parseList { parseTerm() }, id())
+            "reference_of" -> S.Term.ReferenceOf(parseTerm(), id())
+            "function_of" -> S.Term.FunctionOf(parseList(::readWord), parseTerm(), id())
+            "apply" -> S.Term.Apply(parseTerm(), parseList { parseTerm() }, id())
+            "code_of" -> S.Term.CodeOf(parseTerm(), id())
+            "splice" -> S.Term.Splice(parseTerm(), id())
+            "union" -> S.Term.Union(parseList { parseTerm() }, id())
+            "intersection" -> S.Term.Intersection(parseList { parseTerm() }, id())
+            "boolean" -> S.Term.Boolean(id())
+            "byte" -> S.Term.Byte(id())
+            "short" -> S.Term.Short(id())
+            "int" -> S.Term.Int(id())
+            "long" -> S.Term.Long(id())
+            "float" -> S.Term.Float(id())
+            "double" -> S.Term.Double(id())
+            "string" -> S.Term.String(id())
+            "byte_array" -> S.Term.ByteArray(id())
+            "int_array" -> S.Term.IntArray(id())
+            "long_array" -> S.Term.LongArray(id())
+            "list" -> S.Term.List(parseTerm(), id())
+            "compound" -> S.Term.Compound(parseList { parsePair(::readWord, ::parseTerm) }, id())
+            "reference" -> S.Term.Reference(parseTerm(), id())
+            "function" -> S.Term.Function(parseList { parseParen { S.Parameter(readWord(), parseTerm(), parseTerm(), parseTerm()) } }, parseTerm(), id())
+            "code" -> S.Term.Code(parseTerm(), id())
+            "type" -> S.Term.Type(id())
             else -> when {
-                BYTE_EXPRESSION.matches(word) -> S.Term.ByteOf(word.dropLast(1).toByte(), freshId())
-                SHORT_EXPRESSION.matches(word) -> S.Term.ShortOf(word.dropLast(1).toShort(), freshId())
-                INT_EXPRESSION.matches(word) -> S.Term.IntOf(word.toInt(), freshId())
-                LONG_EXPRESSION.matches(word) -> S.Term.LongOf(word.dropLast(1).toLong(), freshId())
-                FLOAT_EXPRESSION.matches(word) -> S.Term.FloatOf(word.dropLast(1).toFloat(), freshId())
-                DOUBLE_EXPRESSION.matches(word) -> S.Term.DoubleOf(word.dropLast(1).toDouble(), freshId())
-                else -> {
-                    println("'$word'"); TODO(); S.Term.Variable(word, TODO(), freshId())
-                }
+                BYTE_EXPRESSION.matches(word) -> S.Term.ByteOf(word.dropLast(1).toByte(), id())
+                SHORT_EXPRESSION.matches(word) -> S.Term.ShortOf(word.dropLast(1).toShort(), id())
+                INT_EXPRESSION.matches(word) -> S.Term.IntOf(word.toInt(), id())
+                LONG_EXPRESSION.matches(word) -> S.Term.LongOf(word.dropLast(1).toLong(), id())
+                FLOAT_EXPRESSION.matches(word) -> S.Term.FloatOf(word.dropLast(1).toFloat(), id())
+                DOUBLE_EXPRESSION.matches(word) -> S.Term.DoubleOf(word.dropLast(1).toDouble(), id())
+                else -> S.Term.Variable(word, TODO(), id())
             }
         }
     }
@@ -120,7 +124,7 @@ class Parse private constructor(
 
     private fun expect(char: Char) {
         skipWhitespace()
-        if (!canRead() || peek() != char) throw Error("'$char' expected but '${peek()}' found")
+        if (!canRead() || peek() != char) throw Error()
         skip()
     }
 

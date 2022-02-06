@@ -5,32 +5,37 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.graph.Id
 import mce.phase.Elaborate
-import mce.graph.Surface as S
+import mce.phase.Parse
 
 class Server {
-    private val dependencies: MutableMap<String, MutableList<String>> = mutableMapOf()
+    private val dependencies: MutableMap<String, List<String>> = mutableMapOf()
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
-    private val counter: MutableMap<String, Int> = mutableMapOf()
+    private val counter: MutableMap<Key<*>, Int> = mutableMapOf()
 
-    fun register(surface: S.Item) {
-        dependencies[surface.name] = surface.imports.toMutableList()
-        setValue(Key.Item(surface.name), surface)
-        counter[surface.name] = 0
+    fun register(name: String, source: String) {
+        setValue(Key.Source(name), source)
     }
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun <V> fetch(key: Key<V>): V = coroutineScope {
         when (key) {
-            is Key.Item -> getValue(key)
+            is Key.Source -> getValue(key)
+            is Key.Parsed -> getValue(key) ?: run {
+                incrementCount(key)
+                val source = fetch(Key.Source(key.name))
+                Parse(source).also {
+                    dependencies[key.name] = it.imports.toMutableList()
+                    setValue(key, it)
+                }
+            }
             is Key.Elaborated -> getValue(key) ?: run {
-                counter[key.name] = counter[key.name]!! + 1
-                Elaborate(
-                    dependencies[key.name]!!
-                        .map { async { fetch(Key.Elaborated(it)).item } }
-                        .awaitAll()
-                        .associateBy { it.name },
-                    fetch(Key.Item(key.name))
-                ).also { setValue(key, it) }
+                incrementCount(key)
+                val parsed = fetch(Key.Parsed(key.name))
+                val items = dependencies[key.name]!!
+                    .map { async { fetch(Key.Elaborated(it)).item } }
+                    .awaitAll()
+                    .associateBy { it.name }
+                Elaborate(items, parsed).also { setValue(key, it) }
             } as V
         } as V
     }
@@ -43,7 +48,11 @@ class Server {
 
     fun exit(): Nothing = TODO()
 
-    fun getCount(name: String): Int? = counter[name]
+    fun getCount(key: Key<*>): Int = counter[key] ?: 0
+
+    private fun incrementCount(key: Key<*>) {
+        counter[key] = (counter[key] ?: 0) + 1
+    }
 
     private inline fun <reified V> getValue(key: Key<V>): V? = values[key] as V?
 
