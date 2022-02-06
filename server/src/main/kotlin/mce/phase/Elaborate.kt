@@ -12,6 +12,7 @@ private typealias Level = Int
 
 private typealias Stage = Int
 
+@Suppress("NAME_SHADOWING")
 class Elaborate private constructor(
     private val items: Map<String, C.Item>
 ) {
@@ -178,48 +179,51 @@ class Elaborate private constructor(
      * Checks the [term] against the [type] under this context.
      */
     private fun Context.checkTerm(term: S.Term, type: C.Value) {
-        val forced = force(type)
-        types[term.id] = lazy { quote(forced) }
+        val type = force(type)
+        types[term.id] = lazy { quote(type) }
         when {
-            term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(forced), term.id))
-            term is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, forced)
+            term is S.Term.Hole -> diagnose(Diagnostic.TermExpected(quote(type), term.id))
+            term is S.Term.Let -> bind(term.id, Entry(term.name, end, any, inferTerm(term.init), stage)).checkTerm(term.body, type)
             term is S.Term.Match -> {
                 val scrutinee = inferTerm(term.scrutinee)
                 term.clauses.forEach {
                     checkPattern(it.first, scrutinee)
-                    checkTerm(it.second, forced)
+                    checkTerm(it.second, type)
                 }
             }
-            term is S.Term.ListOf && forced is C.Value.List -> term.elements.forEach { checkTerm(it, forced.element.value) }
-            term is S.Term.CompoundOf && forced is C.Value.Compound -> withEnvironment { environment ->
-                (term.elements zip forced.elements).forEach {
+            term is S.Term.ListOf && type is C.Value.List -> term.elements.forEach { checkTerm(it, type.element.value) }
+            term is S.Term.CompoundOf && type is C.Value.Compound -> withEnvironment { environment ->
+                (term.elements zip type.elements).forEach {
                     checkTerm(it.first, environment.evaluate(it.second.second))
                     environment += lazy { environment.evaluate(it.first) }
                 }
             }
-            term is S.Term.ReferenceOf && forced is C.Value.Reference -> checkTerm(term.element, forced.element.value)
-            term is S.Term.FunctionOf && forced is C.Value.Function -> withContext(meta) { environment, context ->
-                (term.parameters zip forced.parameters).forEach { (name, parameter) ->
+            term is S.Term.ReferenceOf && type is C.Value.Reference -> checkTerm(term.element, type.element.value)
+            term is S.Term.FunctionOf && type is C.Value.Function -> withContext(meta) { environment, context ->
+                (term.parameters zip type.parameters).forEach { (name, parameter) ->
                     context.bind(term.id, Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
-                context.checkTerm(term.body, environment.evaluate(forced.resultant))
+                context.checkTerm(term.body, environment.evaluate(type.resultant))
             }
-            term is S.Term.CodeOf && forced is C.Value.Code -> up().checkTerm(term.element, forced.element.value)
+            term is S.Term.CodeOf && type is C.Value.Code -> up().checkTerm(term.element, type.element.value)
             // generalized bottom type
             term is S.Term.Union && term.variants.isEmpty() -> {}
             // generalized top type
             term is S.Term.Intersection && term.variants.isEmpty() -> {}
             else -> {
                 val inferred = inferTerm(term)
-                if (!entries.size.subtype(inferred, forced)) {
+                if (!entries.size.subtype(inferred, type)) {
                     types[term.id] = lazy { quote(end) }
-                    diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), term.id))
+                    diagnose(Diagnostic.TypeMismatch(quote(type), quote(inferred), term.id))
                 }
             }
         }
     }
 
+    /**
+     * Infers the type of the [pattern] under this context.
+     */
     private fun Context.inferPattern(pattern: S.Pattern): C.Value = when (pattern) {
         is S.Pattern.Variable -> fresh().also { bind(pattern.id, Entry(pattern.name, end, any, it, stage)) }
         is S.Pattern.BooleanOf -> C.Value.Boolean
@@ -242,24 +246,30 @@ class Elaborate private constructor(
         is S.Pattern.ReferenceOf -> C.Value.Reference(lazyOf(inferPattern(pattern.element)))
     }.also { types[pattern.id] = lazy { quote(it) } }
 
+    /**
+     * Checks the [pattern] against the [type] under this context.
+     */
     private fun Context.checkPattern(pattern: S.Pattern, type: C.Value) {
-        val forced = force(type)
-        types[pattern.id] = lazy { quote(forced) }
+        val type = force(type)
+        types[pattern.id] = lazy { quote(type) }
         when {
             pattern is S.Pattern.Variable -> bind(pattern.id, Entry(pattern.name, end, any, type, stage))
-            pattern is S.Pattern.ListOf && forced is C.Value.List -> pattern.elements.forEach { checkPattern(it, forced.element.value) }
-            pattern is S.Pattern.CompoundOf && forced is C.Value.Compound -> (pattern.elements zip forced.elements).forEach { checkPattern(it.first, emptyEnvironment().evaluate(it.second.second)) }
-            pattern is S.Pattern.ReferenceOf && forced is C.Value.Reference -> checkPattern(pattern.element, forced.element.value)
+            pattern is S.Pattern.ListOf && type is C.Value.List -> pattern.elements.forEach { checkPattern(it, type.element.value) }
+            pattern is S.Pattern.CompoundOf && type is C.Value.Compound -> (pattern.elements zip type.elements).forEach { checkPattern(it.first, emptyEnvironment().evaluate(it.second.second)) }
+            pattern is S.Pattern.ReferenceOf && type is C.Value.Reference -> checkPattern(pattern.element, type.element.value)
             else -> {
                 val inferred = inferPattern(pattern)
-                if (!0.subtype(inferred, forced)) {
+                if (!0.subtype(inferred, type)) {
                     types[pattern.id] = lazy { quote(end) }
-                    diagnose(Diagnostic.TypeMismatch(quote(forced), quote(inferred), pattern.id))
+                    diagnose(Diagnostic.TypeMismatch(quote(type), quote(inferred), pattern.id))
                 }
             }
         }
     }
 
+    /**
+     * Evaluates the [term] to a value under this environment.
+     */
     private fun Environment.evaluate(term: S.Term): C.Value = when (term) {
         is S.Term.Hole -> C.Value.Hole
         is S.Term.Meta -> metas[term.index] ?: C.Value.Meta(term.index)
@@ -312,40 +322,43 @@ class Elaborate private constructor(
         is S.Term.Type -> C.Value.Type
     }
 
-    private fun quote(value: C.Value): S.Term = when (val forced = force(value)) {
+    /**
+     * Quotes the [value] to a term.
+     */
+    private fun quote(value: C.Value): S.Term = when (val value = force(value)) {
         is C.Value.Hole -> S.Term.Hole(freshId())
-        is C.Value.Meta -> metas[forced.index]?.let { quote(it) } ?: S.Term.Meta(forced.index, freshId())
-        is C.Value.Variable -> S.Term.Variable(forced.name, forced.level, freshId())
-        is C.Value.Definition -> S.Term.Definition(forced.name, freshId())
-        is C.Value.Match -> S.Term.Match(quote(forced.scrutinee), forced.clauses.map { it.first to quote(it.second.value) }, freshId())
-        is C.Value.BooleanOf -> S.Term.BooleanOf(forced.value, freshId())
-        is C.Value.ByteOf -> S.Term.ByteOf(forced.value, freshId())
-        is C.Value.ShortOf -> S.Term.ShortOf(forced.value, freshId())
-        is C.Value.IntOf -> S.Term.IntOf(forced.value, freshId())
-        is C.Value.LongOf -> S.Term.LongOf(forced.value, freshId())
-        is C.Value.FloatOf -> S.Term.FloatOf(forced.value, freshId())
-        is C.Value.DoubleOf -> S.Term.DoubleOf(forced.value, freshId())
-        is C.Value.StringOf -> S.Term.StringOf(forced.value, freshId())
-        is C.Value.ByteArrayOf -> S.Term.ByteArrayOf(forced.elements.map { quote(it.value) }, freshId())
-        is C.Value.IntArrayOf -> S.Term.IntArrayOf(forced.elements.map { quote(it.value) }, freshId())
-        is C.Value.LongArrayOf -> S.Term.LongArrayOf(forced.elements.map { quote(it.value) }, freshId())
-        is C.Value.ListOf -> S.Term.ListOf(forced.elements.map { quote(it.value) }, freshId())
-        is C.Value.CompoundOf -> S.Term.CompoundOf(forced.elements.map { quote(it.value) }, freshId())
-        is C.Value.ReferenceOf -> S.Term.ReferenceOf(quote(forced.element.value), freshId())
+        is C.Value.Meta -> metas[value.index]?.let { quote(it) } ?: S.Term.Meta(value.index, freshId())
+        is C.Value.Variable -> S.Term.Variable(value.name, value.level, freshId())
+        is C.Value.Definition -> S.Term.Definition(value.name, freshId())
+        is C.Value.Match -> S.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) }, freshId())
+        is C.Value.BooleanOf -> S.Term.BooleanOf(value.value, freshId())
+        is C.Value.ByteOf -> S.Term.ByteOf(value.value, freshId())
+        is C.Value.ShortOf -> S.Term.ShortOf(value.value, freshId())
+        is C.Value.IntOf -> S.Term.IntOf(value.value, freshId())
+        is C.Value.LongOf -> S.Term.LongOf(value.value, freshId())
+        is C.Value.FloatOf -> S.Term.FloatOf(value.value, freshId())
+        is C.Value.DoubleOf -> S.Term.DoubleOf(value.value, freshId())
+        is C.Value.StringOf -> S.Term.StringOf(value.value, freshId())
+        is C.Value.ByteArrayOf -> S.Term.ByteArrayOf(value.elements.map { quote(it.value) }, freshId())
+        is C.Value.IntArrayOf -> S.Term.IntArrayOf(value.elements.map { quote(it.value) }, freshId())
+        is C.Value.LongArrayOf -> S.Term.LongArrayOf(value.elements.map { quote(it.value) }, freshId())
+        is C.Value.ListOf -> S.Term.ListOf(value.elements.map { quote(it.value) }, freshId())
+        is C.Value.CompoundOf -> S.Term.CompoundOf(value.elements.map { quote(it.value) }, freshId())
+        is C.Value.ReferenceOf -> S.Term.ReferenceOf(quote(value.element.value), freshId())
         is C.Value.FunctionOf -> S.Term.FunctionOf(
-            forced.parameters,
+            value.parameters,
             quote(
-                forced.parameters
+                value.parameters
                     .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, index)) }
-                    .evaluate(forced.body)
+                    .evaluate(value.body)
             ),
             freshId()
         )
-        is C.Value.Apply -> S.Term.Apply(quote(forced.function), forced.arguments.map { quote(it.value) }, freshId())
-        is C.Value.CodeOf -> S.Term.CodeOf(quote(forced.element.value), freshId())
-        is C.Value.Splice -> S.Term.Splice(quote(forced.element.value), freshId())
-        is C.Value.Union -> S.Term.Union(forced.variants.map { quote(it.value) }, freshId())
-        is C.Value.Intersection -> S.Term.Intersection(forced.variants.map { quote(it.value) }, freshId())
+        is C.Value.Apply -> S.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) }, freshId())
+        is C.Value.CodeOf -> S.Term.CodeOf(quote(value.element.value), freshId())
+        is C.Value.Splice -> S.Term.Splice(quote(value.element.value), freshId())
+        is C.Value.Union -> S.Term.Union(value.variants.map { quote(it.value) }, freshId())
+        is C.Value.Intersection -> S.Term.Intersection(value.variants.map { quote(it.value) }, freshId())
         is C.Value.Boolean -> S.Term.Boolean(freshId())
         is C.Value.Byte -> S.Term.Byte(freshId())
         is C.Value.Short -> S.Term.Short(freshId())
@@ -357,82 +370,85 @@ class Elaborate private constructor(
         is C.Value.ByteArray -> S.Term.ByteArray(freshId())
         is C.Value.IntArray -> S.Term.IntArray(freshId())
         is C.Value.LongArray -> S.Term.LongArray(freshId())
-        is C.Value.List -> S.Term.List(quote(forced.element.value), freshId())
-        is C.Value.Compound -> S.Term.Compound(forced.elements, freshId())
-        is C.Value.Reference -> S.Term.Reference(quote(forced.element.value), freshId())
+        is C.Value.List -> S.Term.List(quote(value.element.value), freshId())
+        is C.Value.Compound -> S.Term.Compound(value.elements, freshId())
+        is C.Value.Reference -> S.Term.Reference(quote(value.element.value), freshId())
         is C.Value.Function -> S.Term.Function(
-            forced.parameters,
+            value.parameters,
             quote(
-                forced.parameters
+                value.parameters
                     .mapIndexed { index, (name, _) -> lazyOf(C.Value.Variable(name, index)) }
-                    .evaluate(forced.resultant)
+                    .evaluate(value.resultant)
             ),
             freshId()
         )
-        is C.Value.Code -> S.Term.Code(quote(forced.element.value), freshId())
+        is C.Value.Code -> S.Term.Code(quote(value.element.value), freshId())
         is C.Value.Type -> S.Term.Type(freshId())
     }
 
+    /**
+     * Checks if the [value1] and the [value2] can be unified.
+     */
     private fun Level.unify(value1: C.Value, value2: C.Value): Boolean {
-        val forced1 = force(value1)
-        val forced2 = force(value2)
+        val value1 = force(value1)
+        val value2 = force(value2)
         return when {
-            forced1 is C.Value.Meta -> when (val solved1 = metas[forced1.index]) {
+            value1 is C.Value.Meta -> when (val solved1 = metas[value1.index]) {
                 null -> {
-                    metas[forced1.index] = forced2
+                    metas[value1.index] = value2
                     true
                 }
-                else -> unify(solved1, forced2)
+                else -> unify(solved1, value2)
             }
-            forced2 is C.Value.Meta -> unify(forced2, forced1)
-            forced1 is C.Value.Variable && forced2 is C.Value.Variable -> forced1.level == forced2.level
-            forced1 is C.Value.Definition && forced2 is C.Value.Definition -> forced1.name == forced2.name
-            forced1 is C.Value.Match && forced2 is C.Value.Match -> unify(forced1.scrutinee, forced2.scrutinee) &&
-                    (forced1.clauses zip forced2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
-            forced1 is C.Value.BooleanOf && forced2 is C.Value.BooleanOf -> forced1.value == forced2.value
-            forced1 is C.Value.ByteOf && forced2 is C.Value.ByteOf -> forced1.value == forced2.value
-            forced1 is C.Value.ShortOf && forced2 is C.Value.ShortOf -> forced1.value == forced2.value
-            forced1 is C.Value.IntOf && forced2 is C.Value.IntOf -> forced1.value == forced2.value
-            forced1 is C.Value.LongOf && forced2 is C.Value.LongOf -> forced1.value == forced2.value
-            forced1 is C.Value.FloatOf && forced2 is C.Value.FloatOf -> forced1.value == forced2.value
-            forced1 is C.Value.DoubleOf && forced2 is C.Value.DoubleOf -> forced1.value == forced2.value
-            forced1 is C.Value.StringOf && forced2 is C.Value.StringOf -> forced1.value == forced2.value
-            forced1 is C.Value.ByteArrayOf && forced2 is C.Value.ByteArrayOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
-            forced1 is C.Value.IntArrayOf && forced2 is C.Value.IntArrayOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
-            forced1 is C.Value.LongArrayOf && forced2 is C.Value.LongArrayOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
-            forced1 is C.Value.ListOf && forced2 is C.Value.ListOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
-            forced1 is C.Value.CompoundOf && forced2 is C.Value.CompoundOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { unify(it.first.value, it.second.value) }
-            forced1 is C.Value.FunctionOf && forced2 is C.Value.FunctionOf -> forced1.parameters.size == forced2.parameters.size &&
-                    forced1.parameters
+            value2 is C.Value.Meta -> unify(value2, value1)
+            value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level == value2.level
+            value1 is C.Value.Definition && value2 is C.Value.Definition -> value1.name == value2.name
+            value1 is C.Value.Match && value2 is C.Value.Match -> unify(value1.scrutinee, value2.scrutinee) &&
+                    (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
+            value1 is C.Value.BooleanOf && value2 is C.Value.BooleanOf -> value1.value == value2.value
+            value1 is C.Value.ByteOf && value2 is C.Value.ByteOf -> value1.value == value2.value
+            value1 is C.Value.ShortOf && value2 is C.Value.ShortOf -> value1.value == value2.value
+            value1 is C.Value.IntOf && value2 is C.Value.IntOf -> value1.value == value2.value
+            value1 is C.Value.LongOf && value2 is C.Value.LongOf -> value1.value == value2.value
+            value1 is C.Value.FloatOf && value2 is C.Value.FloatOf -> value1.value == value2.value
+            value1 is C.Value.DoubleOf && value2 is C.Value.DoubleOf -> value1.value == value2.value
+            value1 is C.Value.StringOf && value2 is C.Value.StringOf -> value1.value == value2.value
+            value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.FunctionOf && value2 is C.Value.FunctionOf -> value1.parameters.size == value2.parameters.size &&
+                    value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
-                        .let { (this + forced1.parameters.size).unify(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
-            forced1 is C.Value.Apply && forced2 is C.Value.Apply -> unify(forced1.function, forced2.function) &&
-                    (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) }
-            forced1 is C.Value.CodeOf && forced2 is C.Value.CodeOf -> unify(forced1.element.value, forced2.element.value)
-            forced1 is C.Value.Splice && forced2 is C.Value.Splice -> unify(forced1.element.value, forced2.element.value)
+                        .let { (this + value1.parameters.size).unify(it.evaluate(value1.body), it.evaluate(value2.body)) }
+            value1 is C.Value.Apply && value2 is C.Value.Apply -> unify(value1.function, value2.function) &&
+                    (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.CodeOf && value2 is C.Value.CodeOf -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Splice && value2 is C.Value.Splice -> unify(value1.element.value, value2.element.value)
             // TODO: unify non-empty unions and intersections?
-            forced1 is C.Value.Union && forced1.variants.isEmpty() && forced2 is C.Value.Union && forced2.variants.isEmpty() -> true
-            forced1 is C.Value.Intersection && forced1.variants.isEmpty() && forced2 is C.Value.Intersection && forced2.variants.isEmpty() -> true
-            forced1 is C.Value.Boolean && forced2 is C.Value.Boolean -> true
-            forced1 is C.Value.Byte && forced2 is C.Value.Byte -> true
-            forced1 is C.Value.Short && forced2 is C.Value.Short -> true
-            forced1 is C.Value.Int && forced2 is C.Value.Int -> true
-            forced1 is C.Value.Long && forced2 is C.Value.Long -> true
-            forced1 is C.Value.Float && forced2 is C.Value.Float -> true
-            forced1 is C.Value.Double && forced2 is C.Value.Double -> true
-            forced1 is C.Value.String && forced2 is C.Value.String -> true
-            forced1 is C.Value.ByteArray && forced2 is C.Value.ByteArray -> true
-            forced1 is C.Value.IntArray && forced2 is C.Value.IntArray -> true
-            forced1 is C.Value.LongArray && forced2 is C.Value.LongArray -> true
-            forced1 is C.Value.List && forced2 is C.Value.List -> unify(forced1.element.value, forced2.element.value)
-            forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
+            value1 is C.Value.Union && value1.variants.isEmpty() && value2 is C.Value.Union && value2.variants.isEmpty() -> true
+            value1 is C.Value.Intersection && value1.variants.isEmpty() && value2 is C.Value.Intersection && value2.variants.isEmpty() -> true
+            value1 is C.Value.Boolean && value2 is C.Value.Boolean -> true
+            value1 is C.Value.Byte && value2 is C.Value.Byte -> true
+            value1 is C.Value.Short && value2 is C.Value.Short -> true
+            value1 is C.Value.Int && value2 is C.Value.Int -> true
+            value1 is C.Value.Long && value2 is C.Value.Long -> true
+            value1 is C.Value.Float && value2 is C.Value.Float -> true
+            value1 is C.Value.Double && value2 is C.Value.Double -> true
+            value1 is C.Value.String && value2 is C.Value.String -> true
+            value1 is C.Value.ByteArray && value2 is C.Value.ByteArray -> true
+            value1 is C.Value.IntArray && value2 is C.Value.IntArray -> true
+            value1 is C.Value.LongArray && value2 is C.Value.LongArray -> true
+            value1 is C.Value.List && value2 is C.Value.List -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size &&
                     withEnvironment { environment ->
-                        (forced1.elements zip forced2.elements)
+                        (value1.elements zip value2.elements)
                             .withIndex()
                             .all { (index, elements) ->
                                 val (elements1, elements2) = elements
@@ -440,51 +456,54 @@ class Elaborate private constructor(
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
-            forced1 is C.Value.Function && forced2 is C.Value.Function -> forced1.parameters.size == forced2.parameters.size &&
+            value1 is C.Value.Function && value2 is C.Value.Function -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
-                        (forced1.parameters zip forced2.parameters)
+                        (value1.parameters zip value2.parameters)
                             .withIndex()
                             .all { (index, parameter) ->
                                 val (parameter1, parameter2) = parameter
                                 (this + index).unify(environment.evaluate(parameter2.type), environment.evaluate(parameter1.type))
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             } &&
-                                (this + forced1.parameters.size).unify(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
+                                (this + value1.parameters.size).unify(environment.evaluate(value1.resultant), environment.evaluate(value2.resultant))
                     }
-            forced1 is C.Value.Code && forced2 is C.Value.Code -> unify(forced1.element.value, forced2.element.value)
-            forced1 is C.Value.Type && forced2 is C.Value.Type -> true
+            value1 is C.Value.Code && value2 is C.Value.Code -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Type && value2 is C.Value.Type -> true
             else -> false
         }
     }
 
+    /**
+     * Checks if the [value1] is a subtype of the [value2] under this level.
+     */
     private fun Level.subtype(value1: C.Value, value2: C.Value): Boolean {
-        val forced1 = force(value1)
-        val forced2 = force(value2)
+        val value1 = force(value1)
+        val value2 = force(value2)
         return when {
-            forced1 is C.Value.ByteArrayOf && forced2 is C.Value.ByteArrayOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { subtype(it.first.value, it.second.value) }
-            forced1 is C.Value.IntArrayOf && forced2 is C.Value.IntArrayOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { subtype(it.first.value, it.second.value) }
-            forced1 is C.Value.LongArrayOf && forced2 is C.Value.LongArrayOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { subtype(it.first.value, it.second.value) }
-            forced1 is C.Value.ListOf && forced2 is C.Value.ListOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { subtype(it.first.value, it.second.value) }
-            forced1 is C.Value.CompoundOf && forced2 is C.Value.CompoundOf -> forced1.elements.size == forced2.elements.size &&
-                    (forced1.elements zip forced2.elements).all { subtype(it.first.value, it.second.value) }
-            forced1 is C.Value.FunctionOf && forced2 is C.Value.FunctionOf -> forced1.parameters.size == forced2.parameters.size &&
-                    forced1.parameters
+            value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+            value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+            value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+            value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+            value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
+                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+            value1 is C.Value.FunctionOf && value2 is C.Value.FunctionOf -> value1.parameters.size == value2.parameters.size &&
+                    value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
-                        .let { (this + forced1.parameters.size).subtype(it.evaluate(forced1.body), it.evaluate(forced2.body)) }
-            forced1 is C.Value.Apply && forced2 is C.Value.Apply -> subtype(forced1.function, forced2.function) &&
-                    (forced1.arguments zip forced2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
-            forced1 is C.Value.Union -> forced1.variants.all { subtype(it.value, forced2) }
-            forced2 is C.Value.Union -> forced2.variants.any { subtype(forced1, it.value) }
-            forced1 is C.Value.Intersection -> forced1.variants.any { subtype(it.value, forced2) }
-            forced2 is C.Value.Intersection -> forced2.variants.all { subtype(forced1, it.value) }
-            forced1 is C.Value.List && forced2 is C.Value.List -> subtype(forced1.element.value, forced2.element.value)
-            forced1 is C.Value.Compound && forced2 is C.Value.Compound -> forced1.elements.size == forced2.elements.size &&
+                        .let { (this + value1.parameters.size).subtype(it.evaluate(value1.body), it.evaluate(value2.body)) }
+            value1 is C.Value.Apply && value2 is C.Value.Apply -> subtype(value1.function, value2.function) &&
+                    (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
+            value1 is C.Value.Union -> value1.variants.all { subtype(it.value, value2) }
+            value2 is C.Value.Union -> value2.variants.any { subtype(value1, it.value) }
+            value1 is C.Value.Intersection -> value1.variants.any { subtype(it.value, value2) }
+            value2 is C.Value.Intersection -> value2.variants.all { subtype(value1, it.value) }
+            value1 is C.Value.List && value2 is C.Value.List -> subtype(value1.element.value, value2.element.value)
+            value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size &&
                     withEnvironment { environment ->
-                        (forced1.elements zip forced2.elements)
+                        (value1.elements zip value2.elements)
                             .withIndex()
                             .all { (index, elements) ->
                                 val (elements1, elements2) = elements
@@ -492,22 +511,25 @@ class Elaborate private constructor(
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
-            forced1 is C.Value.Function && forced2 is C.Value.Function -> forced1.parameters.size == forced2.parameters.size &&
+            value1 is C.Value.Function && value2 is C.Value.Function -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
-                        (forced1.parameters zip forced2.parameters)
+                        (value1.parameters zip value2.parameters)
                             .withIndex()
                             .all { (index, parameter) ->
                                 val (parameter1, parameter2) = parameter
                                 (this + index).subtype(environment.evaluate(parameter2.type), environment.evaluate(parameter1.type))
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             } &&
-                                (this + forced1.parameters.size).subtype(environment.evaluate(forced1.resultant), environment.evaluate(forced2.resultant))
+                                (this + value1.parameters.size).subtype(environment.evaluate(value1.resultant), environment.evaluate(value2.resultant))
                     }
-            forced1 is C.Value.Code && forced2 is C.Value.Code -> subtype(forced1.element.value, forced2.element.value)
-            else -> unify(forced1, forced2)
+            value1 is C.Value.Code && value2 is C.Value.Code -> subtype(value1.element.value, value2.element.value)
+            else -> unify(value1, value2)
         }
     }
 
+    /**
+     * Recursively unfolds meta-variables of the [value].
+     */
     private tailrec fun force(value: C.Value): C.Value = when (value) {
         is C.Value.Meta -> when (metas[value.index]) {
             null -> value
