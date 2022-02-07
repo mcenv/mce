@@ -2,7 +2,7 @@
 
 [![test](https://github.com/mcenv/mce/actions/workflows/test.yml/badge.svg)](https://github.com/mcenv/mce/actions/workflows/test.yml)
 
-A programming environment[^2] for Minecraft[^1].
+A programming environment[^1] for Minecraft[^2].
 
 ## Goals
 
@@ -55,5 +55,5 @@ A programming environment[^2] for Minecraft[^1].
 10. Castagna, G., Laurent, M., Nguyễn, K., & Lutze, M. (2022). On type-cases, union elimination, and occurrence typing. Proceedings of the ACM on Programming Languages, 6, 1 - 31.
 11. Daniel Marshall, Michael Vollmer, & Dominic Orchard. (2022). [Linearity and Uniqueness: An Entente Cordiale](https://starsandspira.ls/docs/esop22-draft.pdf).
 
-[^1]: NOT OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG.
-[^2]: A highly integrated pair of a programming language and a development environment.
+[^1]: A highly integrated pair of a programming language and a development environment.
+[^2]: NOT OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG.
