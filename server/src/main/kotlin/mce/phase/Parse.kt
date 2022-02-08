@@ -10,7 +10,7 @@ class Parse private constructor(
 ) {
     private var cursor: Int = 0
 
-    private fun parseItem(id: Id = freshId()): S.Item {
+    private fun parseItem(): S.Item {
         val imports = parseParen {
             if (readWord() != "import") error("'import' expected")
             parseList(::readWord)
@@ -18,7 +18,15 @@ class Parse private constructor(
 
         return parseParen {
             when (val word = readWord()) {
-                "definition" -> S.Item.Definition(imports, parseList(::parseModifier), readWord(), parseTerm(), parseTerm(), it)
+                "definition" -> {
+                    val modifiers = parseList(::parseModifier)
+                    val name = readWord()
+                    expect(':')
+                    val type = parseTerm()
+                    expect('=')
+                    val body = parseTerm()
+                    S.Item.Definition(imports, modifiers, name, type, body, it)
+                }
                 else -> error("unexpected item '$word'")
             }
         }

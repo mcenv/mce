@@ -1,2 +1,2 @@
 (import ())
-(definition () a boolean (match false ((b b))))
+(definition () a : boolean = match false ((b b)))

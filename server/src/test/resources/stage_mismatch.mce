@@ -1,2 +1,2 @@
 (import ())
-(definition (meta) a (code boolean) let b false (code_of (#0-0-0-0-0 b)))
+(definition (meta) a : code boolean = let b false (code_of (#0-0-0-0-0 b)))

@@ -1,2 +1,2 @@
 (import ())
-(definition () not boolean (match false ((false true) (true false))))
+(definition () not : boolean = match false ((false true) (true false)))
