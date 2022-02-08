@@ -1,4 +1,4 @@
 (import ())
 (definition ()
   : function ((x end any type) (y end any x)) x
-  = function_of (x y) y)
+  = \(x y) y)

@@ -1,4 +1,4 @@
 (import ())
 (#0-0-0-0-0 definition ()
   : code boolean
-  = code_of false)
+  = `false)

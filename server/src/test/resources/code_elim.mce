@@ -1,4 +1,4 @@
 (import ())
 (definition ()
   : boolean
-  = splice (code_of false))
+  = $(`false))

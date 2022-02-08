@@ -1,4 +1,4 @@
 (import ())
 (definition ()
   : boolean
-  = (#0-0-0-0-0 let b (code_of false) false))
+  = (#0-0-0-0-0 let b (`false) false))

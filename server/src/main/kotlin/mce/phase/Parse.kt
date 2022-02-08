@@ -62,6 +62,26 @@ class Parse private constructor(
             skip()
             S.Term.CompoundOf(parseDelimitedList('}', ::parseTerm), id)
         }
+        '&' -> {
+            skip()
+            S.Term.ReferenceOf(parseTerm(), id)
+        }
+        '\\' -> {
+            skip()
+            S.Term.FunctionOf(parseList(::readWord), parseTerm(), id)
+        }
+        '@' -> {
+            skip()
+            S.Term.Apply(parseTerm(), parseList { parseTerm() }, id)
+        }
+        '`' -> {
+            skip()
+            S.Term.CodeOf(parseTerm(), id)
+        }
+        '$' -> {
+            skip()
+            S.Term.Splice(parseTerm(), id)
+        }
         else -> when (val word = readWord()) {
             "hole" -> S.Term.Hole(id)
             "meta" -> S.Term.Meta(readWord().toInt(), id)
@@ -70,11 +90,6 @@ class Parse private constructor(
             "match" -> S.Term.Match(parseTerm(), parseList { parsePair(::parsePattern, ::parseTerm) }, id)
             "false" -> S.Term.BooleanOf(false, id)
             "true" -> S.Term.BooleanOf(true, id)
-            "reference_of" -> S.Term.ReferenceOf(parseTerm(), id)
-            "function_of" -> S.Term.FunctionOf(parseList(::readWord), parseTerm(), id)
-            "apply" -> S.Term.Apply(parseTerm(), parseList { parseTerm() }, id)
-            "code_of" -> S.Term.CodeOf(parseTerm(), id)
-            "splice" -> S.Term.Splice(parseTerm(), id)
             "union" -> S.Term.Union(parseList { parseTerm() }, id)
             "end" -> S.Term.Union(emptyList(), id)
             "intersection" -> S.Term.Intersection(parseList { parseTerm() }, id)
@@ -134,10 +149,13 @@ class Parse private constructor(
             skip()
             S.Pattern.CompoundOf(parseDelimitedList('}', ::parsePattern), id)
         }
+        '&' -> {
+            skip()
+            S.Pattern.ReferenceOf(parsePattern(), id)
+        }
         else -> when (val word = readWord()) {
             "false" -> S.Pattern.BooleanOf(false, id)
             "true" -> S.Pattern.BooleanOf(true, id)
-            "reference_of" -> S.Pattern.ReferenceOf(parsePattern(), id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> S.Pattern.ByteOf(word.dropLast(1).toByte(), id)
                 SHORT_EXPRESSION.matches(word) -> S.Pattern.ShortOf(word.dropLast(1).toShort(), id)

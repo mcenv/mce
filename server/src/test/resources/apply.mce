@@ -1,4 +1,4 @@
 (import ())
 (definition ()
   : boolean
-  = apply (function_of (x) x) (false))
+  = @(\(x) x) (false))
