@@ -1,2 +1,2 @@
-*.mce linguist-language=mcfunction
+*.mce linguist-language=clojure
 * text=auto
