@@ -1,4 +1,4 @@
 (import ())
-(definition () f
+(definition ()
   : list union (byte short int long float double string byte_array (list end) (compound ()) int_array long_array)
   = [0b, 1s, 2, 3l, 4.0f, 5.0d, "6", [b;], [], {}, [i;], [l;],])

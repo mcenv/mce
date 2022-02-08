@@ -10,7 +10,7 @@ class Parse private constructor(
 ) {
     private var cursor: Int = 0
 
-    private fun parseItem(): S.Item {
+    private fun parseItem(name: String): S.Item {
         val imports = parseParen {
             if (readWord() != "import") error("'import' expected")
             parseList(::readWord)
@@ -20,7 +20,6 @@ class Parse private constructor(
             when (val word = readWord()) {
                 "definition" -> {
                     val modifiers = parseList(::parseModifier)
-                    val name = readWord()
                     expect(':')
                     val type = parseTerm()
                     expect('=')
@@ -212,7 +211,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    private fun Char.isWordPart(): Boolean = this != ' ' && this != '(' && this != ')' && this != ','
+    private fun Char.isWordPart(): Boolean = !this.isWhitespace() && this != '(' && this != ')' && this != ','
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 
@@ -224,6 +223,6 @@ class Parse private constructor(
         private val FLOAT_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?f")
         private val DOUBLE_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?d")
 
-        operator fun invoke(input: String): S.Item = Parse(input).parseItem()
+        operator fun invoke(name: String, input: String): S.Item = Parse(input).parseItem(name)
     }
 }

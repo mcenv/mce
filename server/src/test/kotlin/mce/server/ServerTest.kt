@@ -13,8 +13,9 @@ class ServerTest {
     fun hover() {
         runBlocking {
             Server().run {
-                register("a", read("/server.mce"))
-                assertIs<Surface.Term.Boolean>(hover("a", UUID(0, 0)).type)
+                val name = "server"
+                register(name, read("/$name.mce"))
+                assertIs<Surface.Term.Boolean>(hover(name, UUID(0, 0)).type)
             }
         }
     }
@@ -23,11 +24,12 @@ class ServerTest {
     fun counter() {
         runBlocking {
             Server().run {
-                register("a", read("/server.mce"))
-                hover("a", UUID(0, 0))
-                assertEquals(1, getCount(Key.Elaborated("a")))
-                hover("a", UUID(0, 0))
-                assertEquals(1, getCount(Key.Elaborated("a")))
+                val name = "server"
+                register(name, read("/$name.mce"))
+                hover(name, UUID(0, 0))
+                assertEquals(1, getCount(Key.Elaborated(name)))
+                hover(name, UUID(0, 0))
+                assertEquals(1, getCount(Key.Elaborated(name)))
             }
         }
     }

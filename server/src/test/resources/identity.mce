@@ -1,2 +1,4 @@
 (import ())
-(definition () identity : function ((α end any type) (a end any α)) α = function_of (α a) a)
+(definition ()
+  : function ((α end any type) (a end any α)) α
+  = function_of (α a) a)

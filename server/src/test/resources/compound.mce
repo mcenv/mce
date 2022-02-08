@@ -1,2 +1,4 @@
 (import ())
-(definition () a : compound ((α type) (a α)) = {boolean, false,})
+(definition ()
+  : compound ((α type) (a α))
+  = {boolean, false,})

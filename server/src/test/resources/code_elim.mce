@@ -1,2 +1,4 @@
 (import ())
-(definition () a : boolean = splice (code_of false))
+(definition ()
+  : boolean
+  = splice (code_of false))

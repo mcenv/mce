@@ -6,6 +6,6 @@ import kotlin.test.Test
 class ParseTest {
     @Test
     fun parseAll() {
-        Parse(read("/parse.mce"))
+        Parse("parse", read("/parse.mce"))
     }
 }

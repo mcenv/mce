@@ -1,2 +1,4 @@
 (import ())
-(definition () a : boolean = (#0-0-0-0-0 false))
+(definition ()
+  : boolean
+  = (#0-0-0-0-0 false))

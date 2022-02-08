@@ -1,2 +1,4 @@
 (import ())
-(definition () a : boolean = apply (function_of (x) x) (false))
+(definition ()
+  : boolean
+  = apply (function_of (x) x) (false))

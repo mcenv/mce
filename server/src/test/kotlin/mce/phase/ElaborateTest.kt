@@ -10,103 +10,103 @@ import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class ElaborateTest {
-    private fun elaborate(items: Map<String, C.Item>, path: String): Elaborate.Output = Elaborate(items, Parse(read(path)))
+    private fun elaborate(items: Map<String, C.Item>, name: String): Elaborate.Output = Elaborate(items, Parse(name, read("/$name.mce")))
 
     @Test
     fun elaborate() {
         val boolean = S.Term.Boolean(UUID(0, 0))
         val ff = S.Term.BooleanOf(false, UUID(0, 1))
-        val (elaborated, diagnostics, types) = elaborate(emptyMap(), "/elaborate.mce")
+        val (elaborated, diagnostics, types) = elaborate(emptyMap(), "elaborate")
 
         assert(diagnostics.isEmpty())
         assertIs<S.Term.Type>(types[boolean.id]!!.value)
         assertIs<S.Term.Boolean>(types[ff.id]!!.value)
-        assertEquals(C.Item.Definition(emptyList(), "a", C.Term.BooleanOf(false), C.Value.Boolean), elaborated)
+        assertEquals(C.Item.Definition(emptyList(), "elaborate", C.Term.BooleanOf(false), C.Value.Boolean), elaborated)
     }
 
     @Test
     fun apply() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/apply.mce")
+        val (_, diagnostics, _) = elaborate(emptyMap(), "apply")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun functionIntro() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/function_intro.mce")
+        val (_, diagnostics, _) = elaborate(emptyMap(), "function_intro")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun functionElim() {
-        val (identity, diagnostics1, _) = elaborate(emptyMap(), "/identity.mce")
-        val (_, diagnostics2, _) = elaborate(mapOf(identity.name to identity), "/function_elim.mce")
+        val (identity, diagnostics1, _) = elaborate(emptyMap(), "identity")
+        val (_, diagnostics2, _) = elaborate(mapOf(identity.name to identity), "function_elim")
         assert(diagnostics1.isEmpty())
         assert(diagnostics2.isEmpty())
     }
 
     @Test
-    fun testFunctionClosed() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/function_closed.mce")
+    fun functionClosed() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "function_closed")
         assert(diagnostics.contains(Diagnostic.VariableNotFound("a", UUID(0, 0))))
     }
 
     @Test
-    fun testLet() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/let.mce")
+    fun let() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "let")
         assert(diagnostics.isEmpty())
     }
 
     @Test
-    fun testInvalidDefinition() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/invalid_definition.mce")
+    fun invalidDefinition() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "invalid_definition")
         assert(diagnostics.contains(Diagnostic.DefinitionNotFound("a", UUID(0, 0))))
     }
 
     @Test
-    fun testDependentCompound() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/compound.mce")
+    fun compound() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "compound")
         assert(diagnostics.isEmpty())
     }
 
     @Test
-    fun testCodeIntroduction() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/code_intro.mce")
+    fun codeIntro() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "code_intro")
         assert(diagnostics.isEmpty())
     }
 
     @Test
-    fun testCodeElimination() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/code_elim.mce")
+    fun codeElim() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "code_elim")
         assert(diagnostics.isEmpty())
     }
 
     @Test
-    fun testStageMismatch() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/stage_mismatch.mce")
+    fun stageMismatch() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "stage_mismatch")
         assert(diagnostics.contains(Diagnostic.StageMismatch(1, 0, UUID(0, 0))))
     }
 
     @Test
-    fun testPhaseMismatch() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/phase_mismatch.mce")
+    fun phaseMismatch() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch")
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0))))
     }
 
     @Test
-    fun testPhaseMismatchLocal() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/phase_mismatch_local.mce")
+    fun phaseMismatchLocal() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch_local")
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0))))
     }
 
     @Test
-    fun testMatchBoolean() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/match_boolean.mce")
+    fun matchBoolean() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "match_boolean")
         assert(diagnostics.isEmpty())
     }
 
     @Test
-    fun testMatchVariable() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "/match_variable.mce")
+    fun matchVariable() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "match_variable")
         assert(diagnostics.isEmpty())
     }
 }

@@ -1,2 +1,4 @@
 (import ())
-(definition (meta) a : code boolean = code_of false)
+(definition (meta)
+  : code boolean
+  = code_of false)

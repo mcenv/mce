@@ -23,7 +23,7 @@ class Server {
             is Key.Parsed -> getValue(key) ?: run {
                 incrementCount(key)
                 val source = fetch(Key.Source(key.name))
-                Parse(source).also {
+                Parse(key.name, source).also {
                     dependencies[key.name] = it.imports.toMutableList()
                     setValue(key, it)
                 }

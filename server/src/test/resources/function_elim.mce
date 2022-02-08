@@ -1,2 +1,4 @@
 (import (identity))
-(definition () f : boolean = apply (definition identity) (boolean false))
+(definition ()
+  : boolean
+  = apply (definition identity) (boolean false))
