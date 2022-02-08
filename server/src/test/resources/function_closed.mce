@@ -1,0 +1,4 @@
+(import ())
+(definition () a
+  (function ((a end any boolean)) (function ((b end any boolean)) boolean))
+  (function_of (a) (function_of (b) (#0-0-0-0-0 a))))

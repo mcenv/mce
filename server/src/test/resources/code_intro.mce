@@ -1,0 +1,2 @@
+(import ())
+(definition (meta) a (code boolean) (code_of false))

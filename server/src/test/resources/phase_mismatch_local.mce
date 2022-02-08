@@ -1,0 +1,2 @@
+(import ())
+(definition () a boolean (#0-0-0-0-0 let b (code_of false) false))
