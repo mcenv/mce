@@ -11,7 +11,7 @@ object Dsl {
 
     fun hole() = Term.Hole(freshId())
     fun meta(index: Int) = Term.Meta(index, freshId())
-    fun variable(name: String, level: Int) = Term.Variable(name, level, freshId())
+    fun variable(name: String) = Term.Variable(name, freshId())
     fun definition(name: String) = Term.Definition(name, freshId())
     fun let_in(name: String, init: Term, body: Term) = Term.Let(name, init, body, freshId())
     fun Term.match(vararg clauses: Pair<Pattern, Term>) = Term.Match(this, clauses.toList(), freshId())

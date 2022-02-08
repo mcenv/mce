@@ -80,7 +80,7 @@ class Parse private constructor(
                 LONG_EXPRESSION.matches(word) -> S.Term.LongOf(word.dropLast(1).toLong(), id())
                 FLOAT_EXPRESSION.matches(word) -> S.Term.FloatOf(word.dropLast(1).toFloat(), id())
                 DOUBLE_EXPRESSION.matches(word) -> S.Term.DoubleOf(word.dropLast(1).toDouble(), id())
-                else -> S.Term.Variable(word, TODO(), id())
+                else -> S.Term.Variable(word, id())
             }
         }
     }

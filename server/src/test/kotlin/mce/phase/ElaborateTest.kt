@@ -44,7 +44,7 @@ class ElaborateTest {
         assert(diagnostics.isEmpty())
         assertIs<S.Term.Type>(types[boolean.id]!!.value)
         assertIs<S.Term.Boolean>(types[ff.id]!!.value)
-        assertEquals(C.Item.Definition("a", emptyList(), ff, C.Value.Boolean), elaborated)
+        assertEquals(C.Item.Definition(emptyList(), "a", C.Term.BooleanOf(false), C.Value.Boolean), elaborated)
     }
 
     @Test
@@ -55,7 +55,7 @@ class ElaborateTest {
                 emptyList(),
                 "a",
                 boolean(),
-                function_of(variable("x", 0), "x")(ff())
+                function_of(variable("x"), "x")(ff())
             )
         )
 
@@ -68,8 +68,8 @@ class ElaborateTest {
             definition(
                 emptyList(),
                 "a",
-                function(variable("x", 0), parameter("x", end(), any(), type()), parameter("y", end(), any(), variable("x", 0))),
-                function_of(variable("y", 1), "x", "y")
+                function(variable("x"), parameter("x", end(), any(), type()), parameter("y", end(), any(), variable("x"))),
+                function_of(variable("y"), "x", "y")
             )
         )
 
@@ -83,8 +83,8 @@ class ElaborateTest {
             definition(
                 emptyList(),
                 "identity",
-                function(variable("α", 0), parameter("α", end(), any(), type()), parameter("a", end(), any(), variable("α", 0))),
-                function_of(variable("a", 1), "α", "a")
+                function(variable("α"), parameter("α", end(), any(), type()), parameter("a", end(), any(), variable("α"))),
+                function_of(variable("a"), "α", "a")
             )
         )
         val (_, diagnostics2, _) = Elaborate(
@@ -103,7 +103,7 @@ class ElaborateTest {
 
     @Test
     fun testFunctionClosed() {
-        val a = variable("a", 0)
+        val a = variable("a")
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
             definition(
@@ -125,7 +125,7 @@ class ElaborateTest {
                 emptyList(),
                 "a",
                 boolean(),
-                let_in("x", ff(), variable("x", 0))
+                let_in("x", ff(), variable("x"))
             )
         )
 
@@ -179,7 +179,7 @@ class ElaborateTest {
             definition(
                 emptyList(),
                 "a",
-                compound("α" to type(), "a" to variable("α", 0)),
+                compound("α" to type(), "a" to variable("α")),
                 compound_of(boolean(), ff())
             )
         )
@@ -219,7 +219,7 @@ class ElaborateTest {
 
     @Test
     fun testStageMismatch() {
-        val b = variable("b", 0)
+        val b = variable("b")
         val (_, diagnostics, _) = Elaborate(
             emptyMap(),
             definition(
@@ -292,7 +292,7 @@ class ElaborateTest {
                 "a",
                 boolean(),
                 ff().match(
-                    p_variable("b") to variable("b", 0)
+                    p_variable("b") to variable("b")
                 )
             )
         )

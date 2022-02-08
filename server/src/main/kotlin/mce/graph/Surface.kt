@@ -35,7 +35,7 @@ object Surface {
 
         data class Hole(override val id: Id) : Term()
         data class Meta(val index: KInt, override val id: Id) : Term()
-        data class Variable(val name: KString, val level: KInt, override val id: Id) : Term()
+        data class Variable(val name: KString, override val id: Id) : Term()
         data class Definition(val name: KString, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
@@ -78,8 +78,6 @@ object Surface {
         data class Type(override val id: Id) : Term()
     }
 
-    data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
-
     sealed class Pattern {
         abstract val id: Id
 
@@ -99,4 +97,6 @@ object Surface {
         data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class ReferenceOf(val element: Pattern, override val id: Id) : Pattern()
     }
+
+    data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
 }
