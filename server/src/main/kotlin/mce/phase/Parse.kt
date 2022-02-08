@@ -11,23 +11,21 @@ class Parse private constructor(
     private var cursor: Int = 0
 
     private fun parseItem(name: String): S.Item {
-        val imports = parseParen {
+        val imports = run {
             if (readWord() != "import") error("'import' expected")
             parseList(::readWord)
         }
 
-        return parseParen {
-            when (val word = readWord()) {
-                "definition" -> {
-                    val modifiers = parseList(::parseModifier)
-                    expect(':')
-                    val type = parseTerm()
-                    expect('=')
-                    val body = parseTerm()
-                    S.Item.Definition(imports, modifiers, name, type, body, it)
-                }
-                else -> error("unexpected item '$word'")
+        return when (val word = readWord()) {
+            "definition" -> {
+                val modifiers = parseList(::parseModifier)
+                expect(':')
+                val type = parseTerm()
+                expect('=')
+                val body = parseTerm()
+                S.Item.Definition(imports, modifiers, name, type, body)
             }
+            else -> error("unexpected item '$word'")
         }
     }
 

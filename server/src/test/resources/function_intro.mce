@@ -1,4 +1,5 @@
-(import ())
-(definition ()
+import ()
+
+definition ()
   : function ((x end any type) (y end any x)) x
-  = \(x y) y)
+  = \(x y) y

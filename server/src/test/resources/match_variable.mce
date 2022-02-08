@@ -1,6 +1,7 @@
-(import ())
-(definition ()
+import ()
+
+definition ()
   : boolean
   = match false {
       b => b,
-    })
+    }

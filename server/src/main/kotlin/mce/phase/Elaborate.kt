@@ -25,7 +25,7 @@ class Elaborate private constructor(
             val meta = item.modifiers.contains(S.Modifier.META)
             val type = emptyEnvironment().evaluate(emptyContext(meta).checkTerm(item.type, C.Value.Type))
             val body = emptyContext(meta).checkTerm(item.body, type)
-            emptyContext(meta).checkPhase(item.id, type)
+            emptyContext(meta).checkPhase(item.body.id, type)
             C.Item.Definition(item.imports, item.name, body, type)
         }
     }
@@ -56,7 +56,7 @@ class Elaborate private constructor(
         }
         is S.Term.Let -> {
             val init = inferTerm(term.init)
-            val body = bind(term.id, Entry(term.name, END, ANY, init.type, stage)).inferTerm(term.body)
+            val body = bind(term.init.id, Entry(term.name, END, ANY, init.type, stage)).inferTerm(term.body)
             Typing(C.Term.Let(term.name, init.element, body.element), body.type)
         }
         is S.Term.Match -> {
@@ -210,7 +210,7 @@ class Elaborate private constructor(
             }
             term is S.Term.Let -> {
                 val init = inferTerm(term.init)
-                val body = bind(term.id, Entry(term.name, END, ANY, init.type, stage)).checkTerm(term.body, type)
+                val body = bind(term.init.id, Entry(term.name, END, ANY, init.type, stage)).checkTerm(term.body, type)
                 C.Term.Let(term.name, init.element, body)
             }
             term is S.Term.Match -> {

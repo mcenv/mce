@@ -1,4 +1,5 @@
-(import ())
-(definition ()
+import ()
+
+definition ()
   : boolean
-  = let x = false x)
+  = let x = false x
