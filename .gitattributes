@@ -1,2 +1,3 @@
 *.mce linguist-language=clojure
+*.mce -linguist-detectable
 * text=auto
