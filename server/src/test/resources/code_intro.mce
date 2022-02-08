@@ -2,4 +2,5 @@ import ()
 
 definition (meta)
   : code boolean
+  ! {}
   = `false

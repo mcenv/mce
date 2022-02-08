@@ -24,8 +24,9 @@ object Core {
         data class Definition(
             override val imports: KList<KString>,
             override val name: KString,
-            val body: Term,
-            val type: Value
+            val type: Value,
+            val effects: KList<Effect>,
+            val body: Term
         ) : Item()
     }
 
@@ -148,4 +149,6 @@ object Core {
     }
 
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
+
+    sealed class Effect
 }

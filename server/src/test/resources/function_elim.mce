@@ -2,4 +2,5 @@ import (identity)
 
 definition ()
   : boolean
+  ! {}
   = @(!identity) (boolean false)

@@ -2,4 +2,5 @@ import ()
 
 definition ()
   : boolean
+  ! {}
   = let x = false x

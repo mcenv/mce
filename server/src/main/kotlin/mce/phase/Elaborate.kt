@@ -22,9 +22,10 @@ class Elaborate private constructor(
         is S.Item.Definition -> {
             val meta = item.modifiers.contains(S.Modifier.META)
             val type = emptyEnvironment().evaluate(emptyContext(meta).checkTerm(item.type, C.Value.Type))
+            val effects = item.effects.map { elaborateEffect(it) }
             val body = emptyContext(meta).checkTerm(item.body, type)
             emptyContext(meta).checkPhase(item.body.id, type)
-            C.Item.Definition(item.imports, item.name, body, type)
+            C.Item.Definition(item.imports, item.name, type, effects, body)
         }
     }
 
@@ -334,6 +335,8 @@ class Elaborate private constructor(
             }
         }
     }
+
+    private fun elaborateEffect(effect: S.Effect): C.Effect = TODO()
 
     /**
      * Evaluates the [term] to a value under this environment.

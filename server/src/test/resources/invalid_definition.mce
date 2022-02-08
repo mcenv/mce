@@ -2,4 +2,5 @@ import ()
 
 definition ()
   : boolean
+  ! {}
   = (#0-0-0-0-0 !a)

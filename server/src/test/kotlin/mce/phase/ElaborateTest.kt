@@ -21,7 +21,7 @@ class ElaborateTest {
         assert(diagnostics.isEmpty())
         assertIs<S.Term.Type>(types[boolean.id]!!.value)
         assertIs<S.Term.Boolean>(types[ff.id]!!.value)
-        assertEquals(C.Item.Definition(emptyList(), "elaborate", C.Term.BooleanOf(false), C.Value.Boolean), elaborated)
+        assertEquals(C.Item.Definition(emptyList(), "elaborate", C.Value.Boolean, emptyList(), C.Term.BooleanOf(false)), elaborated)
     }
 
     @Test

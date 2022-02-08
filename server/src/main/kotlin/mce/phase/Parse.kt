@@ -21,9 +21,12 @@ class Parse private constructor(
                 val modifiers = parseList(::parseModifier)
                 expect(':')
                 val type = parseTerm()
+                expect('!')
+                expect('{')
+                val effects = parseDelimitedList('}') { TODO() }
                 expect('=')
                 val body = parseTerm()
-                S.Item.Definition(imports, modifiers, name, type, body)
+                S.Item.Definition(imports, modifiers, name, type, effects, body)
             }
             else -> error("unexpected item '$word'")
         }

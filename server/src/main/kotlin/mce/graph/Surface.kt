@@ -20,6 +20,7 @@ object Surface {
             val modifiers: KList<Modifier>,
             override val name: KString,
             val type: Term,
+            val effects: KList<Effect>,
             val body: Term
         ) : Item()
     }
@@ -97,4 +98,6 @@ object Surface {
     }
 
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
+
+    sealed class Effect
 }
