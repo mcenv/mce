@@ -10,8 +10,6 @@ private typealias Environment = List<Lazy<C.Value>>
 
 private typealias Level = Int
 
-private typealias Stage = Int
-
 @Suppress("NAME_SHADOWING")
 class Elaborate private constructor(
     private val items: Map<String, C.Item>
@@ -637,13 +635,13 @@ class Elaborate private constructor(
         val lower: C.Value,
         val upper: C.Value,
         val type: C.Value,
-        val stage: Stage
+        val stage: Int
     )
 
     private inner class Context(
         val entries: MutableList<Entry>,
         val meta: Boolean,
-        var stage: Stage
+        var stage: Int
     ) {
         fun checkPhase(id: Id, type: C.Value) {
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
