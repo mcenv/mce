@@ -9,11 +9,23 @@ class Parse private constructor(
 ) {
     private var cursor: Int = 0
 
-    private fun parseItem(): S.Item = parseParen {
-        when (readWord()) {
-            "definition" -> S.Item.Definition(freshId(), readWord(), parseList(::readWord), readWord().toBooleanStrict(), parseTerm(), parseTerm())
-            else -> throw Error()
+    private fun parseItem(): S.Item {
+        val imports = parseParen {
+            if (readWord() != "import") error()
+            parseList(::readWord)
         }
+
+        return parseParen {
+            when (readWord()) {
+                "definition" -> S.Item.Definition(imports, parseList(::parseModifier), readWord(), parseTerm(), parseTerm(), freshId())
+                else -> error()
+            }
+        }
+    }
+
+    private fun parseModifier(): S.Modifier = when (readWord()) {
+        "meta" -> S.Modifier.META
+        else -> error()
     }
 
     private fun parseTerm(id: () -> UUID = ::freshId): S.Term = when (run { skipWhitespace(); peek() }) {
@@ -124,7 +136,7 @@ class Parse private constructor(
 
     private fun expect(char: Char) {
         skipWhitespace()
-        if (!canRead() || peek() != char) throw Error()
+        if (!canRead() || peek() != char) error()
         skip()
     }
 
@@ -132,7 +144,7 @@ class Parse private constructor(
         skipWhitespace()
         val start = cursor
         while (canRead() && peek().let { it != ' ' && it != '(' && it != ')' }) skip()
-        return source.substring(start, cursor).also { if (it.isEmpty()) throw Error() }
+        return source.substring(start, cursor).also { if (it.isEmpty()) error() }
     }
 
     // TODO: handle escape
@@ -142,6 +154,8 @@ class Parse private constructor(
         while (canRead() && peek() != '"') skip()
         return source.substring(start, cursor).also { skip() }
     }
+
+    private fun error(): Nothing = throw Error("$cursor")
 
     companion object {
         private val BYTE_EXPRESSION = Regex("[-+]?(?:0|[1-9][0-9]*)b")

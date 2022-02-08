@@ -1,12 +1,13 @@
 package mce.graph
 
 import mce.graph.Surface.Item
+import mce.graph.Surface.Modifier
 import mce.graph.Surface.Parameter
 import mce.graph.Surface.Pattern
 import mce.graph.Surface.Term
 
 object Dsl {
-    fun definition(name: String, meta: Boolean, type: Term, body: Term, vararg imports: String) = Item.Definition(freshId(), name, imports.toList(), meta, type, body)
+    fun definition(modifiers: List<Modifier>, name: String, type: Term, body: Term, vararg imports: String) = Item.Definition(imports.toList(), modifiers, name, type, body, freshId())
 
     fun hole() = Term.Hole(freshId())
     fun meta(index: Int) = Term.Meta(index, freshId())

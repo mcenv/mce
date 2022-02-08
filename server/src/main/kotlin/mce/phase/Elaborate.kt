@@ -25,10 +25,11 @@ class Elaborate private constructor(
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
-            emptyContext(item.meta).checkTerm(item.type, C.Value.Type)
+            val meta = item.modifiers.contains(S.Modifier.META)
+            emptyContext(meta).checkTerm(item.type, C.Value.Type)
             val type = emptyEnvironment().evaluate(item.type)
-            emptyContext(item.meta).checkTerm(item.body, type)
-            emptyContext(item.meta).checkPhase(item.id, type)
+            emptyContext(meta).checkTerm(item.body, type)
+            emptyContext(meta).checkPhase(item.id, type)
             C.Item.Definition(item.name, item.imports, item.body, type)
         }
     }

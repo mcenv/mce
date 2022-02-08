@@ -12,18 +12,22 @@ import kotlin.collections.List as KList
 
 object Surface {
     sealed class Item {
-        abstract val id: Id
-        abstract val name: KString
         abstract val imports: KList<KString>
+        abstract val name: KString
+        abstract val id: Id
 
         data class Definition(
-            override val id: Id,
-            override val name: KString,
             override val imports: KList<KString>,
-            val meta: KBoolean,
+            val modifiers: KList<Modifier>,
+            override val name: KString,
             val type: Term,
             val body: Term,
+            override val id: Id
         ) : Item()
+    }
+
+    enum class Modifier {
+        META
     }
 
     sealed class Term {
