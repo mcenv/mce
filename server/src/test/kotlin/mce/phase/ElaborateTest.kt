@@ -23,6 +23,8 @@ import mce.graph.Dsl.parameter
 import mce.graph.Dsl.tt
 import mce.graph.Dsl.type
 import mce.graph.Dsl.variable
+import mce.read
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -30,14 +32,13 @@ import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class ElaborateTest {
+    private fun elaborate(items: Map<String, C.Item>, path: String): Elaborate.Output = Elaborate(items, Parse(read(path)))
+
     @Test
-    fun testFalse() {
-        val boolean = boolean()
-        val ff = ff()
-        val (elaborated, diagnostics, types) = Elaborate(
-            emptyMap(),
-            definition("a", false, boolean, ff)
-        )
+    fun elaborate() {
+        val boolean = S.Term.Boolean(UUID(0, 0))
+        val ff = S.Term.BooleanOf(false, UUID(0, 1))
+        val (elaborated, diagnostics, types) = elaborate(emptyMap(), "/elaborate.mce")
 
         assert(diagnostics.isEmpty())
         assertIs<S.Term.Type>(types[boolean.id]!!.value)
