@@ -1,4 +1,4 @@
 (import (identity))
 (definition ()
   : boolean
-  = @(definition identity) (boolean false))
+  = @(!identity) (boolean false))

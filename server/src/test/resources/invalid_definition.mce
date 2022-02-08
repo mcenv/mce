@@ -1,4 +1,4 @@
 (import ())
 (definition ()
   : boolean
-  = (#0-0-0-0-0 definition a))
+  = (#0-0-0-0-0 !a))

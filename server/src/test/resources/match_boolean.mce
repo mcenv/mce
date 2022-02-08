@@ -1,4 +1,7 @@
 (import ())
 (definition ()
   : boolean
-  = match false ((false true) (true false)))
+  = match false {
+      false => true,
+      true  => false,
+    })

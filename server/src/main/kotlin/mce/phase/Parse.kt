@@ -36,8 +36,12 @@ class Parse private constructor(
         else -> error("unexpected modifier '$word'")
     }
 
-    private fun parseTerm(id: Id = freshId()): S.Term = when (run { skipWhitespace(); peek() }) {
+    private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
         '(' -> parseParen { parseTerm(it) }
+        '!' -> {
+            skip()
+            S.Term.Definition(readWord(), id)
+        }
         '"' -> S.Term.StringOf(readString(), id)
         '[' -> {
             skip()
@@ -85,9 +89,19 @@ class Parse private constructor(
         else -> when (val word = readWord()) {
             "hole" -> S.Term.Hole(id)
             "meta" -> S.Term.Meta(readWord().toInt(), id)
-            "definition" -> S.Term.Definition(readWord(), id)
-            "let" -> S.Term.Let(readWord(), parseTerm(), parseTerm(), id)
-            "match" -> S.Term.Match(parseTerm(), parseList { parsePair(::parsePattern, ::parseTerm) }, id)
+            "let" -> {
+                val name = readWord()
+                expect('=')
+                val init = parseTerm()
+                val body = parseTerm()
+                S.Term.Let(name, init, body, id)
+            }
+            "match" -> {
+                val scrutinee = parseTerm()
+                expect('{')
+                val clauses = parseDelimitedList('}') { parsePair(::parsePattern, { expect('='); expect('>') }, ::parseTerm) }
+                S.Term.Match(scrutinee, clauses, id)
+            }
             "false" -> S.Term.BooleanOf(false, id)
             "true" -> S.Term.BooleanOf(true, id)
             "union" -> S.Term.Union(parseList { parseTerm() }, id)
@@ -106,7 +120,11 @@ class Parse private constructor(
             "int_array" -> S.Term.IntArray(id)
             "long_array" -> S.Term.LongArray(id)
             "list" -> S.Term.List(parseTerm(), id)
-            "compound" -> S.Term.Compound(parseList { parsePair(::readWord, ::parseTerm) }, id)
+            "compound" -> {
+                expect('{')
+                val elements = parseDelimitedList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
+                S.Term.Compound(elements, id)
+            }
             "reference" -> S.Term.Reference(parseTerm(), id)
             "function" -> S.Term.Function(parseList { parseParen { S.Parameter(readWord(), parseTerm(), parseTerm(), parseTerm()) } }, parseTerm(), id)
             "code" -> S.Term.Code(parseTerm(), id)
@@ -123,7 +141,7 @@ class Parse private constructor(
         }
     }
 
-    private fun parsePattern(id: Id = freshId()): S.Pattern = when (run { skipWhitespace(); peek() }) {
+    private fun parsePattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
         '(' -> parseParen { parsePattern(it) }
         '"' -> S.Pattern.StringOf(readString(), id)
         '[' -> {
@@ -170,7 +188,7 @@ class Parse private constructor(
 
     private inline fun <A> parseParen(parseA: (Id) -> A): A {
         expect('(')
-        return when (run { skipWhitespace(); peek() }) {
+        return when (peekChar()) {
             '#' -> {
                 skip()
                 val explicitId = UUID.fromString(readWord())
@@ -180,16 +198,21 @@ class Parse private constructor(
         }.also { expect(')') }
     }
 
-    private inline fun <A, B> parsePair(parseA: () -> A, parseB: () -> B): Pair<A, B> = parseParen { parseA() to parseB() }
+    private inline fun <A, B> parsePair(parseA: () -> A, delimit: () -> Unit, parseB: () -> B): Pair<A, B> {
+        val a = parseA()
+        delimit()
+        val b = parseB()
+        return a to b
+    }
 
     private inline fun <A> parseList(parseA: () -> A): List<A> = parseParen {
         mutableListOf<A>().also {
-            while (peek() != ')') it += parseA()
+            while (peekChar() != ')') it += parseA()
         }
     }
 
     private inline fun <A> parseDelimitedList(end: Char, parseA: () -> A): List<A> = mutableListOf<A>().also {
-        while (peek() != end) {
+        while (peekChar() != end) {
             it += parseA()
             expect(',')
         }
@@ -214,6 +237,11 @@ class Parse private constructor(
         skip()
     }
 
+    private fun peekChar(): Char {
+        skipWhitespace()
+        return peek()
+    }
+
     private fun readWord(): String {
         skipWhitespace()
         val start = cursor
@@ -229,7 +257,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    private fun Char.isWordPart(): Boolean = !this.isWhitespace() && this != '(' && this != ')' && this != ','
+    private fun Char.isWordPart(): Boolean = !this.isWhitespace() && this != ',' && this != '(' && this != ')' && this != '[' && this != ']' && this != '{' && this != '}' && this != '='
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 
