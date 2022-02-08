@@ -40,6 +40,29 @@ class Parse private constructor(
     private fun parseTerm(id: Id = freshId()): S.Term = when (run { skipWhitespace(); peek() }) {
         '(' -> parseParen { parseTerm(it) }
         '"' -> S.Term.StringOf(readString(), id)
+        '[' -> {
+            skip()
+            val char = peek()
+            when {
+                char == 'b' && peek(1) == ';' -> {
+                    skip(2)
+                    S.Term.ByteArrayOf(parseDelimitedList(']', ::parseTerm), id)
+                }
+                char == 'i' && peek(1) == ';' -> {
+                    skip(2)
+                    S.Term.IntArrayOf(parseDelimitedList(']', ::parseTerm), id)
+                }
+                char == 'l' && peek(1) == ';' -> {
+                    skip(2)
+                    S.Term.LongArrayOf(parseDelimitedList(']', ::parseTerm), id)
+                }
+                else -> S.Term.ListOf(parseDelimitedList(']', ::parseTerm), id)
+            }
+        }
+        '{' -> {
+            skip()
+            S.Term.CompoundOf(parseDelimitedList('}', ::parseTerm), id)
+        }
         else -> when (val word = readWord()) {
             "hole" -> S.Term.Hole(id)
             "meta" -> S.Term.Meta(readWord().toInt(), id)
@@ -48,11 +71,6 @@ class Parse private constructor(
             "match" -> S.Term.Match(parseTerm(), parseList { parsePair(::parsePattern, ::parseTerm) }, id)
             "false" -> S.Term.BooleanOf(false, id)
             "true" -> S.Term.BooleanOf(true, id)
-            "byte_array_of" -> S.Term.ByteArrayOf(parseList { parseTerm() }, id)
-            "int_array_of" -> S.Term.IntArrayOf(parseList { parseTerm() }, id)
-            "long_array_of" -> S.Term.LongArrayOf(parseList { parseTerm() }, id)
-            "list_of" -> S.Term.ListOf(parseList { parseTerm() }, id)
-            "compound_of" -> S.Term.CompoundOf(parseList { parseTerm() }, id)
             "reference_of" -> S.Term.ReferenceOf(parseTerm(), id)
             "function_of" -> S.Term.FunctionOf(parseList(::readWord), parseTerm(), id)
             "apply" -> S.Term.Apply(parseTerm(), parseList { parseTerm() }, id)
@@ -94,14 +112,32 @@ class Parse private constructor(
     private fun parsePattern(id: Id = freshId()): S.Pattern = when (run { skipWhitespace(); peek() }) {
         '(' -> parseParen { parsePattern(it) }
         '"' -> S.Pattern.StringOf(readString(), id)
+        '[' -> {
+            skip()
+            val char = peek()
+            when {
+                char == 'b' && peek(1) == ';' -> {
+                    skip(2)
+                    S.Pattern.ByteArrayOf(parseDelimitedList(']', ::parsePattern), id)
+                }
+                char == 'i' && peek(1) == ';' -> {
+                    skip(2)
+                    S.Pattern.IntArrayOf(parseDelimitedList(']', ::parsePattern), id)
+                }
+                char == 'l' && peek(1) == ';' -> {
+                    skip(2)
+                    S.Pattern.LongArrayOf(parseDelimitedList(']', ::parsePattern), id)
+                }
+                else -> S.Pattern.ListOf(parseDelimitedList(']', ::parsePattern), id)
+            }
+        }
+        '{' -> {
+            skip()
+            S.Pattern.CompoundOf(parseDelimitedList('}', ::parsePattern), id)
+        }
         else -> when (val word = readWord()) {
             "false" -> S.Pattern.BooleanOf(false, id)
             "true" -> S.Pattern.BooleanOf(true, id)
-            "byte_array_of" -> S.Pattern.ByteArrayOf(parseList(::parsePattern), id)
-            "int_array_of" -> S.Pattern.IntArrayOf(parseList(::parsePattern), id)
-            "long_array_of" -> S.Pattern.LongArrayOf(parseList(::parsePattern), id)
-            "list_of" -> S.Pattern.ListOf(parseList(::parsePattern), id)
-            "compound_of" -> S.Pattern.CompoundOf(parseList(::parsePattern), id)
             "reference_of" -> S.Pattern.ReferenceOf(parsePattern(), id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> S.Pattern.ByteOf(word.dropLast(1).toByte(), id)
@@ -135,12 +171,20 @@ class Parse private constructor(
         }
     }
 
+    private inline fun <A> parseDelimitedList(end: Char, parseA: () -> A): List<A> = mutableListOf<A>().also {
+        while (peek() != end) {
+            it += parseA()
+            expect(',')
+        }
+        expect(end)
+    }
+
     private fun canRead(length: Int = 1): Boolean = cursor + length <= source.length
 
-    private fun peek(): Char = source[cursor]
+    private fun peek(offset: Int = 0): Char = source[cursor + offset]
 
-    private fun skip() {
-        ++cursor
+    private fun skip(size: Int = 1) {
+        cursor += size
     }
 
     private fun skipWhitespace() {
@@ -149,14 +193,14 @@ class Parse private constructor(
 
     private fun expect(char: Char) {
         skipWhitespace()
-        if (!canRead() || peek() != char) error("'$char' expected")
+        if (!canRead() || peek() != char) error("'$char' expected but '${peek()}' found")
         skip()
     }
 
     private fun readWord(): String {
         skipWhitespace()
         val start = cursor
-        while (canRead() && peek().let { it != ' ' && it != '(' && it != ')' }) skip()
+        while (canRead() && peek().isWordPart()) skip()
         return source.substring(start, cursor).also { if (it.isEmpty()) error("word expected") }
     }
 
@@ -167,6 +211,8 @@ class Parse private constructor(
         while (canRead() && peek() != '"') skip()
         return source.substring(start, cursor).also { skip() }
     }
+
+    private fun Char.isWordPart(): Boolean = this != ' ' && this != '(' && this != ')' && this != ','
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 
