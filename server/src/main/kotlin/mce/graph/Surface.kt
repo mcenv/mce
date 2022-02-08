@@ -20,7 +20,6 @@ object Surface {
             val modifiers: KList<Modifier>,
             override val name: KString,
             val type: Term,
-            val effects: KList<Effect>,
             val body: Term
         ) : Item()
     }

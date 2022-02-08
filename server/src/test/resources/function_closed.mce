@@ -2,5 +2,4 @@ import ()
 
 definition ()
   : function ((a end any boolean)) (function ((b end any boolean)) boolean)
-  ! {}
   = \(a) (\(b) (#0-0-0-0-0 a))

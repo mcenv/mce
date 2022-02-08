@@ -2,5 +2,4 @@ import ()
 
 definition ()
   : compound {α : type, a : α,}
-  ! {}
   = {boolean, false,}

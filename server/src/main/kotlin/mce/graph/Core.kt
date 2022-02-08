@@ -25,7 +25,6 @@ object Core {
             override val imports: KList<KString>,
             override val name: KString,
             val type: Value,
-            val effects: KList<Effect>,
             val body: Term
         ) : Item()
     }

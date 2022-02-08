@@ -2,5 +2,4 @@ import ()
 
 definition ()
   : (#0-0-0-0-0 boolean)
-  ! {}
   = (#0-0-0-0-1 false)

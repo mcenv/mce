@@ -2,5 +2,4 @@ import ()
 
 definition ()
   : boolean
-  ! {}
   = let b = (#0-0-0-0-0 `false) false

@@ -2,7 +2,6 @@ import ()
 
 definition ()
   : boolean
-  ! {}
   = match false {
       false => true,
       true  => false,
