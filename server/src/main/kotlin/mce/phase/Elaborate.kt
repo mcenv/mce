@@ -20,9 +20,6 @@ class Elaborate private constructor(
     private val types: MutableMap<Id, Lazy<S.Term>> = mutableMapOf()
     private val metas: MutableList<C.Value?> = mutableListOf()
 
-    private val end: C.Value.Union = C.Value.Union(emptyList())
-    private val any: C.Value.Intersection = C.Value.Intersection(emptyList())
-
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
             val meta = item.modifiers.contains(S.Modifier.META)
@@ -37,28 +34,36 @@ class Elaborate private constructor(
      * Infers the type of the [term] under this context.
      */
     private fun Context.inferTerm(term: S.Term): Typing<C.Term> = when (term) {
-        is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(quote(end)), term.id)))
+        is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(quote(END)), term.id)))
         is S.Term.Meta -> Typing(C.Term.Meta(term.index), fresh())
-        is S.Term.Variable -> when (val level = entries.indexOfLast { it.name == term.name }) {
-            -1 -> Typing(C.Term.Variable(term.name, -1), diagnose(Diagnostic.VariableNotFound(term.name, term.id)))
-            else -> {
-                val entry = entries[level]
-                if (stage != entry.stage) Typing(C.Term.Variable(term.name, level), diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))) else Typing(C.Term.Variable(term.name, level), entry.type)
+        is S.Term.Variable -> {
+            val level = entries.indexOfLast { it.name == term.name }
+            val type = when (level) {
+                -1 -> diagnose(Diagnostic.VariableNotFound(term.name, term.id))
+                else -> {
+                    val entry = entries[level]
+                    if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
+                }
             }
+            Typing(C.Term.Variable(term.name, level), type)
         }
-        is S.Term.Definition -> when (val item = items[term.name]) {
-            null -> Typing(C.Term.Definition(term.name), diagnose(Diagnostic.DefinitionNotFound(term.name, term.id)))
-            is C.Item.Definition -> Typing(C.Term.Definition(term.name), item.type)
+        is S.Term.Definition -> {
+            val type = when (val item = items[term.name]) {
+                null -> diagnose(Diagnostic.DefinitionNotFound(term.name, term.id))
+                is C.Item.Definition -> item.type
+            }
+            Typing(C.Term.Definition(term.name), type)
         }
         is S.Term.Let -> {
             val init = inferTerm(term.init)
-            val body = bind(term.id, Entry(term.name, end, any, init.type, stage)).inferTerm(term.body)
+            val body = bind(term.id, Entry(term.name, END, ANY, init.type, stage)).inferTerm(term.body)
             Typing(C.Term.Let(term.name, init.element, body.element), body.type)
         }
         is S.Term.Match -> {
-            val type = fresh()
+            val type = fresh() // TODO: use union of element types
             val scrutinee = inferTerm(term.scrutinee)
-            Typing(C.Term.Match(scrutinee.element, term.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) }), type)
+            val clauses = term.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) }
+            Typing(C.Term.Match(scrutinee.element, clauses), type)
         }
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
@@ -68,10 +73,19 @@ class Elaborate private constructor(
         is S.Term.FloatOf -> Typing(C.Term.FloatOf(term.value), C.Value.Float)
         is S.Term.DoubleOf -> Typing(C.Term.DoubleOf(term.value), C.Value.Double)
         is S.Term.StringOf -> Typing(C.Term.StringOf(term.value), C.Value.String)
-        is S.Term.ByteArrayOf -> Typing(C.Term.ByteArrayOf(term.elements.map { checkTerm(it, C.Value.Byte) }), C.Value.ByteArray)
-        is S.Term.IntArrayOf -> Typing(C.Term.IntArrayOf(term.elements.map { checkTerm(it, C.Value.Int) }), C.Value.IntArray)
-        is S.Term.LongArrayOf -> Typing(C.Term.LongArrayOf(term.elements.map { checkTerm(it, C.Value.Long) }), C.Value.LongArray)
-        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), end) else {
+        is S.Term.ByteArrayOf -> {
+            val elements = term.elements.map { checkTerm(it, C.Value.Byte) }
+            Typing(C.Term.ByteArrayOf(elements), C.Value.ByteArray)
+        }
+        is S.Term.IntArrayOf -> {
+            val elements = term.elements.map { checkTerm(it, C.Value.Int) }
+            Typing(C.Term.IntArrayOf(elements), C.Value.IntArray)
+        }
+        is S.Term.LongArrayOf -> {
+            val elements = term.elements.map { checkTerm(it, C.Value.Long) }
+            Typing(C.Term.LongArrayOf(elements), C.Value.LongArray)
+        }
+        is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), END) else { // TODO: use union of element types
             val first = inferTerm(term.elements.first())
             Typing(C.Term.ListOf(listOf(first.element) + term.elements.drop(1).map { checkTerm(it, first.type) }), C.Value.List(lazyOf(first.type)))
         }
@@ -85,30 +99,31 @@ class Elaborate private constructor(
         }
         is S.Term.FunctionOf -> {
             val types = term.parameters.map { fresh() }
-            val body = Context((term.parameters zip types).map { Entry(it.first, end, any, it.second, stage) }.toMutableList(), meta, stage).inferTerm(term.body)
-            Typing(C.Term.FunctionOf(term.parameters, body.element), C.Value.Function((term.parameters zip types).map { C.Parameter(it.first, quote(end), quote(any), quote(it.second)) }, quote(body.type)))
+            val body = Context((term.parameters zip types).map { Entry(it.first, END, ANY, it.second, stage) }.toMutableList(), meta, stage).inferTerm(term.body)
+            val parameters = (term.parameters zip types).map { C.Parameter(it.first, quote(END), quote(ANY), quote(it.second)) }
+            Typing(C.Term.FunctionOf(term.parameters, body.element), C.Value.Function(parameters, quote(body.type)))
         }
         is S.Term.Apply -> {
             val function = inferTerm(term.function)
             when (val type = force(function.type)) {
                 is C.Value.Function -> withEnvironment { environment ->
-                    Typing(
-                        C.Term.Apply(function.element, (term.arguments zip type.parameters).map { (argument, parameter) ->
-                            checkTerm(argument, environment.evaluate(parameter.type)).also {
-                                val argument1 = environment.evaluate(it)
-                                environment.evaluate(parameter.lower).let { lower ->
-                                    if (!entries.size.subtype(lower, argument1)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument1)), serializeTerm(quote(lower)), argument.id))
-                                }
-                                environment.evaluate(parameter.upper).let { upper ->
-                                    if (!entries.size.subtype(argument1, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument1)), argument.id))
-                                }
-                                environment += lazyOf(argument1)
+                    val arguments = (term.arguments zip type.parameters).map { (argument, parameter) ->
+                        checkTerm(argument, environment.evaluate(parameter.type)).also {
+                            val id = argument.id
+                            val argument = environment.evaluate(it)
+                            environment.evaluate(parameter.lower).let { lower ->
+                                if (!entries.size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
                             }
-                        }),
-                        environment.evaluate(type.resultant)
-                    )
+                            environment.evaluate(parameter.upper).let { upper ->
+                                if (!entries.size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
+                            }
+                            environment += lazyOf(argument)
+                        }
+                    }
+                    val resultant = environment.evaluate(type.resultant)
+                    Typing(C.Term.Apply(function.element, arguments), resultant)
                 }
-                else -> Typing(C.Term.Apply(function.element, term.arguments.map { checkTerm(it, any) }), diagnose(Diagnostic.FunctionExpected(term.function.id)))
+                else -> Typing(C.Term.Apply(function.element, term.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(term.function.id)))
             }
         }
         is S.Term.CodeOf -> {
@@ -117,13 +132,20 @@ class Elaborate private constructor(
         }
         is S.Term.Splice -> {
             val element = down().inferTerm(term.element)
-            when (val type = force(element.type)) {
-                is C.Value.Code -> Typing(C.Term.Splice(element.element), type.element.value)
-                else -> Typing(C.Term.Splice(element.element), diagnose(Diagnostic.CodeExpected(term.id)))
+            val type = when (val type = force(element.type)) {
+                is C.Value.Code -> type.element.value
+                else -> diagnose(Diagnostic.CodeExpected(term.id))
             }
+            Typing(C.Term.Splice(element.element), type)
         }
-        is S.Term.Union -> Typing(C.Term.Union(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
-        is S.Term.Intersection -> Typing(C.Term.Intersection(term.variants.map { checkTerm(it, C.Value.Type) }), C.Value.Type)
+        is S.Term.Union -> {
+            val variants = term.variants.map { checkTerm(it, C.Value.Type) }
+            Typing(C.Term.Union(variants), C.Value.Type)
+        }
+        is S.Term.Intersection -> {
+            val variants = term.variants.map { checkTerm(it, C.Value.Type) }
+            Typing(C.Term.Intersection(variants), C.Value.Type)
+        }
         is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
         is S.Term.Byte -> Typing(C.Term.Byte, C.Value.Type)
         is S.Term.Short -> Typing(C.Term.Short, C.Value.Type)
@@ -135,21 +157,25 @@ class Elaborate private constructor(
         is S.Term.ByteArray -> Typing(C.Term.ByteArray, C.Value.Type)
         is S.Term.IntArray -> Typing(C.Term.IntArray, C.Value.Type)
         is S.Term.LongArray -> Typing(C.Term.LongArray, C.Value.Type)
-        is S.Term.List -> Typing(checkTerm(term.element, C.Value.Type), C.Value.Type)
-        is S.Term.Compound -> Typing(
-            C.Term.Compound(
-                withContext(meta) { environment, context ->
-                    term.elements.map { (name, element) ->
-                        (name to context.checkTerm(element, C.Value.Type)).also { (name, element) ->
-                            context.bind(term.id, Entry(name, end, any, environment.evaluate(element), stage))
-                            environment += lazyOf(C.Value.Variable(name, environment.size))
-                        }
+        is S.Term.List -> {
+            val element = checkTerm(term.element, C.Value.Type)
+            Typing(element, C.Value.Type)
+        }
+        is S.Term.Compound -> {
+            val elements = withContext(meta) { environment, context ->
+                term.elements.map { (name, element) ->
+                    (name to context.checkTerm(element, C.Value.Type)).also { (name, element) ->
+                        context.bind(term.id, Entry(name, END, ANY, environment.evaluate(element), stage))
+                        environment += lazyOf(C.Value.Variable(name, environment.size))
                     }
                 }
-            ),
-            C.Value.Type
-        )
-        is S.Term.Reference -> Typing(checkTerm(term.element, C.Value.Type), C.Value.Type)
+            }
+            Typing(C.Term.Compound(elements), C.Value.Type)
+        }
+        is S.Term.Reference -> {
+            val element = checkTerm(term.element, C.Value.Type)
+            Typing(element, C.Value.Type)
+        }
         is S.Term.Function -> Typing(
             withContext(meta) { environment, context ->
                 val parameters = term.parameters.map { (name, lower, upper, parameter) ->
@@ -184,38 +210,48 @@ class Elaborate private constructor(
             }
             term is S.Term.Let -> {
                 val init = inferTerm(term.init)
-                val body = bind(term.id, Entry(term.name, end, any, init.type, stage)).checkTerm(term.body, type)
+                val body = bind(term.id, Entry(term.name, END, ANY, init.type, stage)).checkTerm(term.body, type)
                 C.Term.Let(term.name, init.element, body)
             }
             term is S.Term.Match -> {
                 val scrutinee = inferTerm(term.scrutinee)
-                C.Term.Match(scrutinee.element, term.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) })
+                val clauses = term.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) }
+                C.Term.Match(scrutinee.element, clauses)
             }
-            term is S.Term.ListOf && type is C.Value.List -> C.Term.ListOf(term.elements.map { checkTerm(it, type.element.value) })
+            term is S.Term.ListOf && type is C.Value.List -> {
+                val elements = term.elements.map { checkTerm(it, type.element.value) }
+                C.Term.ListOf(elements)
+            }
             term is S.Term.CompoundOf && type is C.Value.Compound -> withEnvironment { environment ->
-                C.Term.CompoundOf(
-                    (term.elements zip type.elements).map { (term, type) ->
-                        checkTerm(term, environment.evaluate(type.second)).also {
-                            environment += lazy { environment.evaluate(it) }
-                        }
+                val elements = (term.elements zip type.elements).map { (term, type) ->
+                    checkTerm(term, environment.evaluate(type.second)).also {
+                        environment += lazy { environment.evaluate(it) }
                     }
-                )
+                }
+                C.Term.CompoundOf(elements)
             }
-            term is S.Term.ReferenceOf && type is C.Value.Reference -> C.Term.ReferenceOf(checkTerm(term.element, type.element.value))
+            term is S.Term.ReferenceOf && type is C.Value.Reference -> {
+                val element = checkTerm(term.element, type.element.value)
+                C.Term.ReferenceOf(element)
+            }
             term is S.Term.FunctionOf && type is C.Value.Function -> withContext(meta) { environment, context ->
                 (term.parameters zip type.parameters).forEach { (name, parameter) ->
                     context.bind(term.id, Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
-                C.Term.FunctionOf(term.parameters, context.checkTerm(term.body, environment.evaluate(type.resultant)))
+                val resultant = context.checkTerm(term.body, environment.evaluate(type.resultant))
+                C.Term.FunctionOf(term.parameters, resultant)
             }
-            term is S.Term.CodeOf && type is C.Value.Code -> C.Term.CodeOf(up().checkTerm(term.element, type.element.value))
+            term is S.Term.CodeOf && type is C.Value.Code -> {
+                val element = up().checkTerm(term.element, type.element.value)
+                C.Term.CodeOf(element)
+            }
             term is S.Term.Union && term.variants.isEmpty() -> C.Term.Union(emptyList()) // generalized bottom type
             term is S.Term.Intersection && term.variants.isEmpty() -> C.Term.Intersection(emptyList()) // generalized top type
             else -> {
                 val inferred = inferTerm(term)
                 if (!entries.size.subtype(inferred.type, type)) {
-                    types[term.id] = lazy { serializeTerm(quote(end)) }
+                    types[term.id] = lazy { serializeTerm(quote(END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(type)), serializeTerm(quote(inferred.type)), term.id))
                 }
                 inferred.element
@@ -229,7 +265,7 @@ class Elaborate private constructor(
     private fun Context.inferPattern(pattern: S.Pattern): Typing<C.Pattern> = when (pattern) {
         is S.Pattern.Variable -> {
             val type = fresh()
-            bind(pattern.id, Entry(pattern.name, end, any, type, stage))
+            bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
             Typing(C.Pattern.Variable(pattern.name), type)
         }
         is S.Pattern.BooleanOf -> Typing(C.Pattern.BooleanOf(pattern.value), C.Value.Boolean)
@@ -240,10 +276,19 @@ class Elaborate private constructor(
         is S.Pattern.FloatOf -> Typing(C.Pattern.FloatOf(pattern.value), C.Value.Float)
         is S.Pattern.DoubleOf -> Typing(C.Pattern.DoubleOf(pattern.value), C.Value.Double)
         is S.Pattern.StringOf -> Typing(C.Pattern.StringOf(pattern.value), C.Value.String)
-        is S.Pattern.ByteArrayOf -> Typing(C.Pattern.ByteArrayOf(pattern.elements.map { checkPattern(it, C.Value.Byte) }), C.Value.ByteArray)
-        is S.Pattern.IntArrayOf -> Typing(C.Pattern.IntArrayOf(pattern.elements.map { checkPattern(it, C.Value.Int) }), C.Value.IntArray)
-        is S.Pattern.LongArrayOf -> Typing(C.Pattern.LongArrayOf(pattern.elements.map { checkPattern(it, C.Value.Long) }), C.Value.LongArray)
-        is S.Pattern.ListOf -> if (pattern.elements.isEmpty()) Typing(C.Pattern.ListOf(emptyList()), end) else {
+        is S.Pattern.ByteArrayOf -> {
+            val elements = pattern.elements.map { checkPattern(it, C.Value.Byte) }
+            Typing(C.Pattern.ByteArrayOf(elements), C.Value.ByteArray)
+        }
+        is S.Pattern.IntArrayOf -> {
+            val elements = pattern.elements.map { checkPattern(it, C.Value.Int) }
+            Typing(C.Pattern.IntArrayOf(elements), C.Value.IntArray)
+        }
+        is S.Pattern.LongArrayOf -> {
+            val elements = pattern.elements.map { checkPattern(it, C.Value.Long) }
+            Typing(C.Pattern.LongArrayOf(elements), C.Value.LongArray)
+        }
+        is S.Pattern.ListOf -> if (pattern.elements.isEmpty()) Typing(C.Pattern.ListOf(emptyList()), END) else { // TODO: use union of element types
             val first = inferPattern(pattern.elements.first())
             val elements = pattern.elements.drop(1).map { checkPattern(it, first.type) }
             Typing(C.Pattern.ListOf(elements), C.Value.List(lazyOf(first.type)))
@@ -266,7 +311,7 @@ class Elaborate private constructor(
         types[pattern.id] = lazy { serializeTerm(quote(type)) }
         return when {
             pattern is S.Pattern.Variable -> {
-                bind(pattern.id, Entry(pattern.name, end, any, type, stage))
+                bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
                 C.Pattern.Variable(pattern.name)
             }
             pattern is S.Pattern.ListOf && type is C.Value.List -> {
@@ -284,7 +329,7 @@ class Elaborate private constructor(
             else -> {
                 val inferred = inferPattern(pattern)
                 if (!0.subtype(inferred.type, type)) {
-                    types[pattern.id] = lazy { serializeTerm(quote(end)) }
+                    types[pattern.id] = lazy { serializeTerm(quote(END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(type)), serializeTerm(quote(inferred.type)), pattern.id))
                 }
                 inferred.element
@@ -573,7 +618,7 @@ class Elaborate private constructor(
 
     private fun diagnose(diagnostic: Diagnostic): C.Value {
         diagnostics += diagnostic
-        return end
+        return END
     }
 
     data class Output(
@@ -615,6 +660,9 @@ class Elaborate private constructor(
     }
 
     companion object {
+        private val END: C.Value.Union = C.Value.Union(emptyList())
+        private val ANY: C.Value.Intersection = C.Value.Intersection(emptyList())
+
         operator fun invoke(items: Map<String, C.Item>, item: S.Item): Output = Elaborate(items).run {
             Output(elaborateItem(item), diagnostics, types)
         }
