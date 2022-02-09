@@ -115,7 +115,7 @@ class Parse private constructor(
             "match" -> {
                 val scrutinee = parseTerm()
                 expect('[')
-                val clauses = parseList(']') { parsePair(::parsePattern, { expect('='); expect('>') }, ::parseTerm) }
+                val clauses = parseList(']') { parsePair(::parsePattern, { expectString("=>") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
             }
             "false" -> S.Term.BooleanOf(false, id)
@@ -159,7 +159,22 @@ class Parse private constructor(
             "function" -> {
                 val parameters = run {
                     expect('[')
-                    parseList(']') { S.Parameter(readWord(), parseTerm(), parseTerm(), parseTerm()) }
+                    parseList(']') {
+                        val name = readWord()
+                        val lower = run {
+                            expectString(">:")
+                            parseTerm()
+                        }
+                        val upper = run {
+                            expectString("<:")
+                            parseTerm()
+                        }
+                        val type = run {
+                            expect(':')
+                            parseTerm()
+                        }
+                        S.Parameter(name, lower, upper, type)
+                    }
                 }
                 val resultant = parseTerm()
                 S.Term.Function(parameters, resultant, id)
@@ -280,6 +295,12 @@ class Parse private constructor(
         skipWhitespace()
         if (!canRead() || peek() != char) error("'$char' expected but '${peek()}' found")
         skip()
+    }
+
+    private fun expectString(string: String) {
+        skipWhitespace()
+        if (!canRead(string.length) || !source.substring(cursor).startsWith(string)) error("'$string' expected")
+        skip(string.length)
     }
 
     private fun peekChar(): Char {
