@@ -1,7 +1,6 @@
 package mce.phase
 
 import mce.Diagnostic
-import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.graph.Core as C
@@ -22,8 +21,8 @@ class Elaborate private constructor(
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Definition -> {
             val meta = item.modifiers.contains(S.Modifier.META)
-            val type = emptyEnvironment().evaluate(emptyContext(meta).checkTerm(item.type, C.Value.Type, emptySet()))
-            val body = emptyContext(meta).checkTerm(item.body, type, emptySet())
+            val type = emptyEnvironment().evaluate(emptyContext(meta).checkTerm(item.type, C.Value.Type))
+            val body = emptyContext(meta).checkTerm(item.body, type)
             emptyContext(meta).checkPhase(item.body.id, type)
             C.Item.Definition(item.imports, item.name, type, body)
         }
@@ -53,17 +52,6 @@ class Elaborate private constructor(
             }
             Typing(C.Term.Definition(term.name), type)
         }
-        is S.Term.Let -> {
-            val init = inferTerm(term.init)
-            val body = bind(term.init.id, Entry(term.name, END, ANY, init.type, stage)).inferTerm(term.body)
-            Typing(C.Term.Let(term.name, init.element, body.element), body.type, init.effects + body.effects)
-        }
-        is S.Term.Match -> {
-            val type = fresh() // TODO: use union of element types
-            val scrutinee = inferTerm(term.scrutinee).also { checkPurity(term.scrutinee.id, it.effects) }
-            val clauses = term.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type, emptySet() /* ? */) }
-            Typing(C.Term.Match(scrutinee.element, clauses), type)
-        }
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)
@@ -73,58 +61,29 @@ class Elaborate private constructor(
         is S.Term.DoubleOf -> Typing(C.Term.DoubleOf(term.value), C.Value.Double)
         is S.Term.StringOf -> Typing(C.Term.StringOf(term.value), C.Value.String)
         is S.Term.ByteArrayOf -> {
-            val elements = term.elements.map { checkTerm(it, C.Value.Byte, emptySet()) }
+            val elements = term.elements.map { checkTerm(it, C.Value.Byte) }
             Typing(C.Term.ByteArrayOf(elements), C.Value.ByteArray)
         }
         is S.Term.IntArrayOf -> {
-            val elements = term.elements.map { checkTerm(it, C.Value.Int, emptySet()) }
+            val elements = term.elements.map { checkTerm(it, C.Value.Int) }
             Typing(C.Term.IntArrayOf(elements), C.Value.IntArray)
         }
         is S.Term.LongArrayOf -> {
-            val elements = term.elements.map { checkTerm(it, C.Value.Long, emptySet()) }
+            val elements = term.elements.map { checkTerm(it, C.Value.Long) }
             Typing(C.Term.LongArrayOf(elements), C.Value.LongArray)
         }
         is S.Term.ListOf -> if (term.elements.isEmpty()) Typing(C.Term.ListOf(emptyList()), END) else { // TODO: use union of element types
-            val first = inferTerm(term.elements.first()).also { checkPurity(term.elements.first().id, it.effects) }
-            val elements = listOf(first.element) + term.elements.drop(1).map { checkTerm(it, first.type, emptySet()) }
+            val first = inferTerm(term.elements.first())
+            val elements = listOf(first.element) + term.elements.drop(1).map { checkTerm(it, first.type) }
             Typing(C.Term.ListOf(elements), C.Value.List(lazyOf(first.type)))
         }
         is S.Term.CompoundOf -> {
-            val elements = term.elements.map { element -> "" to inferTerm(element).also { checkPurity(element.id, it.effects) } }
+            val elements = term.elements.map { "" to inferTerm(it) }
             Typing(C.Term.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(it.second.type) }))
         }
         is S.Term.ReferenceOf -> {
-            val element = inferTerm(term.element).also { checkPurity(term.element.id, it.effects) }
+            val element = inferTerm(term.element)
             Typing(C.Term.ReferenceOf(element.element), C.Value.Reference(lazyOf(element.type)))
-        }
-        is S.Term.FunctionOf -> {
-            val types = term.parameters.map { fresh() }
-            val body = Context((term.parameters zip types).map { Entry(it.first, END, ANY, it.second, stage) }.toMutableList(), meta, stage).inferTerm(term.body)
-            val parameters = (term.parameters zip types).map { C.Parameter(it.first, quote(END), quote(ANY), quote(it.second)) }
-            Typing(C.Term.FunctionOf(term.parameters, body.element), C.Value.Function(parameters, quote(body.type)), body.effects)
-        }
-        is S.Term.Apply -> {
-            val function = inferTerm(term.function)
-            when (val type = force(function.type)) {
-                is C.Value.Function -> withEnvironment { environment ->
-                    val arguments = (term.arguments zip type.parameters).map { (argument, parameter) ->
-                        checkTerm(argument, environment.evaluate(parameter.type), emptySet()).also {
-                            val id = argument.id
-                            val argument = environment.evaluate(it)
-                            environment.evaluate(parameter.lower).let { lower ->
-                                if (!entries.size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
-                            }
-                            environment.evaluate(parameter.upper).let { upper ->
-                                if (!entries.size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
-                            }
-                            environment += lazyOf(argument)
-                        }
-                    }
-                    val resultant = environment.evaluate(type.resultant)
-                    Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
-                }
-                else -> Typing(C.Term.Apply(function.element, term.arguments.map { checkTerm(it, ANY, emptySet()) }), diagnose(Diagnostic.FunctionExpected(term.function.id)), function.effects)
-            }
         }
         is S.Term.CodeOf -> {
             val element = up().inferTerm(term.element)
@@ -139,11 +98,11 @@ class Elaborate private constructor(
             Typing(C.Term.Splice(element.element), type)
         }
         is S.Term.Union -> {
-            val variants = term.variants.map { checkTerm(it, C.Value.Type, emptySet()) }
+            val variants = term.variants.map { checkTerm(it, C.Value.Type) }
             Typing(C.Term.Union(variants), C.Value.Type)
         }
         is S.Term.Intersection -> {
-            val variants = term.variants.map { checkTerm(it, C.Value.Type, emptySet()) }
+            val variants = term.variants.map { checkTerm(it, C.Value.Type) }
             Typing(C.Term.Intersection(variants), C.Value.Type)
         }
         is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
@@ -158,13 +117,13 @@ class Elaborate private constructor(
         is S.Term.IntArray -> Typing(C.Term.IntArray, C.Value.Type)
         is S.Term.LongArray -> Typing(C.Term.LongArray, C.Value.Type)
         is S.Term.List -> {
-            val element = checkTerm(term.element, C.Value.Type, emptySet())
+            val element = checkTerm(term.element, C.Value.Type)
             Typing(element, C.Value.Type)
         }
         is S.Term.Compound -> {
             val elements = withContext(meta) { environment, context ->
                 term.elements.map { (name, element) ->
-                    (name to context.checkTerm(element, C.Value.Type, emptySet())).also { (name, element) ->
+                    (name to context.checkTerm(element, C.Value.Type)).also { (name, element) ->
                         context.bind(term.id, Entry(name, END, ANY, environment.evaluate(element), stage))
                         environment += lazyOf(C.Value.Variable(name, environment.size))
                     }
@@ -173,34 +132,84 @@ class Elaborate private constructor(
             Typing(C.Term.Compound(elements), C.Value.Type)
         }
         is S.Term.Reference -> {
-            val element = checkTerm(term.element, C.Value.Type, emptySet())
+            val element = checkTerm(term.element, C.Value.Type)
             Typing(element, C.Value.Type)
+        }
+        is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, C.Value.Type)), C.Value.Type)
+        is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
+        else -> inferComputation(term).also {
+            if (!it.effects.isPure()) TODO()
+        }
+    }.also { types[term.id] = lazy { serializeTerm(quote(it.type)) } }
+
+    /**
+     * Infers the type of the [computation] under this context.
+     */
+    private fun Context.inferComputation(computation: S.Term): Typing<C.Term> = when (computation) {
+        is S.Term.Let -> {
+            val init = inferComputation(computation.init)
+            val body = bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage)).inferComputation(computation.body)
+            Typing(C.Term.Let(computation.name, init.element, body.element), body.type, init.effects + body.effects)
+        }
+        is S.Term.Match -> {
+            val type = fresh() // TODO: use union of element types
+            val scrutinee = inferTerm(computation.scrutinee)
+            val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) /* TODO */ }
+            Typing(C.Term.Match(scrutinee.element, clauses), type)
+        }
+        is S.Term.FunctionOf -> {
+            val types = computation.parameters.map { fresh() }
+            val body = Context((computation.parameters zip types).map { Entry(it.first, END, ANY, it.second, stage) }.toMutableList(), meta, stage).inferComputation(computation.body)
+            val parameters = (computation.parameters zip types).map { C.Parameter(it.first, quote(END), quote(ANY), quote(it.second)) }
+            Typing(C.Term.FunctionOf(computation.parameters, body.element), C.Value.Function(parameters, quote(body.type)), body.effects)
+        }
+        is S.Term.Apply -> {
+            val function = inferComputation(computation.function)
+            when (val type = force(function.type)) {
+                is C.Value.Function -> withEnvironment { environment ->
+                    val arguments = (computation.arguments zip type.parameters).map { (argument, parameter) ->
+                        checkTerm(argument, environment.evaluate(parameter.type)).also {
+                            val id = argument.id
+                            val argument = environment.evaluate(it)
+                            environment.evaluate(parameter.lower).let { lower ->
+                                if (!entries.size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
+                            }
+                            environment.evaluate(parameter.upper).let { upper ->
+                                if (!entries.size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
+                            }
+                            environment += lazyOf(argument)
+                        }
+                    }
+                    val resultant = environment.evaluate(type.resultant)
+                    Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
+                }
+                else -> Typing(C.Term.Apply(function.element, computation.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
+            }
         }
         is S.Term.Function -> Typing(
             withContext(meta) { environment, context ->
-                val parameters = term.parameters.map { (name, lower, upper, parameter) ->
-                    val parameter = context.checkTerm(parameter, C.Value.Type, emptySet())
+                val parameters = computation.parameters.map { (name, lower, upper, parameter) ->
+                    val parameter = context.checkTerm(parameter, C.Value.Type)
                     val type = environment.evaluate(parameter)
-                    val lower = context.checkTerm(lower, type, emptySet())
-                    val upper = context.checkTerm(upper, type, emptySet())
+                    val lower = context.checkTerm(lower, type)
+                    val upper = context.checkTerm(upper, type)
                     C.Parameter(name, lower, upper, parameter).also {
-                        context.bind(term.id, Entry(name, environment.evaluate(lower), environment.evaluate(upper), type, stage))
+                        context.bind(computation.id, Entry(name, environment.evaluate(lower), environment.evaluate(upper), type, stage))
                         environment += lazyOf(C.Value.Variable(name, environment.size))
                     }
                 }
-                val resultant = context.checkTerm(term.resultant, C.Value.Type, emptySet())
+                val resultant = context.checkTerm(computation.resultant, C.Value.Type) /* TODO */
                 C.Term.Function(parameters, resultant)
             },
             C.Value.Type
         )
-        is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, C.Value.Type, emptySet())), C.Value.Type)
-        is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
-    }.also { types[term.id] = lazy { serializeTerm(quote(it.type)) } }
+        else -> inferTerm(computation)
+    }
 
     /**
      * Checks the [term] against the [type] under this context.
      */
-    private fun Context.checkTerm(term: S.Term, type: C.Value, effects: Set<C.Effect>?): C.Term {
+    private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term {
         val type = force(type)
         types[term.id] = lazy { serializeTerm(quote(type)) }
         return when {
@@ -208,53 +217,64 @@ class Elaborate private constructor(
                 diagnose(Diagnostic.TermExpected(serializeTerm(quote(type)), term.id))
                 C.Term.Hole
             }
-            term is S.Term.Let -> {
-                val init = inferTerm(term.init)
-                val body = bind(term.init.id, Entry(term.name, END, ANY, init.type, stage)).checkTerm(term.body, type, effects)
-                C.Term.Let(term.name, init.element, body)
-            }
-            term is S.Term.Match -> {
-                val scrutinee = inferTerm(term.scrutinee).also { checkPurity(term.scrutinee.id, it.effects) }
-                val clauses = term.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type, effects) }
-                C.Term.Match(scrutinee.element, clauses)
-            }
             term is S.Term.ListOf && type is C.Value.List -> {
-                val elements = term.elements.map { checkTerm(it, type.element.value, emptySet()) }
+                val elements = term.elements.map { checkTerm(it, type.element.value) }
                 C.Term.ListOf(elements)
             }
             term is S.Term.CompoundOf && type is C.Value.Compound -> withEnvironment { environment ->
                 val elements = (term.elements zip type.elements).map { (term, type) ->
-                    checkTerm(term, environment.evaluate(type.second), emptySet()).also {
+                    checkTerm(term, environment.evaluate(type.second)).also {
                         environment += lazy { environment.evaluate(it) }
                     }
                 }
                 C.Term.CompoundOf(elements)
             }
             term is S.Term.ReferenceOf && type is C.Value.Reference -> {
-                val element = checkTerm(term.element, type.element.value, emptySet())
+                val element = checkTerm(term.element, type.element.value)
                 C.Term.ReferenceOf(element)
             }
-            term is S.Term.FunctionOf && type is C.Value.Function -> withContext(meta) { environment, context ->
-                (term.parameters zip type.parameters).forEach { (name, parameter) ->
-                    context.bind(term.id, Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
-                    environment += lazyOf(C.Value.Variable(name, environment.size))
-                }
-                val resultant = context.checkTerm(term.body, environment.evaluate(type.resultant), null)
-                C.Term.FunctionOf(term.parameters, resultant)
-            }
             term is S.Term.CodeOf && type is C.Value.Code -> {
-                val element = up().checkTerm(term.element, type.element.value, null)
+                val element = up().checkTerm(term.element, type.element.value)
                 C.Term.CodeOf(element)
             }
             term is S.Term.Union && term.variants.isEmpty() -> C.Term.Union(emptyList()) // generalized bottom type
             term is S.Term.Intersection && term.variants.isEmpty() -> C.Term.Intersection(emptyList()) // generalized top type
-            else -> {
-                val inferred = inferTerm(term)
-                if (!entries.size.subtype(inferred.type, type)) {
-                    types[term.id] = lazy { serializeTerm(quote(END)) }
-                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(type)), serializeTerm(quote(inferred.type)), term.id))
+            else -> checkComputation(term, type, Effects.bottom())
+        }
+    }
+
+    /**
+     * Checks the [computation] against the [type] and the [effects] under this context.
+     */
+    private fun Context.checkComputation(computation: S.Term, type: C.Value, effects: Effects): C.Term {
+        val type = force(type)
+        types[computation.id] = lazy { serializeTerm(quote(type)) }
+        return when {
+            computation is S.Term.Let -> {
+                val init = inferComputation(computation.init)
+                val body = bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage)).checkComputation(computation.body, type, effects)
+                C.Term.Let(computation.name, init.element, body)
+            }
+            computation is S.Term.Match -> {
+                val scrutinee = inferTerm(computation.scrutinee)
+                val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkComputation(it.second, type, effects) }
+                C.Term.Match(scrutinee.element, clauses)
+            }
+            computation is S.Term.FunctionOf && type is C.Value.Function -> withContext(meta) { environment, context ->
+                (computation.parameters zip type.parameters).forEach { (name, parameter) ->
+                    context.bind(computation.id, Entry(name, environment.evaluate(parameter.lower), environment.evaluate(parameter.upper), environment.evaluate(parameter.type), stage))
+                    environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
-                effects?.let { if (!it.containsAll(inferred.effects)) diagnose(Diagnostic.EffectMismatch(it.map(::serializeEffect), inferred.effects.map(::serializeEffect), term.id)) }
+                val resultant = context.checkComputation(computation.body, environment.evaluate(type.resultant), effects)
+                C.Term.FunctionOf(computation.parameters, resultant)
+            }
+            else -> {
+                val inferred = inferComputation(computation)
+                if (!entries.size.subtype(inferred.type, type)) {
+                    types[computation.id] = lazy { serializeTerm(quote(END)) }
+                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(type)), serializeTerm(quote(inferred.type)), computation.id))
+                }
+                if (!(inferred.effects sub effects)) TODO()
                 inferred.element
             }
         }
@@ -619,10 +639,6 @@ class Elaborate private constructor(
 
     private inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = block(mutableListOf())
 
-    private fun checkPurity(id: Id, effects: Set<C.Effect>) {
-        if (effects.isNotEmpty()) diagnose(Diagnostic.EffectMismatch(emptyList(), effects.map(::serializeEffect), id))
-    }
-
     private fun diagnose(diagnostic: Diagnostic): C.Value {
         diagnostics += diagnostic
         return END
@@ -634,10 +650,40 @@ class Elaborate private constructor(
         val types: Map<Id, Lazy<S.Term>>
     )
 
-    data class Typing<out E>(
+    private sealed class Effects {
+        object Top : Effects()
+        data class Set(val effects: kotlin.collections.Set<C.Effect>) : Effects()
+
+        fun isPure(): Boolean = when (this) {
+            is Top -> false
+            is Set -> effects.isEmpty()
+        }
+
+        operator fun plus(that: Effects): Effects = when (this) {
+            is Top -> Top
+            is Set -> when (that) {
+                is Top -> Top
+                is Set -> Set(this.effects + that.effects)
+            }
+        }
+
+        infix fun sub(that: Effects): Boolean = when (that) {
+            is Top -> true
+            is Set -> when (this) {
+                is Top -> false
+                is Set -> that.effects.containsAll(this.effects)
+            }
+        }
+
+        companion object {
+            fun bottom(): Effects = Set(emptySet())
+        }
+    }
+
+    private data class Typing<out E>(
         val element: E,
         val type: C.Value,
-        val effects: Set<C.Effect> = emptySet()
+        val effects: Effects = Effects.bottom()
     )
 
     private data class Entry(
