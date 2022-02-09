@@ -1,5 +1,5 @@
-import ()
+import {}
 
-definition ()
+definition {}
   : code boolean
   = (#0-0-0-0-0 `false)

@@ -1,5 +1,5 @@
-import ()
+import {}
 
-definition ()
+definition {}
   : boolean
-  = $(`false)
+  = $`false

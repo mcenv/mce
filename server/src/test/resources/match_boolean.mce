@@ -1,8 +1,8 @@
-import ()
+import {}
 
-definition ()
+definition {}
   : boolean
-  = match false {
+  = match false [
       false => true,
       true  => false,
-    }
+    ]

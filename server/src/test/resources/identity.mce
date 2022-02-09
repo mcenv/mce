@@ -1,5 +1,5 @@
-import ()
+import {}
 
-definition ()
-  : function ((α end any type) (a end any α)) α
-  = \(α a) a
+definition {}
+  : function [α end any type, a end any α,] α
+  = \[α, a,] a

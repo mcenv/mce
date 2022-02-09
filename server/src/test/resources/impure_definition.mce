@@ -1,5 +1,5 @@
-import (thunk_intro)
+import {thunk_intro,}
 
-definition ()
+definition {}
   : boolean
   = (#0-0-0-0-0 force !thunk_intro)

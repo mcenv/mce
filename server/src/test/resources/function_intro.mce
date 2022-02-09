@@ -1,5 +1,5 @@
-import ()
+import {}
 
-definition ()
-  : function ((x end any type) (y end any x)) x
-  = \(x y) y
+definition {}
+  : function [x end any type, y end any x,] x
+  = \[x, y,] y

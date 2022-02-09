@@ -1,7 +1,7 @@
-import ()
+import {}
 
-definition ()
+definition {}
   : boolean
-  = match false {
+  = match false [
       b => b,
-    }
+    ]

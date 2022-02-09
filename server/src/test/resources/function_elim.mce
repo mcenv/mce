@@ -1,5 +1,5 @@
-import (identity)
+import {identity,}
 
-definition ()
+definition {}
   : boolean
-  = @(!identity) (boolean false)
+  = @!identity [boolean, false,]
