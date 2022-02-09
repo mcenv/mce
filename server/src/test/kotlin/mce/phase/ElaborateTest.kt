@@ -109,4 +109,24 @@ class ElaborateTest {
         val (_, diagnostics, _) = elaborate(emptyMap(), "match_variable")
         assert(diagnostics.isEmpty())
     }
+
+    @Test
+    fun thunkIntro() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "thunk_intro")
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun thunkElim() {
+        val (_, diagnostics, _) = elaborate(emptyMap(), "thunk_elim")
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun impureDefinition() {
+        val (thunkIntro, diagnostics1, _) = elaborate(emptyMap(), "thunk_intro")
+        val (_, diagnostics2, _) = elaborate(mapOf(thunkIntro.name to thunkIntro), "impure_definition")
+        assert(diagnostics1.isEmpty())
+        assert(diagnostics2.contains(Diagnostic.EffectMismatch(UUID(0, 0))))
+    }
 }

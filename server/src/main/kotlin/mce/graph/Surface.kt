@@ -53,6 +53,8 @@ object Surface {
         data class ReferenceOf(val element: Term, override val id: Id) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term, override val id: Id) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id) : Term()
+        data class ThunkOf(val body: Term, override val id: Id) : Term()
+        data class Force(val element: Term, override val id: Id) : Term()
         data class CodeOf(val element: Term, override val id: Id) : Term()
         data class Splice(val element: Term, override val id: Id) : Term()
         data class Union(val variants: KList<Term>, override val id: Id) : Term()
@@ -72,6 +74,7 @@ object Surface {
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
         data class Reference(val element: Term, override val id: Id) : Term()
         data class Function(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
+        data class Thunk(val element: Term, val effects: Effects, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
         data class Type(override val id: Id) : Term()
     }
@@ -99,4 +102,9 @@ object Surface {
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
 
     sealed class Effect
+
+    sealed class Effects {
+        object Any : Effects()
+        data class Set(val effects: KList<Effect>) : Effects()
+    }
 }

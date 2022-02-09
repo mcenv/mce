@@ -123,8 +123,11 @@ class Parse private constructor(
                 val elements = parseDelimitedList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
+            "thunk_of" -> S.Term.ThunkOf(parseTerm(), id)
+            "force" -> S.Term.Force(parseTerm(), id)
             "reference" -> S.Term.Reference(parseTerm(), id)
             "function" -> S.Term.Function(parseList { parseParen { S.Parameter(readWord(), parseTerm(), parseTerm(), parseTerm()) } }, parseTerm(), id)
+            "thunk" -> S.Term.Thunk(parseTerm(), parseEffects(), id)
             "code" -> S.Term.Code(parseTerm(), id)
             "type" -> S.Term.Type(id)
             else -> when {
@@ -185,6 +188,17 @@ class Parse private constructor(
     }
 
     private fun parseEffect(): S.Effect = TODO()
+
+    private fun parseEffects(): S.Effects = when (peekChar()) {
+        '{' -> {
+            skip()
+            S.Effects.Set(parseDelimitedList('}', ::parseEffect))
+        }
+        else -> when (val word = readWord()) {
+            "any" -> S.Effects.Any
+            else -> error("unexpected effects: $word")
+        }
+    }
 
     private inline fun <A> parseParen(parseA: (Id) -> A): A {
         expect('(')

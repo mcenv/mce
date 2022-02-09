@@ -12,11 +12,12 @@ sealed class Diagnostic {
     data class VariableNotFound(val name: String, override val id: Id) : Diagnostic()
     data class DefinitionNotFound(val name: String, override val id: Id) : Diagnostic()
     data class FunctionExpected(override val id: Id) : Diagnostic()
+    data class ThunkExpected(override val id: Id) : Diagnostic()
     data class CodeExpected(override val id: Id) : Diagnostic()
     data class TypeMismatch(val expected: S.Term, val actual: S.Term, override val id: Id) : Diagnostic()
     data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
-    data class EffectMismatch(val expected: List<S.Effect>, val actual: List<S.Effect>, override val id: Id) : Diagnostic()
+    data class EffectMismatch(override val id: Id) : Diagnostic()
 
     companion object {
         fun serializeTerm(term: C.Term): S.Term = when (term) {
@@ -42,6 +43,8 @@ sealed class Diagnostic {
             is C.Term.ReferenceOf -> S.Term.ReferenceOf(serializeTerm(term.element), freshId())
             is C.Term.FunctionOf -> S.Term.FunctionOf(term.parameters, serializeTerm(term.body), freshId())
             is C.Term.Apply -> S.Term.Apply(serializeTerm(term.function), term.arguments.map { serializeTerm(it) }, freshId())
+            is C.Term.ThunkOf -> S.Term.ThunkOf(serializeTerm(term.body), freshId())
+            is C.Term.Force -> S.Term.Force(serializeTerm(term.element), freshId())
             is C.Term.CodeOf -> S.Term.CodeOf(serializeTerm(term.element), freshId())
             is C.Term.Splice -> S.Term.Splice(serializeTerm(term.element), freshId())
             is C.Term.Union -> S.Term.Union(term.variants.map { serializeTerm(it) }, freshId())
@@ -61,6 +64,7 @@ sealed class Diagnostic {
             is C.Term.Compound -> S.Term.Compound(term.elements.map { it.first to serializeTerm(it.second) }, freshId())
             is C.Term.Reference -> S.Term.Reference(serializeTerm(term.element), freshId())
             is C.Term.Function -> S.Term.Function(term.parameters.map { S.Parameter(it.name, serializeTerm(it.lower), serializeTerm(it.upper), serializeTerm(it.type)) }, serializeTerm(term.resultant), freshId())
+            is C.Term.Thunk -> S.Term.Thunk(serializeTerm(term.element), serializeEffects(term.effects), freshId())
             is C.Term.Code -> S.Term.Code(serializeTerm(term.element), freshId())
             is C.Term.Type -> S.Term.Type(freshId())
         }
@@ -68,5 +72,7 @@ sealed class Diagnostic {
         fun serializePattern(pattern: C.Pattern): S.Pattern = TODO()
 
         fun serializeEffect(effect: C.Effect): S.Effect = TODO()
+
+        fun serializeEffects(effects: C.Effects): S.Effects = TODO()
     }
 }

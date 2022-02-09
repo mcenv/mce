@@ -85,6 +85,10 @@ class Elaborate private constructor(
             val element = inferTerm(term.element)
             Typing(C.Term.ReferenceOf(element.element), C.Value.Reference(lazyOf(element.type)))
         }
+        is S.Term.ThunkOf -> {
+            val body = inferComputation(term.body)
+            Typing(C.Term.ThunkOf(body.element), C.Value.Thunk(lazyOf(body.type), body.effects))
+        }
         is S.Term.CodeOf -> {
             val element = up().inferTerm(term.element)
             Typing(C.Term.CodeOf(element.element), C.Value.Code(lazyOf(element.type)))
@@ -135,10 +139,15 @@ class Elaborate private constructor(
             val element = checkTerm(term.element, C.Value.Type)
             Typing(element, C.Value.Type)
         }
+        is S.Term.Thunk -> {
+            val element = checkTerm(term.element, C.Value.Type)
+            val effects = elaborateEffects(term.effects)
+            Typing(C.Term.Thunk(element, effects), C.Value.Type)
+        }
         is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
         else -> inferComputation(term).also {
-            if (!it.effects.isPure()) TODO()
+            if (!it.effects.isPure()) diagnose(Diagnostic.EffectMismatch(term.id))
         }
     }.also { types[term.id] = lazy { serializeTerm(quote(it.type)) } }
 
@@ -184,6 +193,13 @@ class Elaborate private constructor(
                     Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
                 }
                 else -> Typing(C.Term.Apply(function.element, computation.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
+            }
+        }
+        is S.Term.Force -> {
+            val element = inferTerm(computation.element)
+            when (val type = force(element.type)) {
+                is C.Value.Thunk -> Typing(C.Term.Force(element.element), type.element.value, type.effects)
+                else -> Typing(C.Term.Force(element.element), diagnose(Diagnostic.ThunkExpected(computation.element.id)))
             }
         }
         is S.Term.Function -> Typing(
@@ -233,20 +249,24 @@ class Elaborate private constructor(
                 val element = checkTerm(term.element, type.element.value)
                 C.Term.ReferenceOf(element)
             }
+            term is S.Term.ThunkOf && type is C.Value.Thunk -> {
+                val body = checkTerm(term.body, type.element.value)
+                C.Term.ThunkOf(body)
+            }
             term is S.Term.CodeOf && type is C.Value.Code -> {
                 val element = up().checkTerm(term.element, type.element.value)
                 C.Term.CodeOf(element)
             }
             term is S.Term.Union && term.variants.isEmpty() -> C.Term.Union(emptyList()) // generalized bottom type
             term is S.Term.Intersection && term.variants.isEmpty() -> C.Term.Intersection(emptyList()) // generalized top type
-            else -> checkComputation(term, type, Effects.bottom())
+            else -> checkComputation(term, type, C.Effects.Set(emptySet()))
         }
     }
 
     /**
      * Checks the [computation] against the [type] and the [effects] under this context.
      */
-    private fun Context.checkComputation(computation: S.Term, type: C.Value, effects: Effects): C.Term {
+    private fun Context.checkComputation(computation: S.Term, type: C.Value, effects: C.Effects): C.Term {
         val type = force(type)
         types[computation.id] = lazy { serializeTerm(quote(type)) }
         return when {
@@ -274,7 +294,7 @@ class Elaborate private constructor(
                     types[computation.id] = lazy { serializeTerm(quote(END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(type)), serializeTerm(quote(inferred.type)), computation.id))
                 }
-                if (!(inferred.effects sub effects)) TODO()
+                if (!(inferred.effects sub effects)) diagnose(Diagnostic.EffectMismatch(computation.id))
                 inferred.element
             }
         }
@@ -360,6 +380,11 @@ class Elaborate private constructor(
 
     private fun elaborateEffect(effect: S.Effect): C.Effect = TODO()
 
+    private fun elaborateEffects(effects: S.Effects): C.Effects = when (effects) {
+        is S.Effects.Any -> C.Effects.Any
+        is S.Effects.Set -> C.Effects.Set(effects.effects.map { elaborateEffect(it) }.toSet())
+    }
+
     /**
      * Evaluates the [term] to a value under this environment.
      */
@@ -389,6 +414,11 @@ class Elaborate private constructor(
             is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
         }
+        is C.Term.ThunkOf -> C.Value.ThunkOf(lazy { evaluate(term.body) })
+        is C.Term.Force -> when (val thunk = evaluate(term.element)) {
+            is C.Value.ThunkOf -> thunk.body.value
+            else -> C.Value.Force(lazyOf(thunk))
+        }
         is C.Term.CodeOf -> C.Value.CodeOf(lazy { evaluate(term.element) })
         is C.Term.Splice -> when (val element = evaluate(term.element)) {
             is C.Value.CodeOf -> element.element.value
@@ -411,6 +441,7 @@ class Elaborate private constructor(
         is C.Term.Compound -> C.Value.Compound(term.elements)
         is C.Term.Reference -> C.Value.Reference(lazy { evaluate(term.element) })
         is C.Term.Function -> C.Value.Function(term.parameters, term.resultant)
+        is C.Term.Thunk -> C.Value.Thunk(lazy { evaluate(term.element) }, term.effects)
         is C.Term.Code -> C.Value.Code(lazy { evaluate(term.element) })
         is C.Term.Type -> C.Value.Type
     }
@@ -447,6 +478,8 @@ class Elaborate private constructor(
             )
         )
         is C.Value.Apply -> C.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) })
+        is C.Value.ThunkOf -> C.Term.ThunkOf(quote(value.body.value))
+        is C.Value.Force -> C.Term.Force(quote(value.element.value))
         is C.Value.CodeOf -> C.Term.CodeOf(quote(value.element.value))
         is C.Value.Splice -> C.Term.Splice(quote(value.element.value))
         is C.Value.Union -> C.Term.Union(value.variants.map { quote(it.value) })
@@ -473,6 +506,7 @@ class Elaborate private constructor(
                     .evaluate(value.resultant)
             )
         )
+        is C.Value.Thunk -> C.Term.Thunk(quote(value.element.value), value.effects)
         is C.Value.Code -> C.Term.Code(quote(value.element.value))
         is C.Value.Type -> C.Term.Type
     }
@@ -650,40 +684,31 @@ class Elaborate private constructor(
         val types: Map<Id, Lazy<S.Term>>
     )
 
-    private sealed class Effects {
-        object Top : Effects()
-        data class Set(val effects: kotlin.collections.Set<C.Effect>) : Effects()
+    private fun C.Effects.isPure(): Boolean = when (this) {
+        is C.Effects.Any -> false
+        is C.Effects.Set -> effects.isEmpty()
+    }
 
-        fun isPure(): Boolean = when (this) {
-            is Top -> false
-            is Set -> effects.isEmpty()
+    private operator fun C.Effects.plus(that: C.Effects): C.Effects = when (this) {
+        is C.Effects.Any -> C.Effects.Any
+        is C.Effects.Set -> when (that) {
+            is C.Effects.Any -> C.Effects.Any
+            is C.Effects.Set -> C.Effects.Set(this.effects + that.effects)
         }
+    }
 
-        operator fun plus(that: Effects): Effects = when (this) {
-            is Top -> Top
-            is Set -> when (that) {
-                is Top -> Top
-                is Set -> Set(this.effects + that.effects)
-            }
-        }
-
-        infix fun sub(that: Effects): Boolean = when (that) {
-            is Top -> true
-            is Set -> when (this) {
-                is Top -> false
-                is Set -> that.effects.containsAll(this.effects)
-            }
-        }
-
-        companion object {
-            fun bottom(): Effects = Set(emptySet())
+    private infix fun C.Effects.sub(that: C.Effects): Boolean = when (that) {
+        is C.Effects.Any -> true
+        is C.Effects.Set -> when (this) {
+            is C.Effects.Any -> false
+            is C.Effects.Set -> that.effects.containsAll(this.effects)
         }
     }
 
     private data class Typing<out E>(
         val element: E,
         val type: C.Value,
-        val effects: Effects = Effects.bottom()
+        val effects: C.Effects = C.Effects.Set(emptySet())
     )
 
     private data class Entry(

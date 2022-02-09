@@ -1,0 +1,5 @@
+import ()
+
+definition ()
+  : boolean
+  = force (thunk_of false)

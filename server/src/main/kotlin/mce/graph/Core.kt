@@ -9,6 +9,7 @@ import kotlin.Long as KLong
 import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
+import kotlin.collections.Set as KSet
 
 /**
  * A core representation.
@@ -55,6 +56,8 @@ object Core {
         data class ReferenceOf(val element: Term) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
+        data class ThunkOf(val body: Term) : Term()
+        data class Force(val element: Term) : Term()
         data class CodeOf(val element: Term) : Term()
         data class Splice(val element: Term) : Term()
         data class Union(val variants: KList<Term>) : Term()
@@ -74,6 +77,7 @@ object Core {
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Reference(val element: Term) : Term()
         data class Function(val parameters: KList<Parameter>, val resultant: Term) : Term()
+        data class Thunk(val element: Term, val effects: Effects) : Term()
         data class Code(val element: Term) : Term()
         object Type : Term()
     }
@@ -124,6 +128,8 @@ object Core {
         data class ReferenceOf(val element: Lazy<Value>) : Value()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
+        data class ThunkOf(val body: Lazy<Value>) : Value()
+        data class Force(val element: Lazy<Value>) : Value()
         data class CodeOf(val element: Lazy<Value>) : Value()
         data class Splice(val element: Lazy<Value>) : Value()
         data class Union(val variants: KList<Lazy<Value>>) : Value()
@@ -143,6 +149,7 @@ object Core {
         data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
         data class Reference(val element: Lazy<Value>) : Value()
         data class Function(val parameters: KList<Parameter>, val resultant: Term) : Value()
+        data class Thunk(val element: Lazy<Value>, val effects: Effects) : Value()
         data class Code(val element: Lazy<Value>) : Value()
         object Type : Value()
     }
@@ -150,4 +157,9 @@ object Core {
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
 
     sealed class Effect
+
+    sealed class Effects {
+        object Any : Effects()
+        data class Set(val effects: KSet<Effect>) : Effects()
+    }
 }
