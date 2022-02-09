@@ -1,5 +1,5 @@
 import {}
 
 definition {}
-  : compound {α : type, a : α,}
-  = {boolean, false,}
+  : compound {α : type, a : α}
+  = {boolean, false}

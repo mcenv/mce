@@ -259,7 +259,7 @@ class Parse private constructor(
     private inline fun <A> parseList(end: Char, parseA: () -> A): List<A> = mutableListOf<A>().also {
         while (peekChar() != end) {
             it += parseA()
-            expect(',')
+            if (peekChar() == ',') skip() else break
         }
         expect(end)
     }

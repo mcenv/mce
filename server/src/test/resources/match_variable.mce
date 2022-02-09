@@ -3,5 +3,5 @@ import {}
 definition {}
   : boolean
   = match false [
-      b => b,
+      b => b
     ]

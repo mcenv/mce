@@ -2,4 +2,4 @@ import {identity,}
 
 definition {}
   : boolean
-  = @!identity [boolean, false,]
+  = @!identity [boolean, false]
