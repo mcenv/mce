@@ -68,10 +68,29 @@ sealed class Diagnostic {
             is C.Term.Type -> S.Term.Type(freshId())
         }
 
-        fun serializePattern(pattern: C.Pattern): S.Pattern = TODO()
+        fun serializePattern(pattern: C.Pattern): S.Pattern = when (pattern) {
+            is C.Pattern.Variable -> S.Pattern.Variable(pattern.name, freshId())
+            is C.Pattern.BooleanOf -> S.Pattern.BooleanOf(pattern.value, freshId())
+            is C.Pattern.ByteOf -> S.Pattern.ByteOf(pattern.value, freshId())
+            is C.Pattern.ShortOf -> S.Pattern.ShortOf(pattern.value, freshId())
+            is C.Pattern.IntOf -> S.Pattern.IntOf(pattern.value, freshId())
+            is C.Pattern.LongOf -> S.Pattern.LongOf(pattern.value, freshId())
+            is C.Pattern.FloatOf -> S.Pattern.FloatOf(pattern.value, freshId())
+            is C.Pattern.DoubleOf -> S.Pattern.DoubleOf(pattern.value, freshId())
+            is C.Pattern.StringOf -> S.Pattern.StringOf(pattern.value, freshId())
+            is C.Pattern.ByteArrayOf -> S.Pattern.ByteArrayOf(pattern.elements.map { serializePattern(it) }, freshId())
+            is C.Pattern.IntArrayOf -> S.Pattern.IntArrayOf(pattern.elements.map { serializePattern(it) }, freshId())
+            is C.Pattern.LongArrayOf -> S.Pattern.LongArrayOf(pattern.elements.map { serializePattern(it) }, freshId())
+            is C.Pattern.ListOf -> S.Pattern.ListOf(pattern.elements.map { serializePattern(it) }, freshId())
+            is C.Pattern.CompoundOf -> S.Pattern.CompoundOf(pattern.elements.map { serializePattern(it) }, freshId())
+            is C.Pattern.ReferenceOf -> S.Pattern.ReferenceOf(serializePattern(pattern.element), freshId())
+        }
 
         fun serializeEffect(effect: C.Effect): S.Effect = TODO()
 
-        fun serializeEffects(effects: C.Effects): S.Effects = TODO()
+        fun serializeEffects(effects: C.Effects): S.Effects = when (effects) {
+            is C.Effects.Any -> S.Effects.Any
+            is C.Effects.Set -> S.Effects.Set(effects.effects.map { serializeEffect(it) })
+        }
     }
 }
