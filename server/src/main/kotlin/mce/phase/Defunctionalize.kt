@@ -1,10 +1,11 @@
 package mce.phase
 
+import java.util.concurrent.atomic.AtomicInteger
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 
 class Defunctionalize private constructor() {
-    private val state: State = State()
+    private val functions: MutableList<D.Term> = mutableListOf()
 
     private fun defunctionalizeItem(item: C.Item): D.Item = when (item) {
         is C.Item.Definition -> {
@@ -60,18 +61,18 @@ class Defunctionalize private constructor() {
             val element = defunctionalizeTerm(term.element)
             D.Term.ReferenceOf(element)
         }
-        is C.Term.FunctionOf -> D.Term.FunctionOf(state.freshTag()).also {
+        is C.Term.FunctionOf -> D.Term.FunctionOf(freshTag()).also {
             val body = defunctionalizeTerm(term.body)
-            state.addFunction(body)
+            functions += body
         }
         is C.Term.Apply -> {
             val function = defunctionalizeTerm(term.function)
             val arguments = term.arguments.map { defunctionalizeTerm(it) }
             D.Term.Apply(function, arguments)
         }
-        is C.Term.ThunkOf -> D.Term.FunctionOf(state.freshTag()).also {
+        is C.Term.ThunkOf -> D.Term.FunctionOf(freshTag()).also {
             val body = defunctionalizeTerm(term.body)
-            state.addFunction(body)
+            functions += body
         }
         is C.Term.Force -> {
             val element = defunctionalizeTerm(term.element)
@@ -167,18 +168,11 @@ class Defunctionalize private constructor() {
         is C.Effects.Set -> D.Effects.Set(effects.effects.map { defunctionalizeEffect(it) }.toSet())
     }
 
-    private class State {
-        private val functions: MutableList<D.Term> = mutableListOf()
-        private var tag: Int = 0
-
-        fun addFunction(function: D.Term) {
-            functions += function
-        }
-
-        fun freshTag(): Int = tag++
-    }
-
     companion object {
+        private val tag: AtomicInteger = AtomicInteger(0)
+
+        private fun freshTag(): Int = tag.getAndIncrement()
+
         operator fun invoke(item: C.Item): D.Item = Defunctionalize().defunctionalizeItem(item)
     }
 }
