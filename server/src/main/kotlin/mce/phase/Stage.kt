@@ -8,7 +8,7 @@ import mce.graph.Staged as S
  */
 class Stage private constructor(
     private val metaState: MetaState,
-    private val items: Map<String, C.Item>
+    private val items: Map<String, S.Item>
 ) {
     private fun stageItem(item: C.Item): S.Item = when (item) {
         is C.Item.Definition -> {
@@ -175,6 +175,6 @@ class Stage private constructor(
     }
 
     companion object {
-        operator fun invoke(metaState: MetaState, items: Map<String, C.Item>, item: C.Item): S.Item = Stage(metaState, items).stageItem(item)
+        operator fun invoke(metaState: MetaState, items: Map<String, S.Item>, item: C.Item): S.Item = Stage(metaState, items).stageItem(item)
     }
 }
