@@ -16,7 +16,7 @@ class ElaborateTest {
     fun elaborate() {
         val boolean = S.Term.Boolean(UUID(0, 0))
         val ff = S.Term.BooleanOf(false, UUID(0, 1))
-        val (elaborated, diagnostics, types) = elaborate(emptyMap(), "elaborate")
+        val (elaborated, _, diagnostics, types) = elaborate(emptyMap(), "elaborate")
 
         assert(diagnostics.isEmpty())
         assertIs<S.Term.Type>(types[boolean.id]!!.value)
@@ -26,106 +26,106 @@ class ElaborateTest {
 
     @Test
     fun apply() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "apply")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "apply")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun functionIntro() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "function_intro")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "function_intro")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun functionElim() {
-        val (identity, diagnostics1, _) = elaborate(emptyMap(), "identity")
-        val (_, diagnostics2, _) = elaborate(mapOf(identity.name to identity), "function_elim")
+        val (identity, _, diagnostics1, _) = elaborate(emptyMap(), "identity")
+        val (_, _, diagnostics2, _) = elaborate(mapOf(identity.name to identity), "function_elim")
         assert(diagnostics1.isEmpty())
         assert(diagnostics2.isEmpty())
     }
 
     @Test
     fun functionClosed() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "function_closed")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "function_closed")
         assert(diagnostics.contains(Diagnostic.VariableNotFound("a", UUID(0, 0))))
     }
 
     @Test
     fun let() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "let")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "let")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun invalidDefinition() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "invalid_definition")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "invalid_definition")
         assert(diagnostics.contains(Diagnostic.DefinitionNotFound("a", UUID(0, 0))))
     }
 
     @Test
     fun compound() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "compound")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "compound")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun codeIntro() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "code_intro")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "code_intro")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun codeElim() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "code_elim")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "code_elim")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun stageMismatch() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "stage_mismatch")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "stage_mismatch")
         assert(diagnostics.contains(Diagnostic.StageMismatch(1, 0, UUID(0, 0))))
     }
 
     @Test
     fun phaseMismatch() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch")
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0))))
     }
 
     @Test
     fun phaseMismatchLocal() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch_local")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch_local")
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0))))
     }
 
     @Test
     fun matchBoolean() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "match_boolean")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "match_boolean")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun matchVariable() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "match_variable")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "match_variable")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun thunkIntro() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "thunk_intro")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "thunk_intro")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun thunkElim() {
-        val (_, diagnostics, _) = elaborate(emptyMap(), "thunk_elim")
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "thunk_elim")
         assert(diagnostics.isEmpty())
     }
 
     @Test
     fun impureDefinition() {
-        val (thunkIntro, diagnostics1, _) = elaborate(emptyMap(), "thunk_intro")
-        val (_, diagnostics2, _) = elaborate(mapOf(thunkIntro.name to thunkIntro), "impure_definition")
+        val (thunkIntro, _, diagnostics1, _) = elaborate(emptyMap(), "thunk_intro")
+        val (_, _, diagnostics2, _) = elaborate(mapOf(thunkIntro.name to thunkIntro), "impure_definition")
         assert(diagnostics1.isEmpty())
         assert(diagnostics2.contains(Diagnostic.EffectMismatch(UUID(0, 0))))
     }

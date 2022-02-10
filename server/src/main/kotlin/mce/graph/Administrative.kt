@@ -10,7 +10,7 @@ import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
 
-object Normal {
+object Administrative {
     sealed class Item {
         abstract val imports: KList<KString>
         abstract val name: KString

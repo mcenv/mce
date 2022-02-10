@@ -524,11 +524,7 @@ class Elaborate private constructor(
 
     private fun emptyContext(meta: Boolean): Context = Context(mutableListOf(), meta, 0)
 
-    private fun emptyEnvironment(): Environment = mutableListOf()
-
     private inline fun <R> withContext(meta: Boolean, block: (MutableList<Lazy<C.Value>>, Context) -> R): R = block(mutableListOf(), emptyContext(meta))
-
-    private inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = block(mutableListOf())
 
     private fun diagnose(diagnostic: Diagnostic): C.Value {
         diagnostics += diagnostic
@@ -537,6 +533,7 @@ class Elaborate private constructor(
 
     data class Output(
         val item: C.Item,
+        val metaState: MetaState,
         val diagnostics: List<Diagnostic>,
         val types: Map<Id, Lazy<S.Term>>
     )
@@ -600,7 +597,7 @@ class Elaborate private constructor(
         private val ANY: C.Value.Intersection = C.Value.Intersection(emptyList())
 
         operator fun invoke(items: Map<String, C.Item>, item: S.Item): Output = Elaborate(items).run {
-            Output(elaborateItem(item), diagnostics, types)
+            Output(elaborateItem(item), metaState, diagnostics, types)
         }
     }
 }

@@ -9,6 +9,7 @@ import kotlin.Long as KLong
 import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
+import kotlin.collections.Set as KSet
 
 object Staged {
     sealed class Item {
@@ -45,6 +46,8 @@ object Staged {
         data class ReferenceOf(val element: Term) : Term()
         data class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
+        data class ThunkOf(val body: Term) : Term()
+        data class Force(val element: Term) : Term()
         data class Union(val variants: KList<Term>) : Term()
         data class Intersection(val variants: KList<Term>) : Term()
         object Boolean : Term()
@@ -62,6 +65,7 @@ object Staged {
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Reference(val element: Term) : Term()
         data class Function(val parameters: KList<Term>, val resultant: Term) : Term()
+        data class Thunk(val element: Term, val effects: Effects) : Term()
         object Type : Term()
     }
 
@@ -81,5 +85,12 @@ object Staged {
         data class ListOf(val elements: KList<Pattern>) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>) : Pattern()
         data class ReferenceOf(val element: Pattern) : Pattern()
+    }
+
+    sealed class Effect
+
+    sealed class Effects {
+        object Any : Effects()
+        data class Set(val effects: KSet<Effect>) : Effects()
     }
 }
