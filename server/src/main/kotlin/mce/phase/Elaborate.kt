@@ -416,6 +416,7 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.ReferenceOf && value2 is C.Value.ReferenceOf -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.FunctionOf && value2 is C.Value.FunctionOf -> value1.parameters.size == value2.parameters.size &&
@@ -424,9 +425,10 @@ class Elaborate private constructor(
                         .let { (this + value1.parameters.size).unify(it.evaluate(metaState, value1.body), it.evaluate(metaState, value2.body)) }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> unify(value1.function, value2.function) &&
                     (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) }
+            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> unify(value1.body.value, value2.body.value)
+            value1 is C.Value.Force && value2 is C.Value.Force -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.CodeOf && value2 is C.Value.CodeOf -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Splice && value2 is C.Value.Splice -> unify(value1.element.value, value2.element.value)
-            // TODO: unify non-empty unions and intersections?
             value1 is C.Value.Union && value1.variants.isEmpty() && value2 is C.Value.Union && value2.variants.isEmpty() -> true
             value1 is C.Value.Intersection && value1.variants.isEmpty() && value2 is C.Value.Intersection && value2.variants.isEmpty() -> true
             value1 is C.Value.Boolean && value2 is C.Value.Boolean -> true
@@ -451,6 +453,7 @@ class Elaborate private constructor(
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
+            value1 is C.Value.Reference && value2 is C.Value.Reference -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Function && value2 is C.Value.Function -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
                         (value1.parameters zip value2.parameters)
@@ -462,6 +465,7 @@ class Elaborate private constructor(
                             } &&
                                 (this + value1.parameters.size).unify(environment.evaluate(metaState, value1.resultant), environment.evaluate(metaState, value2.resultant))
                     }
+            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Code && value2 is C.Value.Code -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Type && value2 is C.Value.Type -> true
             else -> false
@@ -485,12 +489,15 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+            value1 is C.Value.ReferenceOf && value2 is C.Value.ReferenceOf -> subtype(value1.element.value, value2.element.value)
             value1 is C.Value.FunctionOf && value2 is C.Value.FunctionOf -> value1.parameters.size == value2.parameters.size &&
                     value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
                         .let { (this + value1.parameters.size).subtype(it.evaluate(metaState, value1.body), it.evaluate(metaState, value2.body)) }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> subtype(value1.function, value2.function) &&
                     (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
+            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> subtype(value1.body.value, value2.body.value)
+            value1 is C.Value.Force && value2 is C.Value.Force -> subtype(value1.element.value, value2.element.value)
             value1 is C.Value.Union -> value1.variants.all { subtype(it.value, value2) }
             value2 is C.Value.Union -> value2.variants.any { subtype(value1, it.value) }
             value1 is C.Value.Intersection -> value1.variants.any { subtype(it.value, value2) }
@@ -506,6 +513,7 @@ class Elaborate private constructor(
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
+            value1 is C.Value.Reference && value2 is C.Value.Reference -> subtype(value1.element.value, value2.element.value)
             value1 is C.Value.Function && value2 is C.Value.Function -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
                         (value1.parameters zip value2.parameters)
@@ -517,6 +525,7 @@ class Elaborate private constructor(
                             } &&
                                 (this + value1.parameters.size).subtype(environment.evaluate(metaState, value1.resultant), environment.evaluate(metaState, value2.resultant))
                     }
+            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> subtype(value1.element.value, value2.element.value) && value1.effects sub value2.effects
             value1 is C.Value.Code && value2 is C.Value.Code -> subtype(value1.element.value, value2.element.value)
             else -> unify(value1, value2)
         }
