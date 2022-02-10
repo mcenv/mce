@@ -42,7 +42,7 @@ object Defunctionalized {
         data class ListOf(val elements: KList<Term>) : Term()
         data class CompoundOf(val elements: KList<Term>) : Term()
         data class ReferenceOf(val element: Term) : Term()
-        data class FunctionOf(val arity: KInt, val tag: KInt) : Term()
+        data class FunctionOf(val tag: KInt) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
         data class Union(val variants: KList<Term>) : Term()
         data class Intersection(val variants: KList<Term>) : Term()

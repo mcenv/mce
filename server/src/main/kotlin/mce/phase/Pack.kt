@@ -1,61 +1,54 @@
 package mce.phase
 
-import mce.graph.Core as C
+import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
 
 class Pack private constructor() {
-    private fun packItem(item: C.Item): P.Function = when (item) {
-        is C.Item.Definition -> TODO()
+    private fun packItem(item: D.Item): P.Function = when (item) {
+        is D.Item.Definition -> TODO()
     }
 
-    private fun Context.packTerm(term: C.Term) {
+    private fun Context.packTerm(term: D.Term) {
         when (term) {
-            is C.Term.Hole -> TODO()
-            is C.Term.Meta -> TODO()
-            is C.Term.Variable -> TODO()
-            is C.Term.Definition -> TODO()
-            is C.Term.Let -> TODO()
-            is C.Term.Match -> TODO()
-            is C.Term.BooleanOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(if (term.value) 1 else 0)))
-            is C.Term.ByteOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(term.value)))
-            is C.Term.ShortOf -> +append(STACKS, SHORT, P.SourceProvider.Value(P.Nbt.Short(term.value)))
-            is C.Term.IntOf -> +append(STACKS, INT, P.SourceProvider.Value(P.Nbt.Int(term.value)))
-            is C.Term.LongOf -> +append(STACKS, LONG, P.SourceProvider.Value(P.Nbt.Long(term.value)))
-            is C.Term.FloatOf -> +append(STACKS, FLOAT, P.SourceProvider.Value(P.Nbt.Float(term.value)))
-            is C.Term.DoubleOf -> +append(STACKS, DOUBLE, P.SourceProvider.Value(P.Nbt.Double(term.value)))
-            is C.Term.StringOf -> +append(STACKS, STRING, P.SourceProvider.Value(P.Nbt.String(term.value)))
-            is C.Term.ByteArrayOf -> TODO()
-            is C.Term.IntArrayOf -> TODO()
-            is C.Term.LongArrayOf -> TODO()
-            is C.Term.ListOf -> TODO()
-            is C.Term.CompoundOf -> TODO()
-            is C.Term.ReferenceOf -> TODO()
-            is C.Term.FunctionOf -> TODO()
-            is C.Term.Apply -> TODO()
-            is C.Term.ThunkOf -> TODO()
-            is C.Term.Force -> TODO()
-            is C.Term.CodeOf -> TODO()
-            is C.Term.Splice -> TODO()
-            is C.Term.Union -> TODO()
-            is C.Term.Intersection -> TODO()
-            is C.Term.Boolean -> TODO()
-            is C.Term.Byte -> TODO()
-            is C.Term.Short -> TODO()
-            is C.Term.Int -> TODO()
-            is C.Term.Long -> TODO()
-            is C.Term.Float -> TODO()
-            is C.Term.Double -> TODO()
-            is C.Term.String -> TODO()
-            is C.Term.ByteArray -> TODO()
-            is C.Term.IntArray -> TODO()
-            is C.Term.LongArray -> TODO()
-            is C.Term.List -> TODO()
-            is C.Term.Compound -> TODO()
-            is C.Term.Reference -> TODO()
-            is C.Term.Function -> TODO()
-            is C.Term.Thunk -> TODO()
-            is C.Term.Code -> TODO()
-            is C.Term.Type -> TODO()
+            is D.Term.Variable -> TODO()
+            is D.Term.Definition -> TODO()
+            is D.Term.Let -> TODO()
+            is D.Term.Match -> TODO()
+            is D.Term.BooleanOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(if (term.value) 1 else 0)))
+            is D.Term.ByteOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(term.value)))
+            is D.Term.ShortOf -> +append(STACKS, SHORT, P.SourceProvider.Value(P.Nbt.Short(term.value)))
+            is D.Term.IntOf -> +append(STACKS, INT, P.SourceProvider.Value(P.Nbt.Int(term.value)))
+            is D.Term.LongOf -> +append(STACKS, LONG, P.SourceProvider.Value(P.Nbt.Long(term.value)))
+            is D.Term.FloatOf -> +append(STACKS, FLOAT, P.SourceProvider.Value(P.Nbt.Float(term.value)))
+            is D.Term.DoubleOf -> +append(STACKS, DOUBLE, P.SourceProvider.Value(P.Nbt.Double(term.value)))
+            is D.Term.StringOf -> +append(STACKS, STRING, P.SourceProvider.Value(P.Nbt.String(term.value)))
+            is D.Term.ByteArrayOf -> TODO()
+            is D.Term.IntArrayOf -> TODO()
+            is D.Term.LongArrayOf -> TODO()
+            is D.Term.ListOf -> TODO()
+            is D.Term.CompoundOf -> TODO()
+            is D.Term.ReferenceOf -> TODO()
+            is D.Term.FunctionOf -> +append(STACKS, INT, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
+            is D.Term.Apply -> TODO()
+            is D.Term.Union -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Intersection -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Boolean -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Byte -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Short -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Int -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Long -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Float -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Double -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.String -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.ByteArray -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.IntArray -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.LongArray -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.List -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Compound -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Reference -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Function -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Thunk -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Type -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
         }
     }
 
@@ -104,6 +97,6 @@ class Pack private constructor() {
 
         private fun nbtCompoundOf(vararg elements: Pair<String, P.Nbt>): P.Nbt.Compound = P.Nbt.Compound(elements.toMap())
 
-        operator fun invoke(item: C.Item): P.Function = Pack().packItem(item)
+        operator fun invoke(item: D.Item): P.Function = Pack().packItem(item)
     }
 }

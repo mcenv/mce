@@ -60,7 +60,7 @@ class Defunctionalize private constructor() {
             val element = defunctionalizeTerm(term.element)
             D.Term.ReferenceOf(element)
         }
-        is C.Term.FunctionOf -> D.Term.FunctionOf(term.parameters.size, state.freshTag()).also {
+        is C.Term.FunctionOf -> D.Term.FunctionOf(state.freshTag()).also {
             val body = defunctionalizeTerm(term.body)
             state.addFunction(body)
         }
@@ -69,7 +69,7 @@ class Defunctionalize private constructor() {
             val arguments = term.arguments.map { defunctionalizeTerm(it) }
             D.Term.Apply(function, arguments)
         }
-        is C.Term.ThunkOf -> D.Term.FunctionOf(0, state.freshTag()).also {
+        is C.Term.ThunkOf -> D.Term.FunctionOf(state.freshTag()).also {
             val body = defunctionalizeTerm(term.body)
             state.addFunction(body)
         }
