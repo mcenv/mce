@@ -1,4 +1,4 @@
-import {thunk_intro,}
+import {thunk_intro}
 
 definition {}
   : boolean
