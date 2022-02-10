@@ -1,5 +1,3 @@
 import {thunk_intro}
 
-definition {}
-  : boolean
-  = (#0-0-0-0-0 !thunk_intro)
+definition {} : boolean = (#0-0-0-0-0 !thunk_intro)

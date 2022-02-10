@@ -1,5 +1,3 @@
 import {}
 
-definition {meta}
-  : code boolean
-  = `false
+definition {meta} : code boolean = `false

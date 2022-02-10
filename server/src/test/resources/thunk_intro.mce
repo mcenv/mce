@@ -1,5 +1,3 @@
 import {}
 
-definition {}
-  : thunk boolean any
-  = ~false
+definition {} : thunk boolean any = ~false

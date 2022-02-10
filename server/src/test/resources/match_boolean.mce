@@ -1,8 +1,7 @@
 import {}
 
-definition {}
-  : boolean
-  = match false [
-      false => true,
-      true  => false
-    ]
+definition {} : boolean =
+  match false [
+    false => true,
+    true  => false
+  ]

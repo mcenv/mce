@@ -1,5 +1,3 @@
 import {}
 
-definition {}
-  : boolean
-  = @(\[x] x) [false]
+definition {} : boolean = @(\[x] x) [false]
