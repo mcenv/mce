@@ -1,6 +1,7 @@
 package mce.server
 
 import mce.graph.Core
+import mce.graph.Defunctionalized
 import mce.graph.Surface
 import mce.phase.Elaborate
 
@@ -11,4 +12,5 @@ sealed class Key<V> {
     data class SurfaceItem(override val name: String) : Key<Surface.Item>()
     data class ElaboratedOutput(override val name: String) : Key<Elaborate.Output>()
     data class StagedItem(override val name: String) : Key<Core.Item>()
+    data class DefunctionalizedItem(override val name: String) : Key<Defunctionalized.Item>()
 }
