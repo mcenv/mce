@@ -24,8 +24,6 @@ object Staged {
     }
 
     sealed class Term {
-        object Hole : Term()
-        data class Meta(val index: KInt) : Term()
         data class Variable(val name: KString, val level: KInt) : Term()
         data class Definition(val name: KString) : Term()
         data class Let(val name: KString, val init: Term, val body: Term) : Term()
