@@ -2,4 +2,4 @@ import {thunk_intro}
 
 definition {}
   : boolean
-  = (#0-0-0-0-0 force thunk_intro)
+  = (#0-0-0-0-0 !thunk_intro)

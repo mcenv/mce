@@ -90,6 +90,14 @@ class Parse private constructor(
             }
             S.Term.Apply(function, arguments, id)
         }
+        '~' -> {
+            skip()
+            S.Term.ThunkOf(parseTerm(), id)
+        }
+        '!' -> {
+            skip()
+            S.Term.Force(parseTerm(), id)
+        }
         '`' -> {
             skip()
             S.Term.CodeOf(parseTerm(), id)
@@ -149,8 +157,6 @@ class Parse private constructor(
                 val elements = parseList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
-            "thunk_of" -> S.Term.ThunkOf(parseTerm(), id)
-            "force" -> S.Term.Force(parseTerm(), id)
             "reference" -> S.Term.Reference(parseTerm(), id)
             "function" -> {
                 val parameters = run {

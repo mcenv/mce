@@ -2,4 +2,4 @@ import {}
 
 definition {}
   : thunk boolean any
-  = thunk_of false
+  = ~false
