@@ -30,23 +30,19 @@ class Elaborate private constructor(
     private fun Context.inferTerm(term: S.Term): Typing<C.Term> = when (term) {
         is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(quote(metaState, END)), term.id)))
         is S.Term.Meta -> Typing(C.Term.Meta(term.index), metaState.fresh())
-        is S.Term.Variable -> {
-            val level = entries.indexOfLast { it.name == term.name }
-            val type = when (level) {
-                -1 -> diagnose(Diagnostic.VariableNotFound(term.name, term.id))
-                else -> {
-                    val entry = entries[level]
-                    if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
+        is S.Term.Name -> when (val level = entries.indexOfLast { it.name == term.name }) {
+            -1 -> {
+                val type = when (val item = items[term.name]) {
+                    null -> diagnose(Diagnostic.NameNotFound(term.name, term.id))
+                    is C.Item.Definition -> item.type
                 }
+                Typing(C.Term.Definition(term.name), type)
             }
-            Typing(C.Term.Variable(term.name, level), type)
-        }
-        is S.Term.Definition -> {
-            val type = when (val item = items[term.name]) {
-                null -> diagnose(Diagnostic.DefinitionNotFound(term.name, term.id))
-                is C.Item.Definition -> item.type
+            else -> {
+                val entry = entries[level]
+                val type = if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
+                Typing(C.Term.Variable(term.name, level), type)
             }
-            Typing(C.Term.Definition(term.name), type)
         }
         is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)

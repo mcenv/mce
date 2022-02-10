@@ -9,8 +9,7 @@ sealed class Diagnostic {
     abstract val id: Id
 
     data class TermExpected(val type: S.Term, override val id: Id) : Diagnostic()
-    data class VariableNotFound(val name: String, override val id: Id) : Diagnostic()
-    data class DefinitionNotFound(val name: String, override val id: Id) : Diagnostic()
+    data class NameNotFound(val name: String, override val id: Id) : Diagnostic()
     data class FunctionExpected(override val id: Id) : Diagnostic()
     data class ThunkExpected(override val id: Id) : Diagnostic()
     data class CodeExpected(override val id: Id) : Diagnostic()
@@ -23,8 +22,8 @@ sealed class Diagnostic {
         fun serializeTerm(term: C.Term): S.Term = when (term) {
             is C.Term.Hole -> S.Term.Hole(freshId())
             is C.Term.Meta -> S.Term.Meta(term.index, freshId())
-            is C.Term.Variable -> S.Term.Variable(term.name, freshId())
-            is C.Term.Definition -> S.Term.Definition(term.name, freshId())
+            is C.Term.Variable -> S.Term.Name(term.name, freshId())
+            is C.Term.Definition -> S.Term.Name(term.name, freshId())
             is C.Term.Let -> S.Term.Let(term.name, serializeTerm(term.init), serializeTerm(term.body), freshId())
             is C.Term.Match -> S.Term.Match(serializeTerm(term.scrutinee), term.clauses.map { serializePattern(it.first) to serializeTerm(it.second) }, freshId())
             is C.Term.BooleanOf -> S.Term.BooleanOf(term.value, freshId())

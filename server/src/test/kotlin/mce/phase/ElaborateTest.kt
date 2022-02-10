@@ -47,7 +47,7 @@ class ElaborateTest {
     @Test
     fun functionClosed() {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "function_closed")
-        assert(diagnostics.contains(Diagnostic.VariableNotFound("a", UUID(0, 0))))
+        assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0))))
     }
 
     @Test
@@ -57,9 +57,9 @@ class ElaborateTest {
     }
 
     @Test
-    fun invalidDefinition() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "invalid_definition")
-        assert(diagnostics.contains(Diagnostic.DefinitionNotFound("a", UUID(0, 0))))
+    fun nameNotFound() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "name_not_found")
+        assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0))))
     }
 
     @Test

@@ -44,10 +44,6 @@ class Parse private constructor(
 
     private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
         '(' -> parseParen { parseTerm(it) }
-        '!' -> {
-            skip()
-            S.Term.Definition(readWord(), id)
-        }
         '"' -> S.Term.StringOf(readString(), id)
         '[' -> {
             skip()
@@ -189,7 +185,7 @@ class Parse private constructor(
                 LONG_EXPRESSION.matches(word) -> S.Term.LongOf(word.dropLast(1).toLong(), id)
                 FLOAT_EXPRESSION.matches(word) -> S.Term.FloatOf(word.dropLast(1).toFloat(), id)
                 DOUBLE_EXPRESSION.matches(word) -> S.Term.DoubleOf(word.dropLast(1).toDouble(), id)
-                else -> S.Term.Variable(word, id)
+                else -> S.Term.Name(word, id)
             }
         }
     }
