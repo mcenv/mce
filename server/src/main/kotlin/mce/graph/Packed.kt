@@ -9,8 +9,6 @@ import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
 
-typealias NbtPath = KList<Packed.NbtNode>
-
 object Packed {
     data class Datapack(
         val functions: Map<KString, Function>
@@ -46,6 +44,8 @@ object Packed {
         data class From(val source: ResourceLocation, val path: NbtPath? = null) : SourceProvider()
     }
 
+    data class NbtPath(val nodes: KList<NbtNode> = emptyList())
+
     sealed class NbtNode {
         data class MatchRootObject(val pattern: Nbt.Compound) : NbtNode()
         data class MatchElement(val pattern: Nbt.Compound) : NbtNode()
@@ -65,7 +65,7 @@ object Packed {
         data class ByteArray(val data: KList<KByte>) : Nbt()
         data class String(val data: KString) : Nbt()
         data class List(val elements: KList<Nbt>) : Nbt()
-        data class Compound(val elements: Map<String, Nbt>) : Nbt()
+        data class Compound(val elements: Map<KString, Nbt>) : Nbt()
         data class IntArray(val data: KList<KInt>) : Nbt()
         data class LongArray(val data: KList<KLong>) : Nbt()
     }
@@ -73,5 +73,7 @@ object Packed {
     data class ResourceLocation(
         val namespace: KString,
         val path: KString
-    )
+    ) {
+        constructor(path: KString) : this("minecraft", path)
+    }
 }
