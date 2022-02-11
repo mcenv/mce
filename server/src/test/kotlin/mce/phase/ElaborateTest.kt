@@ -139,7 +139,7 @@ class ElaborateTest {
     @Test
     fun notEq() {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "not_eq")
-        assert(diagnostics.any { it is Diagnostic.TermMismatch })
+        assert(diagnostics.any { it is Diagnostic.TypeMismatch })
     }
 
     @Test

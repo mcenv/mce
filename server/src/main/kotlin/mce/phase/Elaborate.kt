@@ -82,8 +82,7 @@ class Elaborate private constructor(
         }
         is S.Term.Refl -> {
             val left = lazy { metaState.fresh() }
-            val right = lazy { metaState.fresh() }
-            Typing(C.Term.Refl, C.Value.Eq(left, right))
+            Typing(C.Term.Refl, C.Value.Eq(left, left))
         }
         is S.Term.ThunkOf -> {
             val body = inferComputation(term.body)
@@ -142,9 +141,6 @@ class Elaborate private constructor(
         is S.Term.Eq -> {
             val left = inferTerm(term.left)
             val right = checkTerm(term.right, left.type)
-            if (!0.unify(emptyEnvironment().evaluate(metaState, left.element), emptyEnvironment().evaluate(metaState, right))) {
-                diagnose(Diagnostic.TermMismatch(serializeTerm(left.element), serializeTerm(right), term.id))
-            }
             Typing(C.Term.Eq(left.element, right), C.Value.Type)
         }
         is S.Term.Thunk -> {
@@ -405,6 +401,7 @@ class Elaborate private constructor(
         val value1 = metaState.force(value1)
         val value2 = metaState.force(value2)
         return when {
+            value1 is C.Value.Meta && value2 is C.Value.Meta && value1.index == value2.index -> true
             value1 is C.Value.Meta -> when (val solved1 = metaState[value1.index]) {
                 null -> {
                     metaState.solve(value1.index, value2)

@@ -26,9 +26,9 @@ class MetaState(
      * Unfolds meta-variables of the [value] recursively.
      */
     tailrec fun force(value: C.Value): C.Value = when (value) {
-        is C.Value.Meta -> when (this[value.index]) {
+        is C.Value.Meta -> when (val forced = this[value.index]) {
             null -> value
-            else -> force(value)
+            else -> force(forced)
         }
         else -> value
     }
