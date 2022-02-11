@@ -15,8 +15,8 @@ class Defunctionalize private constructor() {
     }
 
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {
-        is C.Term.Hole -> throw InternalError()
-        is C.Term.Meta -> throw InternalError()
+        is C.Term.Hole -> throw Error()
+        is C.Term.Meta -> throw Error()
         is C.Term.Variable -> D.Term.Variable(term.name, term.level)
         is C.Term.Def -> D.Term.Def(term.name)
         is C.Term.Let -> {
@@ -85,8 +85,8 @@ class Defunctionalize private constructor() {
             val element = defunctionalizeTerm(term.element)
             D.Term.Apply(element, emptyList())
         }
-        is C.Term.CodeOf -> throw InternalError()
-        is C.Term.Splice -> throw InternalError()
+        is C.Term.CodeOf -> throw Error()
+        is C.Term.Splice -> throw Error()
         is C.Term.Union -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
             D.Term.Union(variants)
@@ -133,7 +133,7 @@ class Defunctionalize private constructor() {
             val effects = defunctionalizeEffects(term.effects)
             D.Term.Thunk(element, effects)
         }
-        is C.Term.Code -> throw InternalError()
+        is C.Term.Code -> throw Error()
         is C.Term.Type -> D.Term.Type
     }
 

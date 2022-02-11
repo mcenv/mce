@@ -17,7 +17,7 @@ class Stage private constructor(
     }
 
     private fun stageTerm(term: C.Term): C.Term = when (term) {
-        is C.Term.Hole -> throw InternalError()
+        is C.Term.Hole -> throw Error()
         is C.Term.Meta -> stageTerm(emptyEnvironment().normalize(metaState, term))
         is C.Term.Variable -> term
         is C.Term.Def -> term
@@ -81,7 +81,7 @@ class Stage private constructor(
             val element = stageTerm(term.element)
             C.Term.Force(element)
         }
-        is C.Term.CodeOf -> throw InternalError()
+        is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> {
             val staged = emptyEnvironment().normalize(metaState, term)
             stageTerm(staged)
@@ -131,7 +131,7 @@ class Stage private constructor(
             val element = stageTerm(term.element)
             C.Term.Thunk(element, term.effects)
         }
-        is C.Term.Code -> throw InternalError()
+        is C.Term.Code -> throw Error()
         is C.Term.Type -> term
     }
 
