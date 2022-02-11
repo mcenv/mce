@@ -124,11 +124,10 @@ class Elaborate private constructor(
             Typing(C.Term.List(element), C.Value.Type)
         }
         is S.Term.Compound -> {
-            val elements = withContext(meta) { environment, context ->
+            val elements = withContext(meta) {
                 term.elements.map { (name, element) ->
-                    (name to context.checkTerm(element, C.Value.Type)).also { (name, element) ->
-                        context.bind(term.id, Entry(name, END, ANY, environment.evaluate(metaState, element), stage))
-                        environment += lazyOf(C.Value.Variable(name, environment.size))
+                    (name to checkTerm(element, C.Value.Type)).also { (name, element) ->
+                        bind(term.id, Entry(name, END, ANY, environment.evaluate(metaState, element), stage))
                     }
                 }
             }
@@ -172,7 +171,10 @@ class Elaborate private constructor(
         }
         is S.Term.FunOf -> {
             val types = computation.parameters.map { metaState.fresh() }
-            val body = Context((computation.parameters zip types).map { Entry(it.first, END, ANY, it.second, stage) }.toMutableList(), meta, stage).inferComputation(computation.body)
+            val body = withContext(meta) {
+                (computation.parameters zip types).forEach { bind(computation.id, Entry(it.first, END, ANY, it.second, stage)) }
+                inferComputation(computation.body)
+            }
             val parameters = (computation.parameters zip types).map { C.Parameter(it.first, quote(metaState, END), quote(metaState, ANY), quote(metaState, it.second)) }
             Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, quote(metaState, body.type)), body.effects)
         }
@@ -207,18 +209,17 @@ class Elaborate private constructor(
             }
         }
         is S.Term.Fun -> Typing(
-            withContext(meta) { environment, context ->
+            withContext(meta) {
                 val parameters = computation.parameters.map { (name, lower, upper, parameter) ->
-                    val parameter = context.checkTerm(parameter, C.Value.Type)
+                    val parameter = checkTerm(parameter, C.Value.Type)
                     val type = environment.evaluate(metaState, parameter)
-                    val lower = context.checkTerm(lower, type)
-                    val upper = context.checkTerm(upper, type)
+                    val lower = checkTerm(lower, type)
+                    val upper = checkTerm(upper, type)
                     C.Parameter(name, lower, upper, parameter).also {
-                        context.bind(computation.id, Entry(name, environment.evaluate(metaState, lower), environment.evaluate(metaState, upper), type, stage))
-                        environment += lazyOf(C.Value.Variable(name, environment.size))
+                        bind(computation.id, Entry(name, environment.evaluate(metaState, lower), environment.evaluate(metaState, upper), type, stage))
                     }
                 }
-                val resultant = context.checkTerm(computation.resultant, C.Value.Type) /* TODO */
+                val resultant = checkTerm(computation.resultant, C.Value.Type) /* TODO */
                 C.Term.Fun(parameters, resultant)
             },
             C.Value.Type
@@ -285,12 +286,11 @@ class Elaborate private constructor(
                 val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkComputation(it.second, type, effects) }
                 C.Term.Match(scrutinee.element, clauses)
             }
-            computation is S.Term.FunOf && type is C.Value.Fun -> withContext(meta) { environment, context ->
+            computation is S.Term.FunOf && type is C.Value.Fun -> withContext(meta) {
                 (computation.parameters zip type.parameters).forEach { (name, parameter) ->
-                    context.bind(computation.id, Entry(name, environment.evaluate(metaState, parameter.lower), environment.evaluate(metaState, parameter.upper), environment.evaluate(metaState, parameter.type), stage))
-                    environment += lazyOf(C.Value.Variable(name, environment.size))
+                    bind(computation.id, Entry(name, environment.evaluate(metaState, parameter.lower), environment.evaluate(metaState, parameter.upper), environment.evaluate(metaState, parameter.type), stage))
                 }
-                val resultant = context.checkComputation(computation.body, environment.evaluate(metaState, type.resultant), effects)
+                val resultant = checkComputation(computation.body, environment.evaluate(metaState, type.resultant), effects)
                 C.Term.FunOf(computation.parameters, resultant)
             }
             else -> {
@@ -547,9 +547,9 @@ class Elaborate private constructor(
         }
     }
 
-    private fun emptyContext(meta: Boolean): Context = Context(mutableListOf(), meta, 0)
+    private fun emptyContext(meta: Boolean): Context = Context(mutableListOf(), mutableListOf(), meta, 0)
 
-    private inline fun <R> withContext(meta: Boolean, block: (MutableList<Lazy<C.Value>>, Context) -> R): R = block(mutableListOf(), emptyContext(meta))
+    private inline fun <R> withContext(meta: Boolean, block: Context.() -> R): R = block(emptyContext(meta))
 
     private fun diagnose(diagnostic: Diagnostic): C.Value {
         diagnostics += diagnostic
@@ -599,6 +599,7 @@ class Elaborate private constructor(
     )
 
     private inner class Context(
+        val environment: MutableList<Lazy<C.Value>>,
         val entries: MutableList<Entry>,
         val meta: Boolean,
         var stage: Int
@@ -607,8 +608,9 @@ class Elaborate private constructor(
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
         }
 
-        fun bind(id: Id, entry: Entry): Context = apply {
+        fun bind(id: Id, entry: Entry, value: C.Value? = null): Context = apply {
             checkPhase(id, entry.type)
+            environment += lazyOf(value ?: C.Value.Variable(entry.name, environment.size))
             entries += entry
         }
 
