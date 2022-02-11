@@ -33,6 +33,7 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         is C.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.RefOf -> C.Value.RefOf(lazy { evaluate(term.element) })
+        is C.Term.Refl -> C.Value.Refl
         is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body)
         is C.Term.Apply -> when (val function = evaluate(term.function)) {
             is C.Value.FunOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
@@ -64,6 +65,7 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         is C.Term.List -> C.Value.List(lazy { evaluate(term.element) })
         is C.Term.Compound -> C.Value.Compound(term.elements)
         is C.Term.Ref -> C.Value.Ref(lazy { evaluate(term.element) })
+        is C.Term.Eq -> C.Value.Eq(lazy { evaluate(term.left) }, lazy { evaluate(term.right) })
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant)
         is C.Term.Thunk -> C.Value.Thunk(lazy { evaluate(term.element) }, term.effects)
         is C.Term.Code -> C.Value.Code(lazy { evaluate(term.element) })
@@ -98,6 +100,7 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
         is C.Value.ListOf -> C.Term.ListOf(value.elements.map { quote(it.value) })
         is C.Value.CompoundOf -> C.Term.CompoundOf(value.elements.map { quote(it.value) })
         is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value))
+        is C.Value.Refl -> C.Term.Refl
         is C.Value.FunOf -> C.Term.FunOf(
             value.parameters,
             quote(
@@ -127,6 +130,7 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
         is C.Value.List -> C.Term.List(quote(value.element.value))
         is C.Value.Compound -> C.Term.Compound(value.elements)
         is C.Value.Ref -> C.Term.Ref(quote(value.element.value))
+        is C.Value.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value))
         is C.Value.Fun -> C.Term.Fun(
             value.parameters,
             quote(

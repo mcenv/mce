@@ -129,4 +129,16 @@ class ElaborateTest {
         assert(diagnostics1.isEmpty())
         assert(diagnostics2.contains(Diagnostic.EffectMismatch(UUID(0, 0))))
     }
+
+    @Test
+    fun eqIntro() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "eq_intro")
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun notEq() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "not_eq")
+        assert(diagnostics.any { it is Diagnostic.TermMismatch })
+    }
 }

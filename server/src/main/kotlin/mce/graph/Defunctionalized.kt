@@ -42,6 +42,7 @@ object Defunctionalized {
         data class ListOf(val elements: KList<Term>) : Term()
         data class CompoundOf(val elements: KList<Term>) : Term()
         data class RefOf(val element: Term) : Term()
+        object Refl : Term()
         data class FunOf(val tag: KInt) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
         data class Union(val variants: KList<Term>) : Term()
@@ -60,6 +61,7 @@ object Defunctionalized {
         data class List(val element: Term) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Ref(val element: Term) : Term()
+        data class Eq(val left: Term, val right: Term) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
         data class Thunk(val element: Term, val effects: Effects) : Term()
         object Type : Term()
@@ -81,6 +83,7 @@ object Defunctionalized {
         data class ListOf(val elements: KList<Pattern>) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>) : Pattern()
         data class RefOf(val element: Pattern) : Pattern()
+        object Refl : Pattern()
     }
 
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)

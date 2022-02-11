@@ -61,6 +61,7 @@ class Defunctionalize private constructor() {
             val element = defunctionalizeTerm(term.element)
             D.Term.RefOf(element)
         }
+        is C.Term.Refl -> D.Term.Refl
         is C.Term.FunOf -> {
             val tag = freshTag()
             D.Term.FunOf(tag).also {
@@ -117,6 +118,11 @@ class Defunctionalize private constructor() {
             val element = defunctionalizeTerm(term.element)
             D.Term.Ref(element)
         }
+        is C.Term.Eq -> {
+            val left = defunctionalizeTerm(term.left)
+            val right = defunctionalizeTerm(term.right)
+            D.Term.Eq(left, right)
+        }
         is C.Term.Fun -> {
             val parameters = term.parameters.map { D.Parameter(it.name, defunctionalizeTerm(it.lower), defunctionalizeTerm(it.upper), defunctionalizeTerm(it.type)) }
             val resultant = defunctionalizeTerm(term.resultant)
@@ -165,6 +171,7 @@ class Defunctionalize private constructor() {
             val element = defunctionalizePattern(pattern.element)
             D.Pattern.RefOf(element)
         }
+        is C.Pattern.Refl -> D.Pattern.Refl
     }
 
     private fun defunctionalizeEffect(effect: C.Effect): D.Effect = TODO()

@@ -124,6 +124,7 @@ class Parse private constructor(
             }
             "false" -> S.Term.BoolOf(false, id)
             "true" -> S.Term.BoolOf(true, id)
+            "refl" -> S.Term.Refl(id)
             "union" -> {
                 val variants = run {
                     expect('{')
@@ -158,6 +159,11 @@ class Parse private constructor(
                 S.Term.Compound(elements, id)
             }
             "ref" -> S.Term.Ref(parseTerm(), id)
+            "eq" -> {
+                val left = parseTerm()
+                val right = parseTerm()
+                S.Term.Eq(left, right, id)
+            }
             "fun" -> {
                 val parameters = run {
                     expect('[')
@@ -229,6 +235,7 @@ class Parse private constructor(
         else -> when (val word = readWord()) {
             "false" -> S.Pattern.BoolOf(false, id)
             "true" -> S.Pattern.BoolOf(true, id)
+            "refl" -> S.Pattern.Refl(id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> S.Pattern.ByteOf(word.dropLast(1).toByte(), id)
                 SHORT_EXPRESSION.matches(word) -> S.Pattern.ShortOf(word.dropLast(1).toShort(), id)

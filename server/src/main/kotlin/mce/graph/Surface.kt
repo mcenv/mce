@@ -50,6 +50,7 @@ object Surface {
         data class ListOf(val elements: KList<Term>, override val id: Id) : Term()
         data class CompoundOf(val elements: KList<Term>, override val id: Id) : Term()
         data class RefOf(val element: Term, override val id: Id) : Term()
+        data class Refl(override val id: Id) : Term()
         data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id) : Term()
         data class ThunkOf(val body: Term, override val id: Id) : Term()
@@ -72,6 +73,7 @@ object Surface {
         data class List(val element: Term, override val id: Id) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
         data class Ref(val element: Term, override val id: Id) : Term()
+        data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
         data class Thunk(val element: Term, val effects: Effects, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
@@ -96,6 +98,7 @@ object Surface {
         data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class RefOf(val element: Pattern, override val id: Id) : Pattern()
+        data class Refl(override val id: Id) : Pattern()
     }
 
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)

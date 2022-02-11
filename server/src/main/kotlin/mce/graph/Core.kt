@@ -54,6 +54,7 @@ object Core {
         data class ListOf(val elements: KList<Term>) : Term()
         data class CompoundOf(val elements: KList<Term>) : Term()
         data class RefOf(val element: Term) : Term()
+        object Refl : Term()
         data class FunOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
         data class ThunkOf(val body: Term) : Term()
@@ -76,6 +77,7 @@ object Core {
         data class List(val element: Term) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Ref(val element: Term) : Term()
+        data class Eq(val left: Term, val right: Term) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
         data class Thunk(val element: Term, val effects: Effects) : Term()
         data class Code(val element: Term) : Term()
@@ -101,6 +103,7 @@ object Core {
         data class ListOf(val elements: KList<Pattern>) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>) : Pattern()
         data class RefOf(val element: Pattern) : Pattern()
+        object Refl : Pattern()
     }
 
     /**
@@ -126,6 +129,7 @@ object Core {
         data class ListOf(val elements: KList<Lazy<Value>>) : Value()
         data class CompoundOf(val elements: KList<Lazy<Value>>) : Value()
         data class RefOf(val element: Lazy<Value>) : Value()
+        object Refl : Value()
         data class FunOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
         data class ThunkOf(val body: Lazy<Value>) : Value()
@@ -148,6 +152,7 @@ object Core {
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
         data class Ref(val element: Lazy<Value>) : Value()
+        data class Eq(val left: Lazy<Value>, val right: Lazy<Value>) : Value()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Value()
         data class Thunk(val element: Lazy<Value>, val effects: Effects) : Value()
         data class Code(val element: Lazy<Value>) : Value()

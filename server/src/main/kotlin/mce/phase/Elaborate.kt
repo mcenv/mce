@@ -77,6 +77,11 @@ class Elaborate private constructor(
             val element = inferTerm(term.element)
             Typing(C.Term.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
+        is S.Term.Refl -> {
+            val left = lazy { metaState.fresh() }
+            val right = lazy { metaState.fresh() }
+            Typing(C.Term.Refl, C.Value.Eq(left, right))
+        }
         is S.Term.ThunkOf -> {
             val body = inferComputation(term.body)
             Typing(C.Term.ThunkOf(body.element), C.Value.Thunk(lazyOf(body.type), body.effects))
@@ -129,7 +134,15 @@ class Elaborate private constructor(
         }
         is S.Term.Ref -> {
             val element = checkTerm(term.element, C.Value.Type)
-            Typing(element, C.Value.Type)
+            Typing(C.Term.Ref(element), C.Value.Type)
+        }
+        is S.Term.Eq -> {
+            val left = inferTerm(term.left)
+            val right = checkTerm(term.right, left.type)
+            if (!0.unify(emptyEnvironment().evaluate(metaState, left.element), emptyEnvironment().evaluate(metaState, right))) {
+                diagnose(Diagnostic.TermMismatch(serializeTerm(left.element), serializeTerm(right), term.id))
+            }
+            Typing(C.Term.Eq(left.element, right), C.Value.Type)
         }
         is S.Term.Thunk -> {
             val element = checkTerm(term.element, C.Value.Type)
@@ -334,6 +347,10 @@ class Elaborate private constructor(
             val element = inferPattern(pattern.element)
             Typing(C.Pattern.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
+        is S.Pattern.Refl -> {
+            val left = lazyOf(metaState.fresh())
+            Typing(C.Pattern.Refl, C.Value.Eq(left, left))
+        }
     }.also { types[pattern.id] = lazy { serializeTerm(quote(metaState, it.type)) } }
 
     /**
@@ -413,6 +430,7 @@ class Elaborate private constructor(
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
@@ -450,6 +468,7 @@ class Elaborate private constructor(
                             }
                     }
             value1 is C.Value.Ref && value2 is C.Value.Ref -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Eq && value2 is C.Value.Eq -> unify(value1.left.value, value2.left.value) && unify(value1.right.value, value2.right.value)
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
                         (value1.parameters zip value2.parameters)

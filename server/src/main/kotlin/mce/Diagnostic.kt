@@ -13,6 +13,7 @@ sealed class Diagnostic {
     data class FunctionExpected(override val id: Id) : Diagnostic()
     data class ThunkExpected(override val id: Id) : Diagnostic()
     data class CodeExpected(override val id: Id) : Diagnostic()
+    data class TermMismatch(val left: S.Term, val right: S.Term, override val id: Id) : Diagnostic()
     data class TypeMismatch(val expected: S.Term, val actual: S.Term, override val id: Id) : Diagnostic()
     data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
@@ -40,6 +41,7 @@ sealed class Diagnostic {
             is C.Term.ListOf -> S.Term.ListOf(term.elements.map { serializeTerm(it) }, freshId())
             is C.Term.CompoundOf -> S.Term.CompoundOf(term.elements.map { serializeTerm(it) }, freshId())
             is C.Term.RefOf -> S.Term.RefOf(serializeTerm(term.element), freshId())
+            is C.Term.Refl -> S.Term.Refl(freshId())
             is C.Term.FunOf -> S.Term.FunOf(term.parameters, serializeTerm(term.body), freshId())
             is C.Term.Apply -> S.Term.Apply(serializeTerm(term.function), term.arguments.map { serializeTerm(it) }, freshId())
             is C.Term.ThunkOf -> S.Term.ThunkOf(serializeTerm(term.body), freshId())
@@ -62,6 +64,7 @@ sealed class Diagnostic {
             is C.Term.List -> S.Term.List(serializeTerm(term.element), freshId())
             is C.Term.Compound -> S.Term.Compound(term.elements.map { it.first to serializeTerm(it.second) }, freshId())
             is C.Term.Ref -> S.Term.Ref(serializeTerm(term.element), freshId())
+            is C.Term.Eq -> S.Term.Eq(serializeTerm(term.left), serializeTerm(term.right), freshId())
             is C.Term.Fun -> S.Term.Fun(term.parameters.map { S.Parameter(it.name, serializeTerm(it.lower), serializeTerm(it.upper), serializeTerm(it.type)) }, serializeTerm(term.resultant), freshId())
             is C.Term.Thunk -> S.Term.Thunk(serializeTerm(term.element), serializeEffects(term.effects), freshId())
             is C.Term.Code -> S.Term.Code(serializeTerm(term.element), freshId())
@@ -84,6 +87,7 @@ sealed class Diagnostic {
             is C.Pattern.ListOf -> S.Pattern.ListOf(pattern.elements.map { serializePattern(it) }, freshId())
             is C.Pattern.CompoundOf -> S.Pattern.CompoundOf(pattern.elements.map { serializePattern(it) }, freshId())
             is C.Pattern.RefOf -> S.Pattern.RefOf(serializePattern(pattern.element), freshId())
+            is C.Pattern.Refl -> S.Pattern.Refl(freshId())
         }
 
         fun serializeEffect(effect: C.Effect): S.Effect = TODO()

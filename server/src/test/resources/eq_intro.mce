@@ -1,0 +1,3 @@
+import {}
+
+def {} : eq false false = refl

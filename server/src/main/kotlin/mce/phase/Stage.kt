@@ -63,6 +63,7 @@ class Stage private constructor(
             val element = stageTerm(term.element)
             C.Term.RefOf(element)
         }
+        is C.Term.Refl -> term
         is C.Term.FunOf -> {
             val body = stageTerm(term.body)
             C.Term.FunOf(term.parameters, body)
@@ -115,6 +116,11 @@ class Stage private constructor(
         is C.Term.Ref -> {
             val element = stageTerm(term.element)
             C.Term.Ref(element)
+        }
+        is C.Term.Eq -> {
+            val left = stageTerm(term.left)
+            val right = stageTerm(term.right)
+            C.Term.Eq(left, right)
         }
         is C.Term.Fun -> {
             val parameters = term.parameters.map { C.Parameter(it.name, stageTerm(it.lower), stageTerm(it.upper), stageTerm(it.type)) }
