@@ -57,6 +57,12 @@ class ElaborateTest {
     }
 
     @Test
+    fun letEscape() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "let_escape")
+        assert(diagnostics.contains(Diagnostic.NameNotFound("b", UUID(0, 0)))) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
     fun nameNotFound() {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "name_not_found")
         assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }

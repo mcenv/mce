@@ -160,7 +160,10 @@ class Elaborate private constructor(
     private fun Context.inferComputation(computation: S.Term): Typing<C.Term> = when (computation) {
         is S.Term.Let -> {
             val init = inferComputation(computation.init)
-            val body = bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage)).inferComputation(computation.body)
+            val body = run {
+                bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage))
+                inferComputation(computation.body).also { pop() }
+            }
             Typing(C.Term.Let(computation.name, init.element, body.element), body.type, init.effects + body.effects)
         }
         is S.Term.Match -> {
@@ -284,7 +287,10 @@ class Elaborate private constructor(
         return when {
             computation is S.Term.Let -> {
                 val init = inferComputation(computation.init)
-                val body = bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage)).checkComputation(computation.body, type, effects)
+                val body = run {
+                    bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage))
+                    checkComputation(computation.body, type, effects).also { pop() }
+                }
                 C.Term.Let(computation.name, init.element, body)
             }
             computation is S.Term.Match -> {
@@ -622,7 +628,7 @@ class Elaborate private constructor(
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
         }
 
-        fun bind(id: Id, entry: Entry, value: C.Value? = null): Context = apply {
+        fun bind(id: Id, entry: Entry, value: C.Value? = null) {
             checkPhase(id, entry.type)
             environment += lazyOf(value ?: C.Value.Variable(entry.name, environment.size))
             entries += entry
