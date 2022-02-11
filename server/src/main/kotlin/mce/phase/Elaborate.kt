@@ -187,10 +187,10 @@ class Elaborate private constructor(
                             val id = argument.id
                             val argument = environment.evaluate(metaState, it)
                             environment.evaluate(metaState, parameter.lower).let { lower ->
-                                if (!entries.size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, argument)), serializeTerm(quote(metaState, lower)), id))
+                                if (!size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, argument)), serializeTerm(quote(metaState, lower)), id))
                             }
                             environment.evaluate(metaState, parameter.upper).let { upper ->
-                                if (!entries.size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, upper)), serializeTerm(quote(metaState, argument)), id))
+                                if (!size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, upper)), serializeTerm(quote(metaState, argument)), id))
                             }
                             environment += lazyOf(argument)
                         }
@@ -295,7 +295,7 @@ class Elaborate private constructor(
             }
             else -> {
                 val inferred = inferComputation(computation)
-                if (!entries.size.subtype(inferred.type, type)) {
+                if (!size.subtype(inferred.type, type)) {
                     types[computation.id] = lazy { serializeTerm(quote(metaState, END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, type)), serializeTerm(quote(metaState, inferred.type)), computation.id))
                 }
@@ -378,7 +378,7 @@ class Elaborate private constructor(
             }
             else -> {
                 val inferred = inferPattern(pattern)
-                if (!0.subtype(inferred.type, type)) {
+                if (!size.subtype(inferred.type, type)) {
                     types[pattern.id] = lazy { serializeTerm(quote(metaState, END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, type)), serializeTerm(quote(metaState, inferred.type)), pattern.id))
                 }
@@ -604,6 +604,8 @@ class Elaborate private constructor(
         val meta: Boolean,
         var stage: Int
     ) {
+        val size: Int get() = entries.size
+
         fun checkPhase(id: Id, type: C.Value) {
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
         }
