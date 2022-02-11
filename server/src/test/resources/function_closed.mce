@@ -1,3 +1,3 @@
 import {}
 
-def {} : fun [a >: end <: any : bool] (fun [b >: end <: any : bool] bool) = \[a] \[b] (#0-0-0-0-0 a)
+def {} : fun [a : bool] (fun [b : bool] bool) = \[a] \[b] (#0-0-0-0-0 a)

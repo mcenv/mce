@@ -1,6 +1,6 @@
 import {}
 
-def {} : fun [a >: end <: any : bool, b >: end <: any : bool, p >: end <: any : eq a b] eq [a] [b] =
+def {} : fun [a : bool, b : bool, p : eq a b] eq [a] [b] =
   \[a, b, p] match p [
     refl => refl
   ]
