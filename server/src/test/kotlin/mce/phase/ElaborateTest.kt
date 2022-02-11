@@ -14,14 +14,14 @@ class ElaborateTest {
 
     @Test
     fun elaborate() {
-        val boolean = S.Term.Boolean(UUID(0, 0))
-        val ff = S.Term.BooleanOf(false, UUID(0, 1))
+        val bool = S.Term.Bool(UUID(0, 0))
+        val ff = S.Term.BoolOf(false, UUID(0, 1))
         val (elaborated, _, diagnostics, types) = elaborate(emptyMap(), "elaborate")
 
         assert(diagnostics.isEmpty())
-        assertIs<S.Term.Type>(types[boolean.id]!!.value)
-        assertIs<S.Term.Boolean>(types[ff.id]!!.value)
-        assertEquals(C.Item.Definition(emptyList(), "elaborate", C.Value.Boolean, C.Term.BooleanOf(false)), elaborated)
+        assertIs<S.Term.Type>(types[bool.id]!!.value)
+        assertIs<S.Term.Bool>(types[ff.id]!!.value)
+        assertEquals(C.Item.Def(emptyList(), "elaborate", C.Value.Bool, C.Term.BoolOf(false)), elaborated)
     }
 
     @Test

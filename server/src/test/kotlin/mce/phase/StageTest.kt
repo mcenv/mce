@@ -14,7 +14,7 @@ class StageTest {
 
     @Test
     fun reduce() {
-        val definition = stage("code_elim") as C.Item.Definition
-        assertEquals(C.Term.BooleanOf(false), definition.body)
+        val def = stage("code_elim") as C.Item.Def
+        assertEquals(C.Term.BoolOf(false), def.body)
     }
 }

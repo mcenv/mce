@@ -16,10 +16,10 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         is C.Term.Hole -> C.Value.Hole
         is C.Term.Meta -> metaState[term.index] ?: C.Value.Meta(term.index)
         is C.Term.Variable -> this[term.level].value
-        is C.Term.Definition -> C.Value.Definition(term.name) // TODO: unfold
+        is C.Term.Def -> C.Value.Def(term.name) // TODO: unfold
         is C.Term.Let -> (this + lazyOf(evaluate(term.init))).evaluate(term.body)
         is C.Term.Match -> C.Value.Match(evaluate(term.scrutinee), term.clauses.map { it.first to lazy { evaluate(it.second) /* TODO: collect variables */ } })
-        is C.Term.BooleanOf -> C.Value.BooleanOf(term.value)
+        is C.Term.BoolOf -> C.Value.BoolOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
         is C.Term.ShortOf -> C.Value.ShortOf(term.value)
         is C.Term.IntOf -> C.Value.IntOf(term.value)
@@ -32,10 +32,10 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         is C.Term.LongArrayOf -> C.Value.LongArrayOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { evaluate(it) } })
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { evaluate(it) } })
-        is C.Term.ReferenceOf -> C.Value.ReferenceOf(lazy { evaluate(term.element) })
-        is C.Term.FunctionOf -> C.Value.FunctionOf(term.parameters, term.body)
+        is C.Term.RefOf -> C.Value.RefOf(lazy { evaluate(term.element) })
+        is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body)
         is C.Term.Apply -> when (val function = evaluate(term.function)) {
-            is C.Value.FunctionOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
+            is C.Value.FunOf -> term.arguments.map { lazy { evaluate(it) } }.evaluate(function.body)
             else -> C.Value.Apply(function, term.arguments.map { lazy { evaluate(it) } })
         }
         is C.Term.ThunkOf -> C.Value.ThunkOf(lazy { evaluate(term.body) })
@@ -50,7 +50,7 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         }
         is C.Term.Union -> C.Value.Union(term.variants.map { lazy { evaluate(it) } })
         is C.Term.Intersection -> C.Value.Intersection(term.variants.map { lazy { evaluate(it) } })
-        is C.Term.Boolean -> C.Value.Boolean
+        is C.Term.Bool -> C.Value.Bool
         is C.Term.Byte -> C.Value.Byte
         is C.Term.Short -> C.Value.Short
         is C.Term.Int -> C.Value.Int
@@ -63,8 +63,8 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         is C.Term.LongArray -> C.Value.LongArray
         is C.Term.List -> C.Value.List(lazy { evaluate(term.element) })
         is C.Term.Compound -> C.Value.Compound(term.elements)
-        is C.Term.Reference -> C.Value.Reference(lazy { evaluate(term.element) })
-        is C.Term.Function -> C.Value.Function(term.parameters, term.resultant)
+        is C.Term.Ref -> C.Value.Ref(lazy { evaluate(term.element) })
+        is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant)
         is C.Term.Thunk -> C.Value.Thunk(lazy { evaluate(term.element) }, term.effects)
         is C.Term.Code -> C.Value.Code(lazy { evaluate(term.element) })
         is C.Term.Type -> C.Value.Type
@@ -82,9 +82,9 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
         is C.Value.Hole -> C.Term.Hole
         is C.Value.Meta -> metaState[value.index]?.let { quote(it) } ?: C.Term.Meta(value.index)
         is C.Value.Variable -> C.Term.Variable(value.name, value.level)
-        is C.Value.Definition -> C.Term.Definition(value.name)
+        is C.Value.Def -> C.Term.Def(value.name)
         is C.Value.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) })
-        is C.Value.BooleanOf -> C.Term.BooleanOf(value.value)
+        is C.Value.BoolOf -> C.Term.BoolOf(value.value)
         is C.Value.ByteOf -> C.Term.ByteOf(value.value)
         is C.Value.ShortOf -> C.Term.ShortOf(value.value)
         is C.Value.IntOf -> C.Term.IntOf(value.value)
@@ -97,8 +97,8 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
         is C.Value.LongArrayOf -> C.Term.LongArrayOf(value.elements.map { quote(it.value) })
         is C.Value.ListOf -> C.Term.ListOf(value.elements.map { quote(it.value) })
         is C.Value.CompoundOf -> C.Term.CompoundOf(value.elements.map { quote(it.value) })
-        is C.Value.ReferenceOf -> C.Term.ReferenceOf(quote(value.element.value))
-        is C.Value.FunctionOf -> C.Term.FunctionOf(
+        is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value))
+        is C.Value.FunOf -> C.Term.FunOf(
             value.parameters,
             quote(
                 value.parameters
@@ -113,7 +113,7 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
         is C.Value.Splice -> C.Term.Splice(quote(value.element.value))
         is C.Value.Union -> C.Term.Union(value.variants.map { quote(it.value) })
         is C.Value.Intersection -> C.Term.Intersection(value.variants.map { quote(it.value) })
-        is C.Value.Boolean -> C.Term.Boolean
+        is C.Value.Bool -> C.Term.Bool
         is C.Value.Byte -> C.Term.Byte
         is C.Value.Short -> C.Term.Short
         is C.Value.Int -> C.Term.Int
@@ -126,8 +126,8 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
         is C.Value.LongArray -> C.Term.LongArray
         is C.Value.List -> C.Term.List(quote(value.element.value))
         is C.Value.Compound -> C.Term.Compound(value.elements)
-        is C.Value.Reference -> C.Term.Reference(quote(value.element.value))
-        is C.Value.Function -> C.Term.Function(
+        is C.Value.Ref -> C.Term.Ref(quote(value.element.value))
+        is C.Value.Fun -> C.Term.Fun(
             value.parameters,
             quote(
                 value.parameters

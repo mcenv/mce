@@ -18,7 +18,7 @@ class Parse private constructor(
         }
 
         return when (val word = readWord()) {
-            "definition" -> {
+            "def" -> {
                 val modifiers = run {
                     expect('{')
                     parseList('}', ::parseModifier)
@@ -31,7 +31,7 @@ class Parse private constructor(
                     expect('=')
                     parseTerm()
                 }
-                S.Item.Definition(imports, modifiers, name, type, body)
+                S.Item.Def(imports, modifiers, name, type, body)
             }
             else -> error("unexpected item '$word'")
         }
@@ -70,7 +70,7 @@ class Parse private constructor(
         }
         '&' -> {
             skip()
-            S.Term.ReferenceOf(parseTerm(), id)
+            S.Term.RefOf(parseTerm(), id)
         }
         '\\' -> {
             skip()
@@ -79,7 +79,7 @@ class Parse private constructor(
                 parseList(']', ::readWord)
             }
             val body = parseTerm()
-            S.Term.FunctionOf(parameters, body, id)
+            S.Term.FunOf(parameters, body, id)
         }
         '@' -> {
             skip()
@@ -122,8 +122,8 @@ class Parse private constructor(
                 val clauses = parseList(']') { parsePair(::parsePattern, { expectString("=>") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
             }
-            "false" -> S.Term.BooleanOf(false, id)
-            "true" -> S.Term.BooleanOf(true, id)
+            "false" -> S.Term.BoolOf(false, id)
+            "true" -> S.Term.BoolOf(true, id)
             "union" -> {
                 val variants = run {
                     expect('{')
@@ -140,7 +140,7 @@ class Parse private constructor(
                 S.Term.Intersection(variants, id)
             }
             "any" -> S.Term.Intersection(emptyList(), id)
-            "boolean" -> S.Term.Boolean(id)
+            "bool" -> S.Term.Bool(id)
             "byte" -> S.Term.Byte(id)
             "short" -> S.Term.Short(id)
             "int" -> S.Term.Int(id)
@@ -157,8 +157,8 @@ class Parse private constructor(
                 val elements = parseList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
-            "reference" -> S.Term.Reference(parseTerm(), id)
-            "function" -> {
+            "ref" -> S.Term.Ref(parseTerm(), id)
+            "fun" -> {
                 val parameters = run {
                     expect('[')
                     parseList(']') {
@@ -179,7 +179,7 @@ class Parse private constructor(
                     }
                 }
                 val resultant = parseTerm()
-                S.Term.Function(parameters, resultant, id)
+                S.Term.Fun(parameters, resultant, id)
             }
             "thunk" -> S.Term.Thunk(parseTerm(), parseEffects(), id)
             "code" -> S.Term.Code(parseTerm(), id)
@@ -224,11 +224,11 @@ class Parse private constructor(
         }
         '&' -> {
             skip()
-            S.Pattern.ReferenceOf(parsePattern(), id)
+            S.Pattern.RefOf(parsePattern(), id)
         }
         else -> when (val word = readWord()) {
-            "false" -> S.Pattern.BooleanOf(false, id)
-            "true" -> S.Pattern.BooleanOf(true, id)
+            "false" -> S.Pattern.BoolOf(false, id)
+            "true" -> S.Pattern.BoolOf(true, id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> S.Pattern.ByteOf(word.dropLast(1).toByte(), id)
                 SHORT_EXPRESSION.matches(word) -> S.Pattern.ShortOf(word.dropLast(1).toShort(), id)

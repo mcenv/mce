@@ -1,5 +1,5 @@
 import {}
 
-definition {meta} : code boolean =
+def {meta} : code bool =
   let b = false
   `(#0-0-0-0-0 b)

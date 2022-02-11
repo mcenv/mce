@@ -15,12 +15,12 @@ class Elaborate private constructor(
     private val metaState: MetaState = MetaState()
 
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
-        is S.Item.Definition -> {
+        is S.Item.Def -> {
             val meta = item.modifiers.contains(S.Modifier.META)
             val type = emptyEnvironment().evaluate(metaState, emptyContext(meta).checkTerm(item.type, C.Value.Type))
             val body = emptyContext(meta).checkTerm(item.body, type)
             emptyContext(meta).checkPhase(item.body.id, type)
-            C.Item.Definition(item.imports, item.name, type, body)
+            C.Item.Def(item.imports, item.name, type, body)
         }
     }
 
@@ -34,9 +34,9 @@ class Elaborate private constructor(
             -1 -> {
                 val type = when (val item = items[term.name]) {
                     null -> diagnose(Diagnostic.NameNotFound(term.name, term.id))
-                    is C.Item.Definition -> item.type
+                    is C.Item.Def -> item.type
                 }
-                Typing(C.Term.Definition(term.name), type)
+                Typing(C.Term.Def(term.name), type)
             }
             else -> {
                 val entry = entries[level]
@@ -44,7 +44,7 @@ class Elaborate private constructor(
                 Typing(C.Term.Variable(term.name, level), type)
             }
         }
-        is S.Term.BooleanOf -> Typing(C.Term.BooleanOf(term.value), C.Value.Boolean)
+        is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value), C.Value.Bool)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)
         is S.Term.IntOf -> Typing(C.Term.IntOf(term.value), C.Value.Int)
@@ -73,9 +73,9 @@ class Elaborate private constructor(
             val elements = term.elements.map { "" to inferTerm(it) }
             Typing(C.Term.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(metaState, it.second.type) }))
         }
-        is S.Term.ReferenceOf -> {
+        is S.Term.RefOf -> {
             val element = inferTerm(term.element)
-            Typing(C.Term.ReferenceOf(element.element), C.Value.Reference(lazyOf(element.type)))
+            Typing(C.Term.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
         is S.Term.ThunkOf -> {
             val body = inferComputation(term.body)
@@ -101,7 +101,7 @@ class Elaborate private constructor(
             val variants = term.variants.map { checkTerm(it, C.Value.Type) }
             Typing(C.Term.Intersection(variants), C.Value.Type)
         }
-        is S.Term.Boolean -> Typing(C.Term.Boolean, C.Value.Type)
+        is S.Term.Bool -> Typing(C.Term.Bool, C.Value.Type)
         is S.Term.Byte -> Typing(C.Term.Byte, C.Value.Type)
         is S.Term.Short -> Typing(C.Term.Short, C.Value.Type)
         is S.Term.Int -> Typing(C.Term.Int, C.Value.Type)
@@ -127,7 +127,7 @@ class Elaborate private constructor(
             }
             Typing(C.Term.Compound(elements), C.Value.Type)
         }
-        is S.Term.Reference -> {
+        is S.Term.Ref -> {
             val element = checkTerm(term.element, C.Value.Type)
             Typing(element, C.Value.Type)
         }
@@ -158,16 +158,16 @@ class Elaborate private constructor(
             val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) /* TODO */ }
             Typing(C.Term.Match(scrutinee.element, clauses), type)
         }
-        is S.Term.FunctionOf -> {
+        is S.Term.FunOf -> {
             val types = computation.parameters.map { metaState.fresh() }
             val body = Context((computation.parameters zip types).map { Entry(it.first, END, ANY, it.second, stage) }.toMutableList(), meta, stage).inferComputation(computation.body)
             val parameters = (computation.parameters zip types).map { C.Parameter(it.first, quote(metaState, END), quote(metaState, ANY), quote(metaState, it.second)) }
-            Typing(C.Term.FunctionOf(computation.parameters, body.element), C.Value.Function(parameters, quote(metaState, body.type)), body.effects)
+            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, quote(metaState, body.type)), body.effects)
         }
         is S.Term.Apply -> {
             val function = inferComputation(computation.function)
             when (val type = metaState.force(function.type)) {
-                is C.Value.Function -> withEnvironment { environment ->
+                is C.Value.Fun -> withEnvironment { environment ->
                     val arguments = (computation.arguments zip type.parameters).map { (argument, parameter) ->
                         checkTerm(argument, environment.evaluate(metaState, parameter.type)).also {
                             val id = argument.id
@@ -194,7 +194,7 @@ class Elaborate private constructor(
                 else -> Typing(C.Term.Force(element.element), diagnose(Diagnostic.ThunkExpected(computation.element.id)))
             }
         }
-        is S.Term.Function -> Typing(
+        is S.Term.Fun -> Typing(
             withContext(meta) { environment, context ->
                 val parameters = computation.parameters.map { (name, lower, upper, parameter) ->
                     val parameter = context.checkTerm(parameter, C.Value.Type)
@@ -207,7 +207,7 @@ class Elaborate private constructor(
                     }
                 }
                 val resultant = context.checkTerm(computation.resultant, C.Value.Type) /* TODO */
-                C.Term.Function(parameters, resultant)
+                C.Term.Fun(parameters, resultant)
             },
             C.Value.Type
         )
@@ -237,9 +237,9 @@ class Elaborate private constructor(
                 }
                 C.Term.CompoundOf(elements)
             }
-            term is S.Term.ReferenceOf && type is C.Value.Reference -> {
+            term is S.Term.RefOf && type is C.Value.Ref -> {
                 val element = checkTerm(term.element, type.element.value)
-                C.Term.ReferenceOf(element)
+                C.Term.RefOf(element)
             }
             term is S.Term.ThunkOf && type is C.Value.Thunk -> {
                 val body = checkTerm(term.body, type.element.value)
@@ -272,13 +272,13 @@ class Elaborate private constructor(
                 val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkComputation(it.second, type, effects) }
                 C.Term.Match(scrutinee.element, clauses)
             }
-            computation is S.Term.FunctionOf && type is C.Value.Function -> withContext(meta) { environment, context ->
+            computation is S.Term.FunOf && type is C.Value.Fun -> withContext(meta) { environment, context ->
                 (computation.parameters zip type.parameters).forEach { (name, parameter) ->
                     context.bind(computation.id, Entry(name, environment.evaluate(metaState, parameter.lower), environment.evaluate(metaState, parameter.upper), environment.evaluate(metaState, parameter.type), stage))
                     environment += lazyOf(C.Value.Variable(name, environment.size))
                 }
                 val resultant = context.checkComputation(computation.body, environment.evaluate(metaState, type.resultant), effects)
-                C.Term.FunctionOf(computation.parameters, resultant)
+                C.Term.FunOf(computation.parameters, resultant)
             }
             else -> {
                 val inferred = inferComputation(computation)
@@ -301,7 +301,7 @@ class Elaborate private constructor(
             bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
             Typing(C.Pattern.Variable(pattern.name), type)
         }
-        is S.Pattern.BooleanOf -> Typing(C.Pattern.BooleanOf(pattern.value), C.Value.Boolean)
+        is S.Pattern.BoolOf -> Typing(C.Pattern.BoolOf(pattern.value), C.Value.Bool)
         is S.Pattern.ByteOf -> Typing(C.Pattern.ByteOf(pattern.value), C.Value.Byte)
         is S.Pattern.ShortOf -> Typing(C.Pattern.ShortOf(pattern.value), C.Value.Short)
         is S.Pattern.IntOf -> Typing(C.Pattern.IntOf(pattern.value), C.Value.Int)
@@ -330,9 +330,9 @@ class Elaborate private constructor(
             val elements = pattern.elements.map { "" to inferPattern(it) }
             Typing(C.Pattern.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(metaState, it.second.type) }))
         }
-        is S.Pattern.ReferenceOf -> {
+        is S.Pattern.RefOf -> {
             val element = inferPattern(pattern.element)
-            Typing(C.Pattern.ReferenceOf(element.element), C.Value.Reference(lazyOf(element.type)))
+            Typing(C.Pattern.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
     }.also { types[pattern.id] = lazy { serializeTerm(quote(metaState, it.type)) } }
 
@@ -355,9 +355,9 @@ class Elaborate private constructor(
                 val elements = (pattern.elements zip type.elements).map { checkPattern(it.first, emptyEnvironment().evaluate(metaState, it.second.second)) }
                 C.Pattern.CompoundOf(elements)
             }
-            pattern is S.Pattern.ReferenceOf && type is C.Value.Reference -> {
+            pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
                 val element = checkPattern(pattern.element, type.element.value)
-                C.Pattern.ReferenceOf(element)
+                C.Pattern.RefOf(element)
             }
             else -> {
                 val inferred = inferPattern(pattern)
@@ -393,10 +393,10 @@ class Elaborate private constructor(
             }
             value2 is C.Value.Meta -> unify(value2, value1)
             value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level == value2.level
-            value1 is C.Value.Definition && value2 is C.Value.Definition -> value1.name == value2.name
+            value1 is C.Value.Def && value2 is C.Value.Def -> value1.name == value2.name
             value1 is C.Value.Match && value2 is C.Value.Match -> unify(value1.scrutinee, value2.scrutinee) &&
                     (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
-            value1 is C.Value.BooleanOf && value2 is C.Value.BooleanOf -> value1.value == value2.value
+            value1 is C.Value.BoolOf && value2 is C.Value.BoolOf -> value1.value == value2.value
             value1 is C.Value.ByteOf && value2 is C.Value.ByteOf -> value1.value == value2.value
             value1 is C.Value.ShortOf && value2 is C.Value.ShortOf -> value1.value == value2.value
             value1 is C.Value.IntOf && value2 is C.Value.IntOf -> value1.value == value2.value
@@ -412,10 +412,10 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
-            value1 is C.Value.ReferenceOf && value2 is C.Value.ReferenceOf -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
-            value1 is C.Value.FunctionOf && value2 is C.Value.FunctionOf -> value1.parameters.size == value2.parameters.size &&
+            value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
                     value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
                         .let { (this + value1.parameters.size).unify(it.evaluate(metaState, value1.body), it.evaluate(metaState, value2.body)) }
@@ -427,7 +427,7 @@ class Elaborate private constructor(
             value1 is C.Value.Splice && value2 is C.Value.Splice -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Union && value1.variants.isEmpty() && value2 is C.Value.Union && value2.variants.isEmpty() -> true
             value1 is C.Value.Intersection && value1.variants.isEmpty() && value2 is C.Value.Intersection && value2.variants.isEmpty() -> true
-            value1 is C.Value.Boolean && value2 is C.Value.Boolean -> true
+            value1 is C.Value.Bool && value2 is C.Value.Bool -> true
             value1 is C.Value.Byte && value2 is C.Value.Byte -> true
             value1 is C.Value.Short && value2 is C.Value.Short -> true
             value1 is C.Value.Int && value2 is C.Value.Int -> true
@@ -449,8 +449,8 @@ class Elaborate private constructor(
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
-            value1 is C.Value.Reference && value2 is C.Value.Reference -> unify(value1.element.value, value2.element.value)
-            value1 is C.Value.Function && value2 is C.Value.Function -> value1.parameters.size == value2.parameters.size &&
+            value1 is C.Value.Ref && value2 is C.Value.Ref -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
                         (value1.parameters zip value2.parameters)
                             .withIndex()
@@ -485,8 +485,8 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
-            value1 is C.Value.ReferenceOf && value2 is C.Value.ReferenceOf -> subtype(value1.element.value, value2.element.value)
-            value1 is C.Value.FunctionOf && value2 is C.Value.FunctionOf -> value1.parameters.size == value2.parameters.size &&
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> subtype(value1.element.value, value2.element.value)
+            value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
                     value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
                         .let { (this + value1.parameters.size).subtype(it.evaluate(metaState, value1.body), it.evaluate(metaState, value2.body)) }
@@ -509,8 +509,8 @@ class Elaborate private constructor(
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
-            value1 is C.Value.Reference && value2 is C.Value.Reference -> subtype(value1.element.value, value2.element.value)
-            value1 is C.Value.Function && value2 is C.Value.Function -> value1.parameters.size == value2.parameters.size &&
+            value1 is C.Value.Ref && value2 is C.Value.Ref -> subtype(value1.element.value, value2.element.value)
+            value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size &&
                     withEnvironment { environment ->
                         (value1.parameters zip value2.parameters)
                             .withIndex()

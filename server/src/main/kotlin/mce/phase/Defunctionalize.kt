@@ -8,9 +8,9 @@ class Defunctionalize private constructor() {
     private val functions: MutableMap<Int, D.Term> = mutableMapOf()
 
     private fun defunctionalizeItem(item: C.Item): D.Item = when (item) {
-        is C.Item.Definition -> {
+        is C.Item.Def -> {
             val body = defunctionalizeTerm(item.body)
-            D.Item.Definition(item.imports, item.name, body)
+            D.Item.Def(item.imports, item.name, body)
         }
     }
 
@@ -18,7 +18,7 @@ class Defunctionalize private constructor() {
         is C.Term.Hole -> throw InternalError()
         is C.Term.Meta -> throw InternalError()
         is C.Term.Variable -> D.Term.Variable(term.name, term.level)
-        is C.Term.Definition -> D.Term.Definition(term.name)
+        is C.Term.Def -> D.Term.Def(term.name)
         is C.Term.Let -> {
             val init = defunctionalizeTerm(term.init)
             val body = defunctionalizeTerm(term.body)
@@ -29,7 +29,7 @@ class Defunctionalize private constructor() {
             val clauses = term.clauses.map { defunctionalizePattern(it.first) to defunctionalizeTerm(it.second) }
             D.Term.Match(scrutinee, clauses)
         }
-        is C.Term.BooleanOf -> D.Term.BooleanOf(term.value)
+        is C.Term.BoolOf -> D.Term.BoolOf(term.value)
         is C.Term.ByteOf -> D.Term.ByteOf(term.value)
         is C.Term.ShortOf -> D.Term.ShortOf(term.value)
         is C.Term.IntOf -> D.Term.IntOf(term.value)
@@ -57,13 +57,13 @@ class Defunctionalize private constructor() {
             val elements = term.elements.map { defunctionalizeTerm(it) }
             D.Term.CompoundOf(elements)
         }
-        is C.Term.ReferenceOf -> {
+        is C.Term.RefOf -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.ReferenceOf(element)
+            D.Term.RefOf(element)
         }
-        is C.Term.FunctionOf -> {
+        is C.Term.FunOf -> {
             val tag = freshTag()
-            D.Term.FunctionOf(tag).also {
+            D.Term.FunOf(tag).also {
                 val body = defunctionalizeTerm(term.body)
                 functions[tag] = body
             }
@@ -75,7 +75,7 @@ class Defunctionalize private constructor() {
         }
         is C.Term.ThunkOf -> {
             val tag = freshTag()
-            D.Term.FunctionOf(tag).also {
+            D.Term.FunOf(tag).also {
                 val body = defunctionalizeTerm(term.body)
                 functions[tag] = body
             }
@@ -94,7 +94,7 @@ class Defunctionalize private constructor() {
             val variants = term.variants.map { defunctionalizeTerm(it) }
             D.Term.Intersection(variants)
         }
-        is C.Term.Boolean -> D.Term.Boolean
+        is C.Term.Bool -> D.Term.Bool
         is C.Term.Byte -> D.Term.Byte
         is C.Term.Short -> D.Term.Short
         is C.Term.Int -> D.Term.Int
@@ -113,14 +113,14 @@ class Defunctionalize private constructor() {
             val elements = term.elements.map { it.first to defunctionalizeTerm(it.second) }
             D.Term.Compound(elements)
         }
-        is C.Term.Reference -> {
+        is C.Term.Ref -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.Reference(element)
+            D.Term.Ref(element)
         }
-        is C.Term.Function -> {
+        is C.Term.Fun -> {
             val parameters = term.parameters.map { D.Parameter(it.name, defunctionalizeTerm(it.lower), defunctionalizeTerm(it.upper), defunctionalizeTerm(it.type)) }
             val resultant = defunctionalizeTerm(term.resultant)
-            D.Term.Function(parameters, resultant)
+            D.Term.Fun(parameters, resultant)
         }
         is C.Term.Thunk -> {
             val element = defunctionalizeTerm(term.element)
@@ -133,7 +133,7 @@ class Defunctionalize private constructor() {
 
     private fun defunctionalizePattern(pattern: C.Pattern): D.Pattern = when (pattern) {
         is C.Pattern.Variable -> D.Pattern.Variable(pattern.name)
-        is C.Pattern.BooleanOf -> D.Pattern.BooleanOf(pattern.value)
+        is C.Pattern.BoolOf -> D.Pattern.BoolOf(pattern.value)
         is C.Pattern.ByteOf -> D.Pattern.ByteOf(pattern.value)
         is C.Pattern.ShortOf -> D.Pattern.ShortOf(pattern.value)
         is C.Pattern.IntOf -> D.Pattern.IntOf(pattern.value)
@@ -161,9 +161,9 @@ class Defunctionalize private constructor() {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
             D.Pattern.CompoundOf(elements)
         }
-        is C.Pattern.ReferenceOf -> {
+        is C.Pattern.RefOf -> {
             val element = defunctionalizePattern(pattern.element)
-            D.Pattern.ReferenceOf(element)
+            D.Pattern.RefOf(element)
         }
     }
 

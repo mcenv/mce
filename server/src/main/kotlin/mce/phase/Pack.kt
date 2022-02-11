@@ -5,16 +5,16 @@ import mce.graph.Packed as P
 
 class Pack private constructor() {
     private fun packItem(item: D.Item): P.Function = when (item) {
-        is D.Item.Definition -> TODO()
+        is D.Item.Def -> TODO()
     }
 
     private fun Context.packTerm(term: D.Term) {
         when (term) {
             is D.Term.Variable -> TODO()
-            is D.Term.Definition -> TODO()
+            is D.Term.Def -> TODO()
             is D.Term.Let -> TODO()
             is D.Term.Match -> TODO()
-            is D.Term.BooleanOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(if (term.value) 1 else 0)))
+            is D.Term.BoolOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(if (term.value) 1 else 0)))
             is D.Term.ByteOf -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(term.value)))
             is D.Term.ShortOf -> +append(STACKS, SHORT, P.SourceProvider.Value(P.Nbt.Short(term.value)))
             is D.Term.IntOf -> +append(STACKS, INT, P.SourceProvider.Value(P.Nbt.Int(term.value)))
@@ -27,12 +27,12 @@ class Pack private constructor() {
             is D.Term.LongArrayOf -> TODO()
             is D.Term.ListOf -> TODO()
             is D.Term.CompoundOf -> TODO()
-            is D.Term.ReferenceOf -> TODO()
-            is D.Term.FunctionOf -> +append(STACKS, INT, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
+            is D.Term.RefOf -> TODO()
+            is D.Term.FunOf -> +append(STACKS, INT, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
             is D.Term.Apply -> TODO()
             is D.Term.Union -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Intersection -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.Boolean -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Bool -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Byte -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Short -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Int -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
@@ -45,8 +45,8 @@ class Pack private constructor() {
             is D.Term.LongArray -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.List -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Compound -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.Reference -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.Function -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Ref -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Fun -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Thunk -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Type -> +append(STACKS, BYTE, P.SourceProvider.Value(P.Nbt.Byte(0)))
         }

@@ -1,3 +1,3 @@
 import {identity}
 
-definition {} : boolean = @identity [boolean, false]
+def {} : bool = @identity [bool, false]

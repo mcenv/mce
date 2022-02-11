@@ -10,9 +10,9 @@ class Stage private constructor(
     private val items: Map<String, C.Item>
 ) {
     private fun stageItem(item: C.Item): C.Item = when (item) {
-        is C.Item.Definition -> {
+        is C.Item.Def -> {
             val body = stageTerm(item.body)
-            C.Item.Definition(item.imports, item.name, item.type, body)
+            C.Item.Def(item.imports, item.name, item.type, body)
         }
     }
 
@@ -20,7 +20,7 @@ class Stage private constructor(
         is C.Term.Hole -> throw InternalError()
         is C.Term.Meta -> stageTerm(emptyEnvironment().normalize(metaState, term))
         is C.Term.Variable -> term
-        is C.Term.Definition -> term
+        is C.Term.Def -> term
         is C.Term.Let -> {
             val init = stageTerm(term.init)
             val body = stageTerm(term.body)
@@ -31,7 +31,7 @@ class Stage private constructor(
             val clauses = term.clauses.map { it.first to stageTerm(it.second) }
             C.Term.Match(scrutinee, clauses)
         }
-        is C.Term.BooleanOf -> term
+        is C.Term.BoolOf -> term
         is C.Term.ByteOf -> term
         is C.Term.ShortOf -> term
         is C.Term.IntOf -> term
@@ -59,13 +59,13 @@ class Stage private constructor(
             val elements = term.elements.map { stageTerm(it) }
             C.Term.CompoundOf(elements)
         }
-        is C.Term.ReferenceOf -> {
+        is C.Term.RefOf -> {
             val element = stageTerm(term.element)
-            C.Term.ReferenceOf(element)
+            C.Term.RefOf(element)
         }
-        is C.Term.FunctionOf -> {
+        is C.Term.FunOf -> {
             val body = stageTerm(term.body)
-            C.Term.FunctionOf(term.parameters, body)
+            C.Term.FunOf(term.parameters, body)
         }
         is C.Term.Apply -> {
             val function = stageTerm(term.function)
@@ -93,7 +93,7 @@ class Stage private constructor(
             val variants = term.variants.map { stageTerm(it) }
             C.Term.Intersection(variants)
         }
-        is C.Term.Boolean -> term
+        is C.Term.Bool -> term
         is C.Term.Byte -> term
         is C.Term.Short -> term
         is C.Term.Int -> term
@@ -112,14 +112,14 @@ class Stage private constructor(
             val elements = term.elements.map { it.first to stageTerm(it.second) }
             C.Term.Compound(elements)
         }
-        is C.Term.Reference -> {
+        is C.Term.Ref -> {
             val element = stageTerm(term.element)
-            C.Term.Reference(element)
+            C.Term.Ref(element)
         }
-        is C.Term.Function -> {
+        is C.Term.Fun -> {
             val parameters = term.parameters.map { C.Parameter(it.name, stageTerm(it.lower), stageTerm(it.upper), stageTerm(it.type)) }
             val resultant = stageTerm(term.resultant)
-            C.Term.Function(parameters, resultant)
+            C.Term.Fun(parameters, resultant)
         }
         is C.Term.Thunk -> {
             val element = stageTerm(term.element)

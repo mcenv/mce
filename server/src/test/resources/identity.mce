@@ -1,3 +1,3 @@
 import {}
 
-definition {} : function [α >: end <: any : type, a >: end <: any : α] α = \[α, a] a
+def {} : fun [α >: end <: any : type, a >: end <: any : α] α = \[α, a] a

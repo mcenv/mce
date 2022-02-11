@@ -1,6 +1,6 @@
 import {}
 
-definition {} : boolean =
+def {} : bool =
   match false [
     false => true,
     true  => false

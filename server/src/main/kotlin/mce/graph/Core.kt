@@ -22,7 +22,7 @@ object Core {
         abstract val imports: KList<KString>
         abstract val name: KString
 
-        data class Definition(
+        data class Def(
             override val imports: KList<KString>,
             override val name: KString,
             val type: Value,
@@ -37,10 +37,10 @@ object Core {
         object Hole : Term()
         data class Meta(val index: KInt) : Term()
         data class Variable(val name: KString, val level: KInt) : Term()
-        data class Definition(val name: KString) : Term()
+        data class Def(val name: KString) : Term()
         data class Let(val name: KString, val init: Term, val body: Term) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>) : Term()
-        data class BooleanOf(val value: KBoolean) : Term()
+        data class BoolOf(val value: KBoolean) : Term()
         data class ByteOf(val value: KByte) : Term()
         data class ShortOf(val value: KShort) : Term()
         data class IntOf(val value: KInt) : Term()
@@ -53,8 +53,8 @@ object Core {
         data class LongArrayOf(val elements: KList<Term>) : Term()
         data class ListOf(val elements: KList<Term>) : Term()
         data class CompoundOf(val elements: KList<Term>) : Term()
-        data class ReferenceOf(val element: Term) : Term()
-        data class FunctionOf(val parameters: KList<KString>, val body: Term) : Term()
+        data class RefOf(val element: Term) : Term()
+        data class FunOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
         data class ThunkOf(val body: Term) : Term()
         data class Force(val element: Term) : Term()
@@ -62,7 +62,7 @@ object Core {
         data class Splice(val element: Term) : Term()
         data class Union(val variants: KList<Term>) : Term()
         data class Intersection(val variants: KList<Term>) : Term()
-        object Boolean : Term()
+        object Bool : Term()
         object Byte : Term()
         object Short : Term()
         object Int : Term()
@@ -75,8 +75,8 @@ object Core {
         object LongArray : Term()
         data class List(val element: Term) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
-        data class Reference(val element: Term) : Term()
-        data class Function(val parameters: KList<Parameter>, val resultant: Term) : Term()
+        data class Ref(val element: Term) : Term()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
         data class Thunk(val element: Term, val effects: Effects) : Term()
         data class Code(val element: Term) : Term()
         object Type : Term()
@@ -87,7 +87,7 @@ object Core {
      */
     sealed class Pattern {
         data class Variable(val name: KString) : Pattern()
-        data class BooleanOf(val value: KBoolean) : Pattern()
+        data class BoolOf(val value: KBoolean) : Pattern()
         data class ByteOf(val value: KByte) : Pattern()
         data class ShortOf(val value: KShort) : Pattern()
         data class IntOf(val value: KInt) : Pattern()
@@ -100,7 +100,7 @@ object Core {
         data class LongArrayOf(val elements: KList<Pattern>) : Pattern()
         data class ListOf(val elements: KList<Pattern>) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>) : Pattern()
-        data class ReferenceOf(val element: Pattern) : Pattern()
+        data class RefOf(val element: Pattern) : Pattern()
     }
 
     /**
@@ -110,9 +110,9 @@ object Core {
         object Hole : Value()
         data class Meta(val index: KInt) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
-        data class Definition(val name: KString) : Value()
+        data class Def(val name: KString) : Value()
         data class Match(val scrutinee: Value, val clauses: KList<Pair<Pattern, Lazy<Value>>>) : Value()
-        data class BooleanOf(val value: KBoolean) : Value()
+        data class BoolOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()
         data class ShortOf(val value: KShort) : Value()
         data class IntOf(val value: KInt) : Value()
@@ -125,8 +125,8 @@ object Core {
         data class LongArrayOf(val elements: KList<Lazy<Value>>) : Value()
         data class ListOf(val elements: KList<Lazy<Value>>) : Value()
         data class CompoundOf(val elements: KList<Lazy<Value>>) : Value()
-        data class ReferenceOf(val element: Lazy<Value>) : Value()
-        data class FunctionOf(val parameters: KList<KString>, val body: Term) : Value()
+        data class RefOf(val element: Lazy<Value>) : Value()
+        data class FunOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
         data class ThunkOf(val body: Lazy<Value>) : Value()
         data class Force(val element: Lazy<Value>) : Value()
@@ -134,7 +134,7 @@ object Core {
         data class Splice(val element: Lazy<Value>) : Value()
         data class Union(val variants: KList<Lazy<Value>>) : Value()
         data class Intersection(val variants: KList<Lazy<Value>>) : Value()
-        object Boolean : Value()
+        object Bool : Value()
         object Byte : Value()
         object Short : Value()
         object Int : Value()
@@ -147,8 +147,8 @@ object Core {
         object LongArray : Value()
         data class List(val element: Lazy<Value>) : Value()
         data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
-        data class Reference(val element: Lazy<Value>) : Value()
-        data class Function(val parameters: KList<Parameter>, val resultant: Term) : Value()
+        data class Ref(val element: Lazy<Value>) : Value()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Value()
         data class Thunk(val element: Lazy<Value>, val effects: Effects) : Value()
         data class Code(val element: Lazy<Value>) : Value()
         object Type : Value()

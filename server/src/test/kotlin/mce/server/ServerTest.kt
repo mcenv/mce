@@ -15,7 +15,7 @@ class ServerTest {
             Server().run {
                 val name = "server"
                 register(name, read("/$name.mce"))
-                assertIs<Surface.Term.Boolean>(hover(name, UUID(0, 0)).type)
+                assertIs<Surface.Term.Bool>(hover(name, UUID(0, 0)).type)
             }
         }
     }

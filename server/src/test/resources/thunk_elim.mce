@@ -1,3 +1,3 @@
 import {}
 
-definition {} : boolean = !~false
+def {} : bool = !~false

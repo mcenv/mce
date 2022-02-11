@@ -15,7 +15,7 @@ object Surface {
         abstract val imports: KList<KString>
         abstract val name: KString
 
-        data class Definition(
+        data class Def(
             override val imports: KList<KString>,
             val modifiers: KList<Modifier>,
             override val name: KString,
@@ -36,7 +36,7 @@ object Surface {
         data class Name(val name: KString, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
-        data class BooleanOf(val value: KBoolean, override val id: Id) : Term()
+        data class BoolOf(val value: KBoolean, override val id: Id) : Term()
         data class ByteOf(val value: KByte, override val id: Id) : Term()
         data class ShortOf(val value: KShort, override val id: Id) : Term()
         data class IntOf(val value: KInt, override val id: Id) : Term()
@@ -49,8 +49,8 @@ object Surface {
         data class LongArrayOf(val elements: KList<Term>, override val id: Id) : Term()
         data class ListOf(val elements: KList<Term>, override val id: Id) : Term()
         data class CompoundOf(val elements: KList<Term>, override val id: Id) : Term()
-        data class ReferenceOf(val element: Term, override val id: Id) : Term()
-        data class FunctionOf(val parameters: KList<KString>, val body: Term, override val id: Id) : Term()
+        data class RefOf(val element: Term, override val id: Id) : Term()
+        data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id) : Term()
         data class ThunkOf(val body: Term, override val id: Id) : Term()
         data class Force(val element: Term, override val id: Id) : Term()
@@ -58,7 +58,7 @@ object Surface {
         data class Splice(val element: Term, override val id: Id) : Term()
         data class Union(val variants: KList<Term>, override val id: Id) : Term()
         data class Intersection(val variants: KList<Term>, override val id: Id) : Term()
-        data class Boolean(override val id: Id) : Term()
+        data class Bool(override val id: Id) : Term()
         data class Byte(override val id: Id) : Term()
         data class Short(override val id: Id) : Term()
         data class Int(override val id: Id) : Term()
@@ -71,8 +71,8 @@ object Surface {
         data class LongArray(override val id: Id) : Term()
         data class List(val element: Term, override val id: Id) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
-        data class Reference(val element: Term, override val id: Id) : Term()
-        data class Function(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
+        data class Ref(val element: Term, override val id: Id) : Term()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
         data class Thunk(val element: Term, val effects: Effects, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
         data class Type(override val id: Id) : Term()
@@ -82,7 +82,7 @@ object Surface {
         abstract val id: Id
 
         data class Variable(val name: KString, override val id: Id) : Pattern()
-        data class BooleanOf(val value: KBoolean, override val id: Id) : Pattern()
+        data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
         data class ByteOf(val value: KByte, override val id: Id) : Pattern()
         data class ShortOf(val value: KShort, override val id: Id) : Pattern()
         data class IntOf(val value: KInt, override val id: Id) : Pattern()
@@ -95,7 +95,7 @@ object Surface {
         data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-        data class ReferenceOf(val element: Pattern, override val id: Id) : Pattern()
+        data class RefOf(val element: Pattern, override val id: Id) : Pattern()
     }
 
     data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
