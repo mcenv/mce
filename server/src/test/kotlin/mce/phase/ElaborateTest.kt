@@ -172,4 +172,34 @@ class ElaborateTest {
         assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
         assertEquals(C.Value.Bool, metaState[0])
     }
+
+    @Test
+    fun sym() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "sym")
+        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun symBad() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "sym_bad")
+        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun trans() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "trans")
+        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun transBad() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "trans_bad")
+        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun cong() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "cong")
+        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+    }
 }

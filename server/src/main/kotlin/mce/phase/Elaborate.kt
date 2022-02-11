@@ -170,8 +170,11 @@ class Elaborate private constructor(
             val type = metaState.fresh() // TODO: use union of element types
             val scrutinee = inferTerm(computation.scrutinee)
             val sizeBefore = size
-            val clauses = computation.clauses.map {
-                (checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) /* TODO */).also {
+            val clauses = computation.clauses.map { (pattern, body) ->
+                val pattern = checkPattern(pattern, scrutinee.type)
+                val type = environment.evaluate(metaState, quote(metaState, type))
+                val body = checkTerm(body, type) // TODO
+                (pattern to body).also {
                     val sizeAfter = size
                     pop(sizeAfter - sizeBefore)
                 }
@@ -296,8 +299,11 @@ class Elaborate private constructor(
             computation is S.Term.Match -> {
                 val scrutinee = inferTerm(computation.scrutinee)
                 val sizeBefore = size
-                val clauses = computation.clauses.map {
-                    (checkPattern(it.first, scrutinee.type) to checkComputation(it.second, type, effects)).also {
+                val clauses = computation.clauses.map { (pattern, body) ->
+                    val pattern = checkPattern(pattern, scrutinee.type)
+                    val type = environment.evaluate(metaState, quote(metaState, type))
+                    val body = checkComputation(body, type, effects)
+                    (pattern to body).also {
                         val sizeAfter = size
                         pop(sizeAfter - sizeBefore)
                     }
@@ -393,6 +399,10 @@ class Elaborate private constructor(
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
                 val element = checkPattern(pattern.element, type.element.value)
                 C.Pattern.RefOf(element)
+            }
+            pattern is S.Pattern.Refl && type is C.Value.Eq -> {
+                match(type.left.value, type.right.value)
+                C.Pattern.Refl
             }
             else -> {
                 val inferred = inferPattern(pattern)
@@ -562,6 +572,19 @@ class Elaborate private constructor(
             value1 is C.Value.Thunk && value2 is C.Value.Thunk -> subtype(value1.element.value, value2.element.value) && value1.effects sub value2.effects
             value1 is C.Value.Code && value2 is C.Value.Code -> subtype(value1.element.value, value2.element.value)
             else -> unify(value1, value2)
+        }
+    }
+
+    /**
+     * Matches the [value1] and the [value2].
+     */
+    private fun Context.match(value1: C.Value, value2: C.Value) {
+        val value1 = metaState.force(value1)
+        val value2 = metaState.force(value2)
+        when {
+            value1 is C.Value.Variable -> environment[value1.level] = lazyOf(value2)
+            value2 is C.Value.Variable -> environment[value2.level] = lazyOf(value1)
+            else -> { /* TODO */ }
         }
     }
 

@@ -1,0 +1,6 @@
+import {}
+
+def {} : fun [a >: end <: any : bool, b >: end <: any : bool, p >: end <: any : eq a b] eq b false =
+  \[a, b, p] match p [
+    refl => refl
+  ]
