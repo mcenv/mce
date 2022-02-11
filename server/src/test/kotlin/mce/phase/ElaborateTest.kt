@@ -111,6 +111,12 @@ class ElaborateTest {
     }
 
     @Test
+    fun matchEscape() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "match_escape")
+        assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
     fun nestedPatterns() {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "nested_patterns")
         assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }

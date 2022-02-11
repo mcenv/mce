@@ -166,7 +166,13 @@ class Elaborate private constructor(
         is S.Term.Match -> {
             val type = metaState.fresh() // TODO: use union of element types
             val scrutinee = inferTerm(computation.scrutinee)
-            val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) /* TODO */ }
+            val sizeBefore = size
+            val clauses = computation.clauses.map {
+                (checkPattern(it.first, scrutinee.type) to checkTerm(it.second, type) /* TODO */).also {
+                    val sizeAfter = size
+                    pop(sizeAfter - sizeBefore)
+                }
+            }
             Typing(C.Term.Match(scrutinee.element, clauses), type)
         }
         is S.Term.FunOf -> {
@@ -283,7 +289,13 @@ class Elaborate private constructor(
             }
             computation is S.Term.Match -> {
                 val scrutinee = inferTerm(computation.scrutinee)
-                val clauses = computation.clauses.map { checkPattern(it.first, scrutinee.type) to checkComputation(it.second, type, effects) }
+                val sizeBefore = size
+                val clauses = computation.clauses.map {
+                    (checkPattern(it.first, scrutinee.type) to checkComputation(it.second, type, effects)).also {
+                        val sizeAfter = size
+                        pop(sizeAfter - sizeBefore)
+                    }
+                }
                 C.Term.Match(scrutinee.element, clauses)
             }
             computation is S.Term.FunOf && type is C.Value.Fun -> withContext(meta) {
@@ -614,6 +626,13 @@ class Elaborate private constructor(
             checkPhase(id, entry.type)
             environment += lazyOf(value ?: C.Value.Variable(entry.name, environment.size))
             entries += entry
+        }
+
+        fun pop(size: Int = 1) {
+            for (i in 0 until size) {
+                environment.removeLast()
+                entries.removeLast()
+            }
         }
 
         fun up(): Context = apply { ++stage }
