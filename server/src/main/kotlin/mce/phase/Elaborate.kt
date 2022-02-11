@@ -348,7 +348,7 @@ class Elaborate private constructor(
             Typing(C.Pattern.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
         is S.Pattern.Refl -> {
-            val left = lazyOf(metaState.fresh())
+            val left = lazy { metaState.fresh() }
             Typing(C.Pattern.Refl, C.Value.Eq(left, left))
         }
     }.also { types[pattern.id] = lazy { serializeTerm(quote(metaState, it.type)) } }

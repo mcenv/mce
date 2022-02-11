@@ -1,0 +1,6 @@
+import {}
+
+def {} : bool =
+  match refl [
+    refl => false
+  ]

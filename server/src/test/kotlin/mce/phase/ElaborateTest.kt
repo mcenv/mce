@@ -137,6 +137,12 @@ class ElaborateTest {
     }
 
     @Test
+    fun eqElim() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "eq_elim")
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
     fun notEq() {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "not_eq")
         assert(diagnostics.any { it is Diagnostic.TypeMismatch })
