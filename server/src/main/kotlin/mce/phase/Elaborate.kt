@@ -121,7 +121,7 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray, C.Value.Type)
         is S.Term.List -> {
             val element = checkTerm(term.element, C.Value.Type)
-            Typing(element, C.Value.Type)
+            Typing(C.Term.List(element), C.Value.Type)
         }
         is S.Term.Compound -> {
             val elements = withContext(meta) { environment, context ->

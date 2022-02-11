@@ -111,6 +111,13 @@ class ElaborateTest {
     }
 
     @Test
+    fun nestedPatterns() {
+        val (_, _, diagnostics, _) = elaborate(emptyMap(), "nested_patterns")
+        diagnostics.forEach { println(it) }
+        assert(diagnostics.isEmpty())
+    }
+
+    @Test
     fun thunkIntro() {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "thunk_intro")
         assert(diagnostics.isEmpty())
