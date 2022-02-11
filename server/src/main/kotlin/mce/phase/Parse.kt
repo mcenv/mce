@@ -44,6 +44,10 @@ class Parse private constructor(
 
     private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
         '(' -> parseParen { parseTerm(it) }
+        '?' -> {
+            skip()
+            S.Term.Meta(id)
+        }
         '"' -> S.Term.StringOf(readString(), id)
         '[' -> {
             skip()
@@ -108,7 +112,6 @@ class Parse private constructor(
         }
         else -> when (val word = readWord()) {
             "hole" -> S.Term.Hole(id)
-            "meta" -> S.Term.Meta(readWord().toInt(), id)
             "let" -> {
                 val name = readWord()
                 expect('=')

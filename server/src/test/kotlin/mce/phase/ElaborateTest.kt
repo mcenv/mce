@@ -141,4 +141,11 @@ class ElaborateTest {
         val (_, _, diagnostics, _) = elaborate(emptyMap(), "not_eq")
         assert(diagnostics.any { it is Diagnostic.TermMismatch })
     }
+
+    @Test
+    fun meta() {
+        val (_, metaState, diagnostics, _) = elaborate(emptyMap(), "meta")
+        assert(diagnostics.isEmpty())
+        assertEquals(C.Value.Bool, metaState[0])
+    }
 }

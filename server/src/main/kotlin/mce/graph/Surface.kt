@@ -32,7 +32,7 @@ object Surface {
         abstract val id: Id
 
         data class Hole(override val id: Id) : Term()
-        data class Meta(val index: KInt, override val id: Id) : Term()
+        data class Meta(override val id: Id) : Term()
         data class Name(val name: KString, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()

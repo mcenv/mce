@@ -29,7 +29,10 @@ class Elaborate private constructor(
      */
     private fun Context.inferTerm(term: S.Term): Typing<C.Term> = when (term) {
         is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(quote(metaState, END)), term.id)))
-        is S.Term.Meta -> Typing(C.Term.Meta(term.index), metaState.fresh())
+        is S.Term.Meta -> {
+            val type = metaState.fresh()
+            Typing(checkTerm(term, type), type)
+        }
         is S.Term.Name -> when (val level = entries.indexOfLast { it.name == term.name }) {
             -1 -> {
                 val type = when (val item = items[term.name]) {
@@ -238,6 +241,7 @@ class Elaborate private constructor(
                 diagnose(Diagnostic.TermExpected(serializeTerm(quote(metaState, type)), term.id))
                 C.Term.Hole
             }
+            term is S.Term.Meta -> quote(metaState, metaState.fresh())
             term is S.Term.ListOf && type is C.Value.List -> {
                 val elements = term.elements.map { checkTerm(it, type.element.value) }
                 C.Term.ListOf(elements)

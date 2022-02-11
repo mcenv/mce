@@ -22,7 +22,7 @@ sealed class Diagnostic {
     companion object {
         fun serializeTerm(term: C.Term): S.Term = when (term) {
             is C.Term.Hole -> S.Term.Hole(freshId())
-            is C.Term.Meta -> S.Term.Meta(term.index, freshId())
+            is C.Term.Meta -> S.Term.Meta(freshId())
             is C.Term.Variable -> S.Term.Name(term.name, freshId())
             is C.Term.Def -> S.Term.Name(term.name, freshId())
             is C.Term.Let -> S.Term.Let(term.name, serializeTerm(term.init), serializeTerm(term.body), freshId())
