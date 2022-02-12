@@ -14,10 +14,12 @@ import kotlin.collections.Set as KSet
 object Defunctionalized {
     sealed class Item {
         abstract val imports: KList<KString>
+        abstract val exports: KList<KString>
         abstract val name: KString
 
         data class Def(
             override val imports: KList<KString>,
+            override val exports: KList<KString>,
             override val name: KString,
             val body: Term
         ) : Item()

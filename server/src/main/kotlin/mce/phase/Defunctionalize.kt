@@ -11,7 +11,7 @@ class Defunctionalize private constructor() {
     private fun defunctionalizeItem(item: C.Item): D.Item = when (item) {
         is C.Item.Def -> {
             val body = defunctionalizeTerm(item.body)
-            D.Item.Def(item.imports, item.name, body)
+            D.Item.Def(item.imports, item.exports, item.name, body)
         }
     }
 

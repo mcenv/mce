@@ -20,7 +20,7 @@ class Elaborate private constructor(
             val type = emptyEnvironment().evaluate(metaState, emptyContext(meta).checkTerm(item.type, C.Value.Type))
             val body = emptyContext(meta).checkTerm(item.body, type)
             emptyContext(meta).checkPhase(item.body.id, type)
-            C.Item.Def(item.imports, item.name, type, body)
+            C.Item.Def(item.imports, item.exports, item.name, type, body)
         }
     }
 

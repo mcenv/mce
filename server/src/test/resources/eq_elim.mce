@@ -1,5 +1,7 @@
 import {}
 
+export {}
+
 def {} : bool =
   match refl [
     refl => false

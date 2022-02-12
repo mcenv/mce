@@ -1,0 +1,5 @@
+import {identity}
+
+export {}
+
+def {} : int = @identity [int, 0]

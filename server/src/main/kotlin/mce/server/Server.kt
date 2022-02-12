@@ -10,7 +10,6 @@ import mce.phase.Parse
 import mce.phase.Stage
 
 class Server {
-    private val dependencies: MutableMap<String, List<String>> = mutableMapOf()
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
     private val counter: MutableMap<Key<*>, Int> = mutableMapOf()
 
@@ -23,16 +22,15 @@ class Server {
         getValue(key) ?: run {
             incrementCount(key)
             when (key) {
-                is Key.Source -> error("unregistered")
+                is Key.Source -> error("'${key.name}' unregistered")
                 is Key.SurfaceItem -> {
                     val source = fetch(Key.Source(key.name))
-                    Parse(key.name, source).also {
-                        dependencies[key.name] = it.imports.toMutableList()
-                    } as V
+                    Parse(key.name, source) as V
                 }
                 is Key.ElaboratedOutput -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
-                    val items = dependencies[key.name]!!
+                    val items = surfaceItem.imports
+                        .filter { fetch(Key.SurfaceItem(it)).exports.contains(surfaceItem.name) }
                         .map { async { fetch(Key.ElaboratedOutput(it)).item } }
                         .awaitAll()
                         .associateBy { it.name }
@@ -40,7 +38,8 @@ class Server {
                 }
                 is Key.StagedItem -> {
                     val elaboratedOutput = fetch(Key.ElaboratedOutput(key.name))
-                    val items = dependencies[key.name]!!
+                    val items = elaboratedOutput.item.imports
+                        .filter { fetch(Key.SurfaceItem(it)).exports.contains(elaboratedOutput.item.name) }
                         .map { async { fetch(Key.StagedItem(it)) } }
                         .awaitAll()
                         .associateBy { it.name }

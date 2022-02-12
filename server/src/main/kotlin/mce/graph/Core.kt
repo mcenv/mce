@@ -20,10 +20,12 @@ object Core {
      */
     sealed class Item {
         abstract val imports: KList<KString>
+        abstract val exports: KList<KString>
         abstract val name: KString
 
         data class Def(
             override val imports: KList<KString>,
+            override val exports: KList<KString>,
             override val name: KString,
             val type: Value,
             val body: Term

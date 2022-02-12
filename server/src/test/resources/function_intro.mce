@@ -1,3 +1,5 @@
 import {}
 
+export {}
+
 def {} : fun [x : type, y : x] x = \[x, y] y

@@ -1,3 +1,5 @@
 import {}
 
+export {function_elim}
+
 def {} : fun [α : type, a : α] α = \[α, a] a

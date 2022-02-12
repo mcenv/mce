@@ -1,5 +1,7 @@
 import {}
 
+export {}
+
 def {} : bool =
   let b = (#0-0-0-0-0 `false)
   false

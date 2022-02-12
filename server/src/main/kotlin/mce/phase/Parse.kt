@@ -12,11 +12,15 @@ class Parse private constructor(
 
     private fun parseItem(name: String): S.Item {
         val imports = run {
-            if (readWord() != "import") error("'import' expected")
+            expectString("import")
             expect('{')
             parseList('}', ::readWord)
         }
-
+        val exports = run {
+            expectString("export")
+            expect('{')
+            parseList('}', ::readWord)
+        }
         return when (val word = readWord()) {
             "def" -> {
                 val modifiers = run {
@@ -31,7 +35,7 @@ class Parse private constructor(
                     expect('=')
                     parseTerm()
                 }
-                S.Item.Def(imports, modifiers, name, type, body)
+                S.Item.Def(imports, exports, modifiers, name, type, body)
             }
             else -> error("unexpected item '$word'")
         }

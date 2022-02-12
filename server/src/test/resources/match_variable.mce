@@ -1,5 +1,7 @@
 import {}
 
+export {}
+
 def {} : bool =
   match false [
     b => b
