@@ -1,16 +1,13 @@
 package mce.phase
 
-import mce.read
+import mce.fetch
+import mce.server.Key
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import mce.graph.Core as C
 
 class StageTest {
-    private fun stage(name: String): C.Item {
-        val surface = Parse(name, read("/$name.mce"))
-        val elaborated = Elaborate(emptyMap(), surface)
-        return Stage(elaborated.metaState, emptyMap(), elaborated.item)
-    }
+    private fun stage(name: String, vararg imports: String): C.Item = fetch(Key.StagedItem(name), *imports)
 
     @Test
     fun reduce() {

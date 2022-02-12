@@ -19,11 +19,11 @@ class Server {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private suspend fun <V> fetch(key: Key<V>): V = coroutineScope {
+    suspend fun <V> fetch(key: Key<V>): V = coroutineScope {
         getValue(key) ?: run {
             incrementCount(key)
             when (key) {
-                is Key.Source -> error("unreachable")
+                is Key.Source -> error("unregistered")
                 is Key.SurfaceItem -> {
                     val source = fetch(Key.Source(key.name))
                     Parse(key.name, source).also {

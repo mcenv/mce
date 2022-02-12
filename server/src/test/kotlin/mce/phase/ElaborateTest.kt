@@ -1,7 +1,8 @@
 package mce.phase
 
 import mce.Diagnostic
-import mce.read
+import mce.fetch
+import mce.server.Key
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,196 +11,174 @@ import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class ElaborateTest {
-    private fun elaborate(items: Map<String, C.Item>, name: String): Elaborate.Output = Elaborate(items, Parse(name, read("/$name.mce")))
+    private fun elaborate(name: String, vararg imports: String): Elaborate.Output = fetch(Key.ElaboratedOutput(name), *imports)
+
+    private fun Elaborate.Output.success(): Elaborate.Output = apply {
+        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+    }
 
     @Test
     fun elaborate() {
-        val bool = S.Term.Bool(UUID(0, 0))
-        val ff = S.Term.BoolOf(false, UUID(0, 1))
-        val (elaborated, _, diagnostics, types) = elaborate(emptyMap(), "elaborate")
-
-        assert(diagnostics.isEmpty())
-        assertIs<S.Term.Type>(types[bool.id]!!.value)
-        assertIs<S.Term.Bool>(types[ff.id]!!.value)
-        assertEquals(C.Item.Def(emptyList(), "elaborate", C.Value.Bool, C.Term.BoolOf(false)), elaborated)
+        val (item, _, _, types) = elaborate("elaborate").success()
+        assertIs<S.Term.Type>(types[UUID(0, 0)]!!.value)
+        assertIs<S.Term.Bool>(types[UUID(0, 1)]!!.value)
+        assertEquals(C.Item.Def(emptyList(), "elaborate", C.Value.Bool, C.Term.BoolOf(false)), item)
     }
 
     @Test
     fun apply() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "apply")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("apply").success()
     }
 
     @Test
     fun functionIntro() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "function_intro")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("function_intro").success()
     }
 
     @Test
     fun functionElim() {
-        val (identity, _, diagnostics1, _) = elaborate(emptyMap(), "identity")
-        val (_, _, diagnostics2, _) = elaborate(mapOf(identity.name to identity), "function_elim")
-        assert(diagnostics1.isEmpty()) { diagnostics1.joinToString("\n") }
-        assert(diagnostics2.isEmpty()) { diagnostics2.joinToString("\n") }
+        elaborate("function_elim", "identity").success()
     }
 
     @Test
     fun functionClosed() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "function_closed")
+        val (_, _, diagnostics, _) = elaborate("function_closed")
         assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun let() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "let")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("let").success()
     }
 
     @Test
     fun letEscape() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "let_escape")
+        val (_, _, diagnostics, _) = elaborate("let_escape")
         assert(diagnostics.contains(Diagnostic.NameNotFound("b", UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun nameNotFound() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "name_not_found")
+        val (_, _, diagnostics, _) = elaborate("name_not_found")
         assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun compound() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "compound")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("compound").success()
     }
 
     @Test
     fun codeIntro() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "code_intro")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("code_intro").success()
     }
 
     @Test
     fun codeElim() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "code_elim")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("code_elim").success()
     }
 
     @Test
     fun stageMismatch() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "stage_mismatch")
+        val (_, _, diagnostics, _) = elaborate("stage_mismatch")
         assert(diagnostics.contains(Diagnostic.StageMismatch(1, 0, UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun phaseMismatch() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch")
+        val (_, _, diagnostics, _) = elaborate("phase_mismatch")
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun phaseMismatchLocal() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "phase_mismatch_local")
+        val (_, _, diagnostics, _) = elaborate("phase_mismatch_local")
         assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun matchBoolean() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "match_boolean")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("match_boolean").success()
     }
 
     @Test
     fun matchVariable() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "match_variable")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("match_variable").success()
     }
 
     @Test
     fun matchEscape() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "match_escape")
+        val (_, _, diagnostics, _) = elaborate("match_escape")
         assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun nestedPatterns() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "nested_patterns")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("nested_patterns").success()
     }
 
     @Test
     fun thunkIntro() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "thunk_intro")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("thunk_intro").success()
     }
 
     @Test
     fun thunkElim() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "thunk_elim")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("thunk_elim").success()
     }
 
     @Test
     fun impureDefinition() {
-        val (thunkIntro, _, diagnostics1, _) = elaborate(emptyMap(), "thunk_intro")
-        val (_, _, diagnostics2, _) = elaborate(mapOf(thunkIntro.name to thunkIntro), "impure_definition")
-        assert(diagnostics1.isEmpty()) { diagnostics1.joinToString("\n") }
-        assert(diagnostics2.contains(Diagnostic.EffectMismatch(UUID(0, 0)))) { diagnostics2.joinToString("\n") }
+        val (_, _, diagnostics, _) = elaborate("impure_definition", "thunk_intro")
+        assert(diagnostics.contains(Diagnostic.EffectMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun eqIntro() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "eq_intro")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("eq_intro").success()
     }
 
     @Test
     fun eqElim() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "eq_elim")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("eq_elim").success()
     }
 
     @Test
     fun notEq() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "not_eq")
+        val (_, _, diagnostics, _) = elaborate("not_eq")
         assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun meta() {
-        val (_, metaState, diagnostics, _) = elaborate(emptyMap(), "meta")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        val (_, metaState, _, _) = elaborate("meta").success()
         assertEquals(C.Value.Bool, metaState[0])
     }
 
     @Test
     fun sym() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "sym")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("sym").success()
     }
 
     @Test
     fun symBad() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "sym_bad")
+        val (_, _, diagnostics, _) = elaborate("sym_bad")
         assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun trans() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "trans")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("trans").success()
     }
 
     @Test
     fun transBad() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "trans_bad")
+        val (_, _, diagnostics, _) = elaborate("trans_bad")
         assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun cong() {
-        val (_, _, diagnostics, _) = elaborate(emptyMap(), "cong")
-        assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
+        elaborate("cong").success()
     }
 }
