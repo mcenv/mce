@@ -181,4 +181,9 @@ class ElaborateTest {
     fun cong() {
         elaborate("cong").success()
     }
+
+    @Test
+    fun inj() {
+        elaborate("inj").success()
+    }
 }

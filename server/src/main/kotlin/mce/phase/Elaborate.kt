@@ -584,7 +584,14 @@ class Elaborate private constructor(
         when {
             value1 is C.Value.Variable -> environment[value1.level] = lazyOf(value2)
             value2 is C.Value.Variable -> environment[value2.level] = lazyOf(value1)
-            else -> { /* TODO */ }
+            value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
+            value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
+            value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
+            value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
+            value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> match(value1.element.value, value2.element.value)
+            else -> { /* TODO */
+            }
         }
     }
 
