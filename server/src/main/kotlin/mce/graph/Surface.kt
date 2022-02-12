@@ -101,7 +101,7 @@ object Surface {
         data class Refl(override val id: Id) : Pattern()
     }
 
-    data class Parameter(val name: KString, val lower: Term, val upper: Term, val type: Term)
+    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Effect
 

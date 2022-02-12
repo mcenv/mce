@@ -5,6 +5,7 @@ import mce.graph.Core as C
 /**
  * Performs staging and zonking.
  */
+@Suppress("NAME_SHADOWING")
 class Stage private constructor(
     private val metaState: MetaState,
     private val items: Map<String, C.Item>
@@ -123,7 +124,12 @@ class Stage private constructor(
             C.Term.Eq(left, right)
         }
         is C.Term.Fun -> {
-            val parameters = term.parameters.map { C.Parameter(it.name, stageTerm(it.lower), stageTerm(it.upper), stageTerm(it.type)) }
+            val parameters = term.parameters.map { (name, lower, upper, type) ->
+                val lower = lower?.let { stageTerm(it) }
+                val upper = upper?.let { stageTerm(it) }
+                val type = stageTerm(type)
+                C.Parameter(name, lower, upper, type)
+            }
             val resultant = stageTerm(term.resultant)
             C.Term.Fun(parameters, resultant)
         }

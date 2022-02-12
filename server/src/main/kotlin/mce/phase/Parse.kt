@@ -172,31 +172,19 @@ class Parse private constructor(
                     expect('[')
                     parseList(']') {
                         val name = readWord()
-                        when (peekChar()) {
-                            ':' -> {
-                                val type = run {
-                                    skip()
-                                    parseTerm()
-                                }
-                                S.Parameter(name, S.Term.Union(emptyList(), freshId()), S.Term.Intersection(emptyList(), freshId()), type)
-                            }
-                            '>' -> {
-                                val lower = run {
-                                    expectString(">:")
-                                    parseTerm()
-                                }
-                                val upper = run {
-                                    expectString("<:")
-                                    parseTerm()
-                                }
-                                val type = run {
-                                    expect(':')
-                                    parseTerm()
-                                }
-                                S.Parameter(name, lower, upper, type)
-                            }
-                            else -> error("")
+                        val lower = if (peekChar() == '>') {
+                            expectString(">:")
+                            parseTerm()
+                        } else null
+                        val upper = if (peekChar() == '<') {
+                            expectString("<:")
+                            parseTerm()
+                        } else null
+                        val type = run {
+                            expect(':')
+                            parseTerm()
                         }
+                        S.Parameter(name, lower, upper, type)
                     }
                 }
                 val resultant = parseTerm()

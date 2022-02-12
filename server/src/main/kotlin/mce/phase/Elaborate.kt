@@ -198,11 +198,15 @@ class Elaborate private constructor(
                         checkTerm(argument, environment.evaluate(metaState, parameter.type)).also {
                             val id = argument.id
                             val argument = environment.evaluate(metaState, it)
-                            environment.evaluate(metaState, parameter.lower).let { lower ->
-                                if (!size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, argument)), serializeTerm(quote(metaState, lower)), id))
+                            parameter.lower?.let { lower ->
+                                environment.evaluate(metaState, lower).let { lower ->
+                                    if (!size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, argument)), serializeTerm(quote(metaState, lower)), id))
+                                }
                             }
-                            environment.evaluate(metaState, parameter.upper).let { upper ->
-                                if (!size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, upper)), serializeTerm(quote(metaState, argument)), id))
+                            parameter.upper?.let { upper ->
+                                environment.evaluate(metaState, upper).let { upper ->
+                                    if (!size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, upper)), serializeTerm(quote(metaState, argument)), id))
+                                }
                             }
                             environment += lazyOf(argument)
                         }
@@ -225,10 +229,12 @@ class Elaborate private constructor(
                 val parameters = computation.parameters.map { (name, lower, upper, parameter) ->
                     val parameter = checkTerm(parameter, C.Value.Type)
                     val type = environment.evaluate(metaState, parameter)
-                    val lower = checkTerm(lower, type)
-                    val upper = checkTerm(upper, type)
+                    val lower = lower?.let { checkTerm(it, type) }
+                    val upper = upper?.let { checkTerm(it, type) }
                     C.Parameter(name, lower, upper, parameter).also {
-                        bind(computation.id, Entry(name, environment.evaluate(metaState, lower), environment.evaluate(metaState, upper), type, stage))
+                        val lower = lower?.let { environment.evaluate(metaState, it) }
+                        val upper = upper?.let { environment.evaluate(metaState, it) }
+                        bind(computation.id, Entry(name, lower, upper, type, stage))
                     }
                 }
                 val resultant = checkTerm(computation.resultant, C.Value.Type) /* TODO */
@@ -312,7 +318,10 @@ class Elaborate private constructor(
             }
             computation is S.Term.FunOf && type is C.Value.Fun -> withContext(meta) {
                 (computation.parameters zip type.parameters).forEach { (name, parameter) ->
-                    bind(computation.id, Entry(name, environment.evaluate(metaState, parameter.lower), environment.evaluate(metaState, parameter.upper), environment.evaluate(metaState, parameter.type), stage))
+                    val lower = parameter.lower?.let { environment.evaluate(metaState, it) }
+                    val upper = parameter.upper?.let { environment.evaluate(metaState, it) }
+                    val type = environment.evaluate(metaState, parameter.type)
+                    bind(computation.id, Entry(name, lower, upper, type, stage))
                 }
                 val resultant = checkComputation(computation.body, environment.evaluate(metaState, type.resultant), effects)
                 C.Term.FunOf(computation.parameters, resultant)
@@ -640,8 +649,8 @@ class Elaborate private constructor(
 
     private data class Entry(
         val name: String,
-        val lower: C.Value,
-        val upper: C.Value,
+        val lower: C.Value?,
+        val upper: C.Value?,
         val type: C.Value,
         val stage: Int
     )

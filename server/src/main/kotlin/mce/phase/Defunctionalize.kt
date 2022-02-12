@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 
+@Suppress("NAME_SHADOWING")
 class Defunctionalize private constructor() {
     private val functions: MutableMap<Int, D.Term> = mutableMapOf()
 
@@ -124,7 +125,12 @@ class Defunctionalize private constructor() {
             D.Term.Eq(left, right)
         }
         is C.Term.Fun -> {
-            val parameters = term.parameters.map { D.Parameter(it.name, defunctionalizeTerm(it.lower), defunctionalizeTerm(it.upper), defunctionalizeTerm(it.type)) }
+            val parameters = term.parameters.map { (name, lower, upper, type) ->
+                val lower = lower?.let { defunctionalizeTerm(it) }
+                val upper = upper?.let { defunctionalizeTerm(it) }
+                val type = defunctionalizeTerm(type)
+                D.Parameter(name, lower, upper, type)
+            }
             val resultant = defunctionalizeTerm(term.resultant)
             D.Term.Fun(parameters, resultant)
         }
