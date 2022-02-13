@@ -194,13 +194,13 @@ class ElaborateTest {
     }
 
     @Test
-    fun coeWithoutRewrite() {
-        val (_, _, diagnostics, _) =  elaborate("coe_without_rewrite")
+    fun castWithoutCoe() {
+        val (_, _, diagnostics, _) = elaborate("cast_without_coe")
         assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
     }
 
     @Test
-    fun coe() {
-        elaborate("coe").success()
+    fun cast() {
+        elaborate("cast").success()
     }
 }

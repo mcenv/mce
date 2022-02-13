@@ -26,7 +26,7 @@ sealed class Diagnostic {
             is C.Term.Def -> S.Term.Name(term.name, freshId())
             is C.Term.Let -> S.Term.Let(term.name, serializeTerm(term.init), serializeTerm(term.body), freshId())
             is C.Term.Match -> S.Term.Match(serializeTerm(term.scrutinee), term.clauses.map { serializePattern(it.first) to serializeTerm(it.second) }, freshId())
-            is C.Term.Rewrite -> S.Term.Rewrite(serializeTerm(term.target), serializeTerm(term.proof), freshId())
+            is C.Term.Coerce -> S.Term.Coerce(serializeTerm(term.target), serializeTerm(term.proof), freshId())
             is C.Term.BoolOf -> S.Term.BoolOf(term.value, freshId())
             is C.Term.ByteOf -> S.Term.ByteOf(term.value, freshId())
             is C.Term.ShortOf -> S.Term.ShortOf(term.value, freshId())

@@ -42,7 +42,7 @@ object Core {
         data class Def(val name: KString) : Term()
         data class Let(val name: KString, val init: Term, val body: Term) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>) : Term()
-        data class Rewrite(val target: Term, val proof: Term) : Term()
+        data class Coerce(val target: Term, val proof: Term) : Term()
         data class BoolOf(val value: KBoolean) : Term()
         data class ByteOf(val value: KByte) : Term()
         data class ShortOf(val value: KShort) : Term()
