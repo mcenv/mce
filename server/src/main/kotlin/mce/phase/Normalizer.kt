@@ -19,6 +19,7 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
         is C.Term.Def -> C.Value.Def(term.name) // TODO: unfold
         is C.Term.Let -> (this + lazyOf(evaluate(term.init))).evaluate(term.body)
         is C.Term.Match -> C.Value.Match(evaluate(term.scrutinee), term.clauses.map { it.first to lazy { evaluate(it.second) /* TODO: collect variables */ } })
+        is C.Term.Rewrite -> evaluate(term.target)
         is C.Term.BoolOf -> C.Value.BoolOf(term.value)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value)
         is C.Term.ShortOf -> C.Value.ShortOf(term.value)

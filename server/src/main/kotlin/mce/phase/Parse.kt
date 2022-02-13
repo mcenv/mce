@@ -129,6 +129,11 @@ class Parse private constructor(
                 val clauses = parseList(']') { parsePair(::parsePattern, { expectString("=>") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
             }
+            "rewrite" -> {
+                val target = parseTerm()
+                val proof = parseTerm()
+                S.Term.Rewrite(target, proof, id)
+            }
             "false" -> S.Term.BoolOf(false, id)
             "true" -> S.Term.BoolOf(true, id)
             "refl" -> S.Term.Refl(id)

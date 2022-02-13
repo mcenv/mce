@@ -1,0 +1,8 @@
+import {}
+
+export {}
+
+def {} : fun [α : type, β : type, a : α, p : eq α β] β =
+  \[α, β, a, p] match p [
+    refl => a
+  ]

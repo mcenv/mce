@@ -38,6 +38,7 @@ object Surface {
         data class Name(val name: KString, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
+        data class Rewrite(val target: Term, val proof: Term, override val id: Id) : Term()
         data class BoolOf(val value: KBoolean, override val id: Id) : Term()
         data class ByteOf(val value: KByte, override val id: Id) : Term()
         data class ShortOf(val value: KShort, override val id: Id) : Term()

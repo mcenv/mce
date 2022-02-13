@@ -192,4 +192,15 @@ class ElaborateTest {
         val (_, _, diagnostics, _) = elaborate("invalid_import")
         assert(diagnostics.any { it is Diagnostic.NameNotFound }) { diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun coeWithoutRewrite() {
+        val (_, _, diagnostics, _) =  elaborate("coe_without_rewrite")
+        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun coe() {
+        elaborate("coe").success()
+    }
 }

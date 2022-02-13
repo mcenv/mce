@@ -30,6 +30,7 @@ class Defunctionalize private constructor() {
             val clauses = term.clauses.map { defunctionalizePattern(it.first) to defunctionalizeTerm(it.second) }
             D.Term.Match(scrutinee, clauses)
         }
+        is C.Term.Rewrite -> defunctionalizeTerm(term.target)
         is C.Term.BoolOf -> D.Term.BoolOf(term.value)
         is C.Term.ByteOf -> D.Term.ByteOf(term.value)
         is C.Term.ShortOf -> D.Term.ShortOf(term.value)
