@@ -11,7 +11,7 @@ import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class ElaborateTest {
-    private fun elaborate(name: String, vararg imports: String): Elaborate.Output = fetch(Key.ElaboratedOutput(name), *imports)
+    private fun elaborate(name: String): Elaborate.Output = fetch(Key.ElaboratedOutput(name))
 
     private fun Elaborate.Output.success(): Elaborate.Output = apply {
         assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
@@ -37,7 +37,7 @@ class ElaborateTest {
 
     @Test
     fun functionElim() {
-        elaborate("function_elim", "identity").success()
+        elaborate("function_elim").success()
     }
 
     @Test
@@ -129,7 +129,7 @@ class ElaborateTest {
 
     @Test
     fun impureDefinition() {
-        val (_, _, diagnostics, _) = elaborate("impure_definition", "thunk_intro")
+        val (_, _, diagnostics, _) = elaborate("impure_definition")
         assert(diagnostics.contains(Diagnostic.EffectMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
 
@@ -189,7 +189,7 @@ class ElaborateTest {
 
     @Test
     fun invalidImport() {
-        val (_, _, diagnostics, _) = elaborate("invalid_import", "identity")
+        val (_, _, diagnostics, _) = elaborate("invalid_import")
         assert(diagnostics.any { it is Diagnostic.NameNotFound }) { diagnostics.joinToString("\n") }
     }
 }

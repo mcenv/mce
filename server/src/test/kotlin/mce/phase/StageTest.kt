@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import mce.graph.Core as C
 
 class StageTest {
-    private fun stage(name: String, vararg imports: String): C.Item = fetch(Key.StagedItem(name), *imports)
+    private fun stage(name: String): C.Item = fetch(Key.StagedItem(name))
 
     @Test
     fun reduce() {

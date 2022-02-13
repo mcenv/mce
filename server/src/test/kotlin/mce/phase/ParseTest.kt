@@ -6,7 +6,7 @@ import mce.server.Key
 import kotlin.test.Test
 
 class ParseTest {
-    private fun parse(name: String, vararg imports: String): Surface.Item = fetch(Key.SurfaceItem(name), *imports)
+    private fun parse(name: String): Surface.Item = fetch(Key.SurfaceItem(name))
 
     @Test
     fun parseAll() {

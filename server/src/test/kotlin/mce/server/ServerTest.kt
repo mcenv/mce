@@ -12,9 +12,8 @@ class ServerTest {
     @Test
     fun hover() {
         runBlocking {
-            Server().run {
+            Server { read("/$it.mce") }.run {
                 val name = "server"
-                register(name, read("/$name.mce"))
                 assertIs<Surface.Term.Bool>(hover(name, UUID(0, 0)).type)
             }
         }
@@ -23,9 +22,8 @@ class ServerTest {
     @Test
     fun counter() {
         runBlocking {
-            Server().run {
+            Server { read("/$it.mce") }.run {
                 val name = "server"
-                register(name, read("/$name.mce"))
                 hover(name, UUID(0, 0))
                 assertEquals(1, getCount(Key.ElaboratedOutput(name)))
                 hover(name, UUID(0, 0))

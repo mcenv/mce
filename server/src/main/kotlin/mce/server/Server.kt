@@ -9,20 +9,18 @@ import mce.phase.Elaborate
 import mce.phase.Parse
 import mce.phase.Stage
 
-class Server {
+class Server(
+    private val sources: (String) -> String
+) {
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
     private val counter: MutableMap<Key<*>, Int> = mutableMapOf()
-
-    fun register(name: String, source: String) {
-        setValue(Key.Source(name), source)
-    }
 
     @Suppress("UNCHECKED_CAST")
     suspend fun <V> fetch(key: Key<V>): V = coroutineScope {
         getValue(key) ?: run {
             incrementCount(key)
             when (key) {
-                is Key.Source -> error("'${key.name}' unregistered")
+                is Key.Source -> sources(key.name) as V
                 is Key.SurfaceItem -> {
                     val source = fetch(Key.Source(key.name))
                     Parse(key.name, source) as V
