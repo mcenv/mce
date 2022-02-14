@@ -19,7 +19,7 @@ class Stage private constructor(
 
     private fun stageTerm(term: C.Term): C.Term = when (term) {
         is C.Term.Hole -> throw Error()
-        is C.Term.Meta -> stageTerm(emptyEnvironment().normalize(metaState, term))
+        is C.Term.Meta -> stageTerm(emptyEnvironment().normalize(items, metaState, term))
         is C.Term.Variable -> term
         is C.Term.Def -> term
         is C.Term.Let -> {
@@ -84,7 +84,7 @@ class Stage private constructor(
         }
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> {
-            val staged = emptyEnvironment().normalize(metaState, term)
+            val staged = emptyEnvironment().normalize(items, metaState, term)
             stageTerm(staged)
         }
         is C.Term.Union -> {

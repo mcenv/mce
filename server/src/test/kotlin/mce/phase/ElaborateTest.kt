@@ -197,4 +197,9 @@ class ElaborateTest {
     fun cast() {
         elaborate("cast").success()
     }
+
+    @Test
+    fun unfoldDef() {
+        elaborate("unfold_def").success()
+    }
 }

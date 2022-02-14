@@ -11,12 +11,12 @@ inline fun <R> withEnvironment(block: (MutableList<Lazy<C.Value>>) -> R): R = bl
 /**
  * Evaluates the [term] to a value under this environment.
  */
-fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
+fun Environment.evaluate(defs: Map<String, C.Item>, metaState: MetaState, term: C.Term): C.Value {
     fun Environment.evaluate(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
         is C.Term.Meta -> metaState[term.index] ?: C.Value.Meta(term.index)
         is C.Term.Variable -> this[term.level].value
-        is C.Term.Def -> C.Value.Def(term.name) // TODO: unfold
+        is C.Term.Def -> C.Value.Def(term.name, lazy { evaluate((defs[term.name]!! as C.Item.Def).body) })
         is C.Term.Let -> (this + lazyOf(evaluate(term.init))).evaluate(term.body)
         is C.Term.Match -> C.Value.Match(evaluate(term.scrutinee), term.clauses.map { it.first to lazy { evaluate(it.second) /* TODO: collect variables */ } })
         is C.Term.BoolOf -> C.Value.BoolOf(term.value)
@@ -79,7 +79,7 @@ fun Environment.evaluate(metaState: MetaState, term: C.Term): C.Value {
  * Quotes the [value] to a term.
  */
 @Suppress("NAME_SHADOWING")
-fun quote(metaState: MetaState, value: C.Value): C.Term {
+fun quote(defs: Map<String, C.Item>, metaState: MetaState, value: C.Value): C.Term {
     fun quote(value: C.Value): C.Term = when (val value = metaState.force(value)) {
         is C.Value.Hole -> C.Term.Hole
         is C.Value.Meta -> metaState[value.index]?.let { quote(it) } ?: C.Term.Meta(value.index)
@@ -106,7 +106,7 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
             quote(
                 value.parameters
                     .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, index)) }
-                    .evaluate(metaState, value.body)
+                    .evaluate(defs, metaState, value.body)
             )
         )
         is C.Value.Apply -> C.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) })
@@ -136,7 +136,7 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
             quote(
                 value.parameters
                     .mapIndexed { index, (name, _) -> lazyOf(C.Value.Variable(name, index)) }
-                    .evaluate(metaState, value.resultant)
+                    .evaluate(defs, metaState, value.resultant)
             )
         )
         is C.Value.Thunk -> C.Term.Thunk(quote(value.element.value), value.effects)
@@ -150,4 +150,4 @@ fun quote(metaState: MetaState, value: C.Value): C.Term {
 /**
  * Normalizes the [term] to a term.
  */
-fun Environment.normalize(metaState: MetaState, term: C.Term): C.Term = quote(metaState, evaluate(metaState, term))
+fun Environment.normalize(defs: Map<String, C.Item>, metaState: MetaState, term: C.Term): C.Term = quote(defs, metaState, evaluate(defs, metaState, term))

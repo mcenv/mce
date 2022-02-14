@@ -17,7 +17,7 @@ class Elaborate private constructor(
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Def -> {
             val meta = item.modifiers.contains(S.Modifier.META)
-            val type = emptyEnvironment().evaluate(metaState, emptyContext(meta).checkTerm(item.type, C.Value.Type))
+            val type = emptyEnvironment().evaluate(items, metaState, emptyContext(meta).checkTerm(item.type, C.Value.Type))
             val body = emptyContext(meta).checkTerm(item.body, type)
             emptyContext(meta).checkPhase(item.body.id, type)
             C.Item.Def(item.imports, item.exports, item.name, type, body)
@@ -28,7 +28,7 @@ class Elaborate private constructor(
      * Infers the type of the [term] under this context.
      */
     private fun Context.inferTerm(term: S.Term): Typing<C.Term> = when (term) {
-        is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(quote(metaState, END)), term.id)))
+        is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(quote(items, metaState, END)), term.id)))
         is S.Term.Meta -> {
             val type = metaState.fresh()
             Typing(checkTerm(term, type), type)
@@ -74,7 +74,7 @@ class Elaborate private constructor(
         }
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { "" to inferTerm(it) }
-            Typing(C.Term.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(metaState, it.second.type) }))
+            Typing(C.Term.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(items, metaState, it.second.type) }))
         }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)
@@ -127,7 +127,7 @@ class Elaborate private constructor(
             val elements = withContext(meta) {
                 term.elements.map { (name, element) ->
                     (name to checkTerm(element, C.Value.Type)).also { (name, element) ->
-                        bind(term.id, Entry(name, END, ANY, environment.evaluate(metaState, element), stage))
+                        bind(term.id, Entry(name, END, ANY, environment.evaluate(items, metaState, element), stage))
                     }
                 }
             }
@@ -152,7 +152,7 @@ class Elaborate private constructor(
         else -> inferComputation(term).also {
             if (!it.effects.isPure()) diagnose(Diagnostic.EffectMismatch(term.id))
         }
-    }.also { types[term.id] = lazy { serializeTerm(quote(metaState, it.type)) } }
+    }.also { types[term.id] = lazy { serializeTerm(quote(items, metaState, it.type)) } }
 
     /**
      * Infers the type of the [computation] under this context.
@@ -186,31 +186,31 @@ class Elaborate private constructor(
                 (computation.parameters zip types).forEach { bind(computation.id, Entry(it.first, END, ANY, it.second, stage)) }
                 inferComputation(computation.body)
             }
-            val parameters = (computation.parameters zip types).map { C.Parameter(it.first, quote(metaState, END), quote(metaState, ANY), quote(metaState, it.second)) }
-            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, quote(metaState, body.type)), body.effects)
+            val parameters = (computation.parameters zip types).map { C.Parameter(it.first, quote(items, metaState, END), quote(items, metaState, ANY), quote(items, metaState, it.second)) }
+            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, quote(items, metaState, body.type)), body.effects)
         }
         is S.Term.Apply -> {
             val function = inferComputation(computation.function)
             when (val type = metaState.force(function.type)) {
                 is C.Value.Fun -> withEnvironment { environment ->
                     val arguments = (computation.arguments zip type.parameters).map { (argument, parameter) ->
-                        checkTerm(argument, environment.evaluate(metaState, parameter.type)).also {
+                        checkTerm(argument, environment.evaluate(items, metaState, parameter.type)).also {
                             val id = argument.id
-                            val argument = environment.evaluate(metaState, it)
+                            val argument = environment.evaluate(items, metaState, it)
                             parameter.lower?.let { lower ->
-                                environment.evaluate(metaState, lower).let { lower ->
-                                    if (!size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, argument)), serializeTerm(quote(metaState, lower)), id))
+                                environment.evaluate(items, metaState, lower).let { lower ->
+                                    if (!size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(items, metaState, argument)), serializeTerm(quote(items, metaState, lower)), id))
                                 }
                             }
                             parameter.upper?.let { upper ->
-                                environment.evaluate(metaState, upper).let { upper ->
-                                    if (!size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, upper)), serializeTerm(quote(metaState, argument)), id))
+                                environment.evaluate(items, metaState, upper).let { upper ->
+                                    if (!size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(items, metaState, upper)), serializeTerm(quote(items, metaState, argument)), id))
                                 }
                             }
                             environment += lazyOf(argument)
                         }
                     }
-                    val resultant = environment.evaluate(metaState, type.resultant)
+                    val resultant = environment.evaluate(items, metaState, type.resultant)
                     Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
                 }
                 else -> Typing(C.Term.Apply(function.element, computation.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
@@ -227,12 +227,12 @@ class Elaborate private constructor(
             withContext(meta) {
                 val parameters = computation.parameters.map { (name, lower, upper, parameter) ->
                     val parameter = checkTerm(parameter, C.Value.Type)
-                    val type = environment.evaluate(metaState, parameter)
+                    val type = environment.evaluate(items, metaState, parameter)
                     val lower = lower?.let { checkTerm(it, type) }
                     val upper = upper?.let { checkTerm(it, type) }
                     C.Parameter(name, lower, upper, parameter).also {
-                        val lower = lower?.let { environment.evaluate(metaState, it) }
-                        val upper = upper?.let { environment.evaluate(metaState, it) }
+                        val lower = lower?.let { environment.evaluate(items, metaState, it) }
+                        val upper = upper?.let { environment.evaluate(items, metaState, it) }
                         bind(computation.id, Entry(name, lower, upper, type, stage))
                     }
                 }
@@ -249,21 +249,21 @@ class Elaborate private constructor(
      */
     private fun Context.checkTerm(term: S.Term, type: C.Value): C.Term {
         val type = metaState.force(type)
-        types[term.id] = lazy { serializeTerm(quote(metaState, type)) }
+        types[term.id] = lazy { serializeTerm(quote(items, metaState, type)) }
         return when {
             term is S.Term.Hole -> {
-                diagnose(Diagnostic.TermExpected(serializeTerm(quote(metaState, type)), term.id))
+                diagnose(Diagnostic.TermExpected(serializeTerm(quote(items, metaState, type)), term.id))
                 C.Term.Hole
             }
-            term is S.Term.Meta -> quote(metaState, metaState.fresh())
+            term is S.Term.Meta -> quote(items, metaState, metaState.fresh())
             term is S.Term.ListOf && type is C.Value.List -> {
                 val elements = term.elements.map { checkTerm(it, type.element.value) }
                 C.Term.ListOf(elements)
             }
             term is S.Term.CompoundOf && type is C.Value.Compound -> withEnvironment { environment ->
                 val elements = (term.elements zip type.elements).map { (term, type) ->
-                    checkTerm(term, environment.evaluate(metaState, type.second)).also {
-                        environment += lazy { environment.evaluate(metaState, it) }
+                    checkTerm(term, environment.evaluate(items, metaState, type.second)).also {
+                        environment += lazy { environment.evaluate(items, metaState, it) }
                     }
                 }
                 C.Term.CompoundOf(elements)
@@ -291,7 +291,7 @@ class Elaborate private constructor(
      */
     private fun Context.checkComputation(computation: S.Term, type: C.Value, effects: C.Effects): C.Term {
         val type = metaState.force(type)
-        types[computation.id] = lazy { serializeTerm(quote(metaState, type)) }
+        types[computation.id] = lazy { serializeTerm(quote(items, metaState, type)) }
         return when {
             computation is S.Term.Let -> {
                 val init = inferComputation(computation.init)
@@ -316,23 +316,23 @@ class Elaborate private constructor(
             }
             computation is S.Term.FunOf && type is C.Value.Fun -> withContext(meta) {
                 (computation.parameters zip type.parameters).forEach { (name, parameter) ->
-                    val lower = parameter.lower?.let { environment.evaluate(metaState, it) }
-                    val upper = parameter.upper?.let { environment.evaluate(metaState, it) }
-                    val type = environment.evaluate(metaState, parameter.type)
+                    val lower = parameter.lower?.let { environment.evaluate(items, metaState, it) }
+                    val upper = parameter.upper?.let { environment.evaluate(items, metaState, it) }
+                    val type = environment.evaluate(items, metaState, parameter.type)
                     bind(computation.id, Entry(name, lower, upper, type, stage))
                 }
-                val resultant = checkComputation(computation.body, environment.evaluate(metaState, type.resultant), effects)
+                val resultant = checkComputation(computation.body, environment.evaluate(items, metaState, type.resultant), effects)
                 C.Term.FunOf(computation.parameters, resultant)
             }
             else -> {
                 val id = computation.id
                 val computation = inferComputation(computation)
                 // reevaluate types under updated environment
-                val expected = environment.evaluate(metaState, quote(metaState, type))
-                val actual = environment.evaluate(metaState, quote(metaState, computation.type))
+                val expected = environment.evaluate(items, metaState, quote(items, metaState, type))
+                val actual = environment.evaluate(items, metaState, quote(items, metaState, computation.type))
                 if (!size.subtype(actual, expected)) {
-                    types[id] = lazy { serializeTerm(quote(metaState, END)) }
-                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, expected)), serializeTerm(quote(metaState, actual)), id))
+                    types[id] = lazy { serializeTerm(quote(items, metaState, END)) }
+                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(items, metaState, expected)), serializeTerm(quote(items, metaState, actual)), id))
                 }
                 if (!(computation.effects sub effects)) diagnose(Diagnostic.EffectMismatch(id))
                 computation.element
@@ -376,7 +376,7 @@ class Elaborate private constructor(
         }
         is S.Pattern.CompoundOf -> {
             val elements = pattern.elements.map { "" to inferPattern(it) }
-            Typing(C.Pattern.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(metaState, it.second.type) }))
+            Typing(C.Pattern.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to quote(items, metaState, it.second.type) }))
         }
         is S.Pattern.RefOf -> {
             val element = inferPattern(pattern.element)
@@ -386,14 +386,14 @@ class Elaborate private constructor(
             val left = lazy { metaState.fresh() }
             Typing(C.Pattern.Refl, C.Value.Eq(left, left))
         }
-    }.also { types[pattern.id] = lazy { serializeTerm(quote(metaState, it.type)) } }
+    }.also { types[pattern.id] = lazy { serializeTerm(quote(items, metaState, it.type)) } }
 
     /**
      * Checks the [pattern] against the [type] under this context.
      */
     private fun Context.checkPattern(pattern: S.Pattern, type: C.Value): C.Pattern {
         val type = metaState.force(type)
-        types[pattern.id] = lazy { serializeTerm(quote(metaState, type)) }
+        types[pattern.id] = lazy { serializeTerm(quote(items, metaState, type)) }
         return when {
             pattern is S.Pattern.Variable -> {
                 bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
@@ -404,7 +404,7 @@ class Elaborate private constructor(
                 C.Pattern.ListOf(elements)
             }
             pattern is S.Pattern.CompoundOf && type is C.Value.Compound -> {
-                val elements = (pattern.elements zip type.elements).map { checkPattern(it.first, emptyEnvironment().evaluate(metaState, it.second.second)) }
+                val elements = (pattern.elements zip type.elements).map { checkPattern(it.first, emptyEnvironment().evaluate(items, metaState, it.second.second)) }
                 C.Pattern.CompoundOf(elements)
             }
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
@@ -418,8 +418,8 @@ class Elaborate private constructor(
             else -> {
                 val inferred = inferPattern(pattern)
                 if (!size.subtype(inferred.type, type)) {
-                    types[pattern.id] = lazy { serializeTerm(quote(metaState, END)) }
-                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, type)), serializeTerm(quote(metaState, inferred.type)), pattern.id))
+                    types[pattern.id] = lazy { serializeTerm(quote(items, metaState, END)) }
+                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(items, metaState, type)), serializeTerm(quote(items, metaState, inferred.type)), pattern.id))
                 }
                 inferred.element
             }
@@ -450,7 +450,9 @@ class Elaborate private constructor(
             }
             value2 is C.Value.Meta -> unify(value2, value1)
             value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level == value2.level
-            value1 is C.Value.Def && value2 is C.Value.Def -> value1.name == value2.name
+            value1 is C.Value.Def && value2 is C.Value.Def && value1.name == value2.name -> true
+            value1 is C.Value.Def -> unify(value1.body.value, value2)
+            value2 is C.Value.Def -> unify(value1, value2.body.value)
             value1 is C.Value.Match && value2 is C.Value.Match -> unify(value1.scrutinee, value2.scrutinee) &&
                     (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
             value1 is C.Value.BoolOf && value2 is C.Value.BoolOf -> value1.value == value2.value
@@ -476,7 +478,7 @@ class Elaborate private constructor(
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
                     value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
-                        .let { (this + value1.parameters.size).unify(it.evaluate(metaState, value1.body), it.evaluate(metaState, value2.body)) }
+                        .let { (this + value1.parameters.size).unify(it.evaluate(items, metaState, value1.body), it.evaluate(items, metaState, value2.body)) }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> unify(value1.function, value2.function) &&
                     (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> unify(value1.body.value, value2.body.value)
@@ -503,7 +505,7 @@ class Elaborate private constructor(
                             .withIndex()
                             .all { (index, elements) ->
                                 val (elements1, elements2) = elements
-                                (this + index).unify(environment.evaluate(metaState, elements1.second), environment.evaluate(metaState, elements2.second))
+                                (this + index).unify(environment.evaluate(items, metaState, elements1.second), environment.evaluate(items, metaState, elements2.second))
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
@@ -515,10 +517,10 @@ class Elaborate private constructor(
                             .withIndex()
                             .all { (index, parameter) ->
                                 val (parameter1, parameter2) = parameter
-                                (this + index).unify(environment.evaluate(metaState, parameter2.type), environment.evaluate(metaState, parameter1.type))
+                                (this + index).unify(environment.evaluate(items, metaState, parameter2.type), environment.evaluate(items, metaState, parameter1.type))
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             } &&
-                                (this + value1.parameters.size).unify(environment.evaluate(metaState, value1.resultant), environment.evaluate(metaState, value2.resultant))
+                                (this + value1.parameters.size).unify(environment.evaluate(items, metaState, value1.resultant), environment.evaluate(items, metaState, value2.resultant))
                     }
             value1 is C.Value.Thunk && value2 is C.Value.Thunk -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Code && value2 is C.Value.Code -> unify(value1.element.value, value2.element.value)
@@ -548,7 +550,7 @@ class Elaborate private constructor(
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
                     value1.parameters
                         .mapIndexed { index, parameter -> lazyOf(C.Value.Variable(parameter, this + index)) }
-                        .let { (this + value1.parameters.size).subtype(it.evaluate(metaState, value1.body), it.evaluate(metaState, value2.body)) }
+                        .let { (this + value1.parameters.size).subtype(it.evaluate(items, metaState, value1.body), it.evaluate(items, metaState, value2.body)) }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> subtype(value1.function, value2.function) &&
                     (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
             value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> subtype(value1.body.value, value2.body.value)
@@ -564,7 +566,7 @@ class Elaborate private constructor(
                             .withIndex()
                             .all { (index, elements) ->
                                 val (elements1, elements2) = elements
-                                (this + index).subtype(environment.evaluate(metaState, elements1.second), environment.evaluate(metaState, elements2.second))
+                                (this + index).subtype(environment.evaluate(items, metaState, elements1.second), environment.evaluate(items, metaState, elements2.second))
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             }
                     }
@@ -575,10 +577,10 @@ class Elaborate private constructor(
                             .withIndex()
                             .all { (index, parameter) ->
                                 val (parameter1, parameter2) = parameter
-                                (this + index).subtype(environment.evaluate(metaState, parameter2.type), environment.evaluate(metaState, parameter1.type))
+                                (this + index).subtype(environment.evaluate(items, metaState, parameter2.type), environment.evaluate(items, metaState, parameter1.type))
                                     .also { environment += lazyOf(C.Value.Variable("", this + index)) }
                             } &&
-                                (this + value1.parameters.size).subtype(environment.evaluate(metaState, value1.resultant), environment.evaluate(metaState, value2.resultant))
+                                (this + value1.parameters.size).subtype(environment.evaluate(items, metaState, value1.resultant), environment.evaluate(items, metaState, value2.resultant))
                     }
             value1 is C.Value.Thunk && value2 is C.Value.Thunk -> subtype(value1.element.value, value2.element.value) && value1.effects sub value2.effects
             value1 is C.Value.Code && value2 is C.Value.Code -> subtype(value1.element.value, value2.element.value)

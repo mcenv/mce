@@ -115,7 +115,7 @@ object Core {
         object Hole : Value()
         data class Meta(val index: KInt) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
-        data class Def(val name: KString) : Value()
+        data class Def(val name: KString, val body: Lazy<Value>) : Value()
         data class Match(val scrutinee: Value, val clauses: KList<Pair<Pattern, Lazy<Value>>>) : Value()
         data class BoolOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()

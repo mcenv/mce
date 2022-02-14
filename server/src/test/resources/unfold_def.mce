@@ -1,0 +1,5 @@
+import {const}
+
+export {}
+
+def {} : eq const false = refl
