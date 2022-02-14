@@ -47,12 +47,6 @@ class Elaborate private constructor(
                 Typing(C.Term.Variable(term.name, level), type)
             }
         }
-        is S.Term.Coerce -> {
-            val type = metaState.fresh()
-            val target = inferTerm(term.target)
-            val proof = checkTerm(term.proof, C.Value.Eq(lazyOf(target.type), lazyOf(type)))
-            Typing(C.Term.Coerce(target.element, proof), type)
-        }
         is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value), C.Value.Bool)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value), C.Value.Byte)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value), C.Value.Short)

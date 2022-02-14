@@ -32,11 +32,6 @@ class Stage private constructor(
             val clauses = term.clauses.map { it.first to stageTerm(it.second) }
             C.Term.Match(scrutinee, clauses)
         }
-        is C.Term.Coerce -> {
-            val target = stageTerm(term.target)
-            val proof = stageTerm(term.proof)
-            C.Term.Coerce(target, proof)
-        }
         is C.Term.BoolOf -> term
         is C.Term.ByteOf -> term
         is C.Term.ShortOf -> term
