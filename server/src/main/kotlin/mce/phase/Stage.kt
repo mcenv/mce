@@ -7,8 +7,7 @@ import mce.graph.Core as C
  */
 @Suppress("NAME_SHADOWING")
 class Stage private constructor(
-    private val metaState: MetaState,
-    private val items: Map<String, C.Item>
+    private val state: NormState
 ) {
     private fun stageItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
@@ -19,7 +18,7 @@ class Stage private constructor(
 
     private fun stageTerm(term: C.Term): C.Term = when (term) {
         is C.Term.Hole -> throw Error()
-        is C.Term.Meta -> stageTerm(emptyEnvironment().normalize(items, metaState, term))
+        is C.Term.Meta -> stageTerm(state.norm(term))
         is C.Term.Variable -> term
         is C.Term.Def -> term
         is C.Term.Let -> {
@@ -84,7 +83,7 @@ class Stage private constructor(
         }
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> {
-            val staged = emptyEnvironment().normalize(items, metaState, term)
+            val staged = state.norm(term)
             stageTerm(staged)
         }
         is C.Term.Union -> {
@@ -142,6 +141,6 @@ class Stage private constructor(
     }
 
     companion object {
-        operator fun invoke(metaState: MetaState, items: Map<String, C.Item>, item: C.Item): C.Item = Stage(metaState, items).stageItem(item)
+        operator fun invoke(state: NormState, item: C.Item): C.Item = Stage(state).stageItem(item)
     }
 }

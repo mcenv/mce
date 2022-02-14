@@ -36,12 +36,7 @@ class Server(
                 }
                 is Key.StagedItem -> {
                     val elaboratedOutput = fetch(Key.ElaboratedOutput(key.name))
-                    val items = elaboratedOutput.item.imports
-                        .filter { fetch(Key.SurfaceItem(it)).exports.contains(elaboratedOutput.item.name) }
-                        .map { async { fetch(Key.StagedItem(it)) } }
-                        .awaitAll()
-                        .associateBy { it.name }
-                    Stage(elaboratedOutput.metaState, items, elaboratedOutput.item) as V
+                    Stage(elaboratedOutput.state, elaboratedOutput.item) as V
                 }
                 is Key.DefunctionalizedItem -> {
                     val item = fetch(Key.StagedItem(key.name))

@@ -151,8 +151,8 @@ class ElaborateTest {
 
     @Test
     fun meta() {
-        val (_, metaState, _, _) = elaborate("meta").success()
-        assertEquals(C.Value.Bool, metaState[0])
+        val (_, state, _, _) = elaborate("meta").success()
+        assertEquals(C.Value.Bool, state.getSolution(0))
     }
 
     @Test
