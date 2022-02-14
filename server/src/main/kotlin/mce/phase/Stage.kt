@@ -7,7 +7,7 @@ import mce.graph.Core as C
  */
 @Suppress("NAME_SHADOWING")
 class Stage private constructor(
-    private val state: NormState
+    private val state: Normalizer
 ) {
     private fun stageItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
@@ -141,6 +141,6 @@ class Stage private constructor(
     }
 
     companion object {
-        operator fun invoke(state: NormState, item: C.Item): C.Item = Stage(state).stageItem(item)
+        operator fun invoke(state: Normalizer, item: C.Item): C.Item = Stage(state).stageItem(item)
     }
 }

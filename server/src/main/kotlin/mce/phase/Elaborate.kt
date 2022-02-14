@@ -13,7 +13,7 @@ class Elaborate private constructor(
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val types: MutableMap<Id, Lazy<S.Term>> = mutableMapOf()
 
-    private val state: NormState = NormState(mutableListOf(), items, mutableListOf())
+    private val state: Normalizer = Normalizer(mutableListOf(), items, mutableListOf())
     private val entries: MutableList<Entry> = mutableListOf()
     private val size: Int get() = entries.size
     private var wavefront: Int = 0
@@ -617,7 +617,7 @@ class Elaborate private constructor(
 
     data class Output(
         val item: C.Item,
-        val state: NormState,
+        val state: Normalizer,
         val diagnostics: List<Diagnostic>,
         val types: Map<Id, Lazy<S.Term>>
     )
@@ -650,7 +650,7 @@ class Elaborate private constructor(
         return block().also { ++stage }
     }
 
-    private inline fun <R> scope(closed: Boolean = false, crossinline block: NormState.() -> R): R {
+    private inline fun <R> scope(closed: Boolean = false, crossinline block: Normalizer.() -> R): R {
         val size = this.size
         val wavefront = this.wavefront
         if (closed) this.wavefront = size
