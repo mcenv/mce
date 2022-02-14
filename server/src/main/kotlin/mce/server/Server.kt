@@ -4,10 +4,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.graph.Id
-import mce.phase.Defunctionalize
-import mce.phase.Elaborate
-import mce.phase.Parse
-import mce.phase.Stage
+import mce.phase.*
 
 class Server(
     private val sources: (String) -> String
@@ -34,9 +31,13 @@ class Server(
                         .associateBy { it.name }
                     Elaborate(items, surfaceItem) as V
                 }
-                is Key.StagedItem -> {
+                is Key.ZonkedOutput -> {
                     val elaboratedOutput = fetch(Key.ElaboratedOutput(key.name))
-                    Stage(elaboratedOutput.state, elaboratedOutput.item) as V
+                    Zonk(elaboratedOutput.normalizer, elaboratedOutput.item) as V
+                }
+                is Key.StagedItem -> {
+                    val zonkedOutput = fetch(Key.ZonkedOutput(key.name))
+                    Stage(zonkedOutput.normalizer, zonkedOutput.item) as V
                 }
                 is Key.DefunctionalizedItem -> {
                     val item = fetch(Key.StagedItem(key.name))

@@ -617,7 +617,7 @@ class Elaborate private constructor(
 
     data class Output(
         val item: C.Item,
-        val state: Normalizer,
+        val normalizer: Normalizer,
         val diagnostics: List<Diagnostic>,
         val types: Map<Id, Lazy<S.Term>>
     )
