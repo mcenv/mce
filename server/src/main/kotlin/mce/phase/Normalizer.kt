@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.graph.Id
 import mce.graph.Core as C
 
 class Normalizer(
@@ -47,7 +48,7 @@ class Normalizer(
     /**
      * Creates a fresh meta-variable.
      */
-    fun fresh(): C.Value = C.Value.Meta(solutions.size).also { solutions += null }
+    fun fresh(id: Id): C.Value = C.Value.Meta(solutions.size, id).also { solutions += null }
 
     /**
      * Unfolds meta-variables of the [value] recursively.
@@ -65,7 +66,7 @@ class Normalizer(
      */
     fun eval(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
-        is C.Term.Meta -> getSolution(term.index) ?: C.Value.Meta(term.index)
+        is C.Term.Meta -> getSolution(term.index) ?: C.Value.Meta(term.index, term.id)
         is C.Term.Variable -> lookup(term.level)
         is C.Term.Def -> C.Value.Def(term.name, lazy { eval((getItem(term.name) as C.Item.Def).body) })
         is C.Term.Let -> scope {
@@ -135,7 +136,7 @@ class Normalizer(
     @Suppress("NAME_SHADOWING")
     fun quote(value: C.Value): C.Term = when (val value = force(value)) {
         is C.Value.Hole -> C.Term.Hole
-        is C.Value.Meta -> getSolution(value.index)?.let { quote(it) } ?: C.Term.Meta(value.index)
+        is C.Value.Meta -> getSolution(value.index)?.let { quote(it) } ?: C.Term.Meta(value.index, value.id)
         is C.Value.Variable -> C.Term.Variable(value.name, value.level)
         is C.Value.Def -> C.Term.Def(value.name)
         is C.Value.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) })

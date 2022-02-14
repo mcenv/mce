@@ -36,7 +36,7 @@ class Elaborate private constructor(
     private fun inferTerm(term: S.Term): Typing<C.Term> = when (term) {
         is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(END)), term.id)))
         is S.Term.Meta -> {
-            val type = normalizer.fresh()
+            val type = normalizer.fresh(term.id)
             Typing(checkTerm(term, type), type)
         }
         is S.Term.Name -> when (val level = entries.subList(wavefront, size).indexOfLast { it.name == term.name }) {
@@ -88,7 +88,7 @@ class Elaborate private constructor(
             Typing(C.Term.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
         is S.Term.Refl -> {
-            val left = lazy { normalizer.fresh() }
+            val left = lazy { normalizer.fresh(term.id) }
             Typing(C.Term.Refl, C.Value.Eq(left, left))
         }
         is S.Term.ThunkOf -> {
@@ -174,7 +174,7 @@ class Elaborate private constructor(
             Typing(C.Term.Let(computation.name, init.element, body.element), body.type, init.effects + body.effects)
         }
         is S.Term.Match -> {
-            val type = normalizer.fresh() // TODO: use union of element types
+            val type = normalizer.fresh(computation.id) // TODO: use union of element types
             val scrutinee = inferTerm(computation.scrutinee)
             val clauses = computation.clauses.map { (pattern, body) ->
                 scope {
@@ -186,7 +186,7 @@ class Elaborate private constructor(
             Typing(C.Term.Match(scrutinee.element, clauses), type)
         }
         is S.Term.FunOf -> {
-            val types = computation.parameters.map { normalizer.fresh() }
+            val types = computation.parameters.map { normalizer.fresh(computation.id) }
             val body = scope(true) {
                 (computation.parameters zip types).forEach { bind(computation.id, Entry(it.first, END, ANY, it.second, stage)) }
                 inferComputation(computation.body)
@@ -260,7 +260,7 @@ class Elaborate private constructor(
                 diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(type)), term.id))
                 C.Term.Hole
             }
-            term is S.Term.Meta -> normalizer.quote(normalizer.fresh())
+            term is S.Term.Meta -> normalizer.quote(normalizer.fresh(term.id))
             term is S.Term.ListOf && type is C.Value.List -> {
                 val elements = term.elements.map { checkTerm(it, type.element.value) }
                 C.Term.ListOf(elements)
@@ -346,7 +346,7 @@ class Elaborate private constructor(
      */
     private fun inferPattern(pattern: S.Pattern): Typing<C.Pattern> = when (pattern) {
         is S.Pattern.Variable -> {
-            val type = normalizer.fresh()
+            val type = normalizer.fresh(pattern.id)
             bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
             Typing(C.Pattern.Variable(pattern.name), type)
         }
@@ -384,7 +384,7 @@ class Elaborate private constructor(
             Typing(C.Pattern.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
         is S.Pattern.Refl -> {
-            val left = lazy { normalizer.fresh() }
+            val left = lazy { normalizer.fresh(pattern.id) }
             Typing(C.Pattern.Refl, C.Value.Eq(left, left))
         }
     }.also { types[pattern.id] = lazy { serializeTerm(normalizer.quote(it.type)) } }

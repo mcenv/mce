@@ -1,8 +1,9 @@
 package mce.phase
 
+import mce.Diagnostic
 import mce.fetch
 import mce.server.Key
-import org.junit.jupiter.api.assertThrows
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import mce.graph.Core as C
@@ -18,6 +19,7 @@ class ZonkTest {
 
     @Test
     fun unsolvedMeta() {
-        assertThrows<Error> { zonk("unsolved_meta") }
+        val output = zonk("unsolved_meta")
+        assert(output.diagnostics.contains(Diagnostic.UnsolvedMeta(UUID(0, 0))))
     }
 }

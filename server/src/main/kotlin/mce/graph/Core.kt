@@ -37,7 +37,7 @@ object Core {
      */
     sealed class Term {
         object Hole : Term()
-        data class Meta(val index: KInt) : Term()
+        data class Meta(val index: KInt, val id: Id) : Term()
         data class Variable(val name: KString, val level: KInt) : Term()
         data class Def(val name: KString) : Term()
         data class Let(val name: KString, val init: Term, val body: Term) : Term()
@@ -113,7 +113,7 @@ object Core {
      */
     sealed class Value {
         object Hole : Value()
-        data class Meta(val index: KInt) : Value()
+        data class Meta(val index: KInt, val id: Id) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
         data class Def(val name: KString, val body: Lazy<Value>) : Value()
         data class Match(val scrutinee: Value, val clauses: KList<Pair<Pattern, Lazy<Value>>>) : Value()

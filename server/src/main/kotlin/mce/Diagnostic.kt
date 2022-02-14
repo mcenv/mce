@@ -17,6 +17,7 @@ sealed class Diagnostic {
     data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
     data class EffectMismatch(override val id: Id) : Diagnostic()
+    data class UnsolvedMeta(override val id: Id) : Diagnostic()
 
     companion object {
         fun serializeTerm(term: C.Term): S.Term = when (term) {

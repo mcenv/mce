@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.Diagnostic
 import mce.graph.Core as C
 
 /**
@@ -9,6 +10,8 @@ import mce.graph.Core as C
 class Zonk private constructor(
     private val normalizer: Normalizer
 ) {
+    private val diagnostics: MutableList<Diagnostic> = mutableListOf()
+
     private fun zonkItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
             val body = zonkTerm(item.body)
@@ -18,9 +21,12 @@ class Zonk private constructor(
 
     private fun zonkTerm(term: C.Term): C.Term = when (term) {
         is C.Term.Hole -> term
-        is C.Term.Meta -> {
-            val solution = normalizer.getSolution(term.index) ?: throw Error()
-            normalizer.quote(solution)
+        is C.Term.Meta -> when (val solution = normalizer.getSolution(term.index)) {
+            null -> {
+                diagnostics += Diagnostic.UnsolvedMeta(term.id)
+                term
+            }
+            else -> normalizer.quote(solution)
         }
         is C.Term.Variable -> term
         is C.Term.Def -> term
@@ -150,13 +156,14 @@ class Zonk private constructor(
     }
 
     data class Output(
+        val item: C.Item,
         val normalizer: Normalizer,
-        val item: C.Item
+        val diagnostics: List<Diagnostic>
     )
 
     companion object {
         operator fun invoke(normalizer: Normalizer, item: C.Item): Output = Zonk(normalizer).run {
-            Output(normalizer, zonkItem(item))
+            Output(zonkItem(item), normalizer, diagnostics)
         }
     }
 }
