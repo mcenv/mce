@@ -285,8 +285,6 @@ class Elaborate private constructor(
                 val element = up { checkTerm(term.element, type.element.value) }
                 C.Term.CodeOf(element)
             }
-            term is S.Term.Union && term.variants.isEmpty() -> C.Term.Union(emptyList()) // generalized bottom type
-            term is S.Term.Intersection && term.variants.isEmpty() -> C.Term.Intersection(emptyList()) // generalized top type
             else -> checkComputation(term, type, C.Effects.Set(emptySet()))
         }
     }
