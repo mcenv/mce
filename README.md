@@ -6,27 +6,19 @@ A programming environment[^1] for Minecraft[^2].
 
 ## Goals
 
-    ┌─────────────────────┐                ┌───────────────────────┐
-    │ Logical consistency │                │ Output predictability │
-    └─┬───────────────────┘                └─────────────────────┬─┘
-      │                                                          │
-      │        ┌─────────────────────┐                           │
-      │        │ Static expressivity │                           │
-      │        └─┬─────────────────┬─┘                           │
-      │          │                 │                             │
-      │          │   ┌─────────────▼───────────┐                 │
-      │    ┌─────┘   │ Aggressive optimization │                 │
-      │    │         └──────────┬─────┬────────┘                 │
-      │    │                    │     │                          │
-    ┌─▼────▼─┐ ┌────────────────▼─┐ ┌─▼─────────────┐ ┌──────────▼─┐
-    │ Safety │ │ High performance │ │ Low footprint │ │ Ergonomics │
-    └──────┬─┘ └────────────────┬─┘ └─┬─────────────┘ └─┬──────────┘
-           │                    │     │                 │
-           └──────────────────┐ │     │ ┌───────────────┘
-                              │ │     │ │
-                            ┌─▼─▼─────▼─▼─┐
-                            │     Fun     │
-                            └─────────────┘
+```mermaid
+flowchart TB
+   LC[Logical consistency]   --> S[Safety]
+   SE[Static expressivity]   --> AO[Aggressive optimization]
+   SE                        --> S[Safety]
+   AO                        --> HP[High performance]
+   AO                        --> LF[Low footprint]
+   OP[Output predictability] --> E[Ergonomics]
+   S                         --> F[Fun]
+   HP                        --> F
+   LF                        --> F
+   E                         --> F
+```
 
 ## Features
 
