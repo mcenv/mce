@@ -172,7 +172,6 @@ class Elaborate private constructor(
             val sizeBefore = size
             val clauses = computation.clauses.map { (pattern, body) ->
                 val pattern = checkPattern(pattern, scrutinee.type)
-                val type = environment.evaluate(metaState, quote(metaState, type))
                 val body = checkTerm(body, type) // TODO
                 (pattern to body).also {
                     val sizeAfter = size
@@ -307,7 +306,6 @@ class Elaborate private constructor(
                 val sizeBefore = size
                 val clauses = computation.clauses.map { (pattern, body) ->
                     val pattern = checkPattern(pattern, scrutinee.type)
-                    val type = environment.evaluate(metaState, quote(metaState, type))
                     val body = checkComputation(body, type, effects)
                     (pattern to body).also {
                         val sizeAfter = size
@@ -327,13 +325,17 @@ class Elaborate private constructor(
                 C.Term.FunOf(computation.parameters, resultant)
             }
             else -> {
-                val inferred = inferComputation(computation)
-                if (!size.subtype(inferred.type, type)) {
-                    types[computation.id] = lazy { serializeTerm(quote(metaState, END)) }
-                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, type)), serializeTerm(quote(metaState, inferred.type)), computation.id))
+                val id = computation.id
+                val computation = inferComputation(computation)
+                // reevaluate types under updated environment
+                val expected = environment.evaluate(metaState, quote(metaState, type))
+                val actual = environment.evaluate(metaState, quote(metaState, computation.type))
+                if (!size.subtype(actual, expected)) {
+                    types[id] = lazy { serializeTerm(quote(metaState, END)) }
+                    diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(metaState, expected)), serializeTerm(quote(metaState, actual)), id))
                 }
-                if (!(inferred.effects sub effects)) diagnose(Diagnostic.EffectMismatch(computation.id))
-                inferred.element
+                if (!(computation.effects sub effects)) diagnose(Diagnostic.EffectMismatch(id))
+                computation.element
             }
         }
     }
