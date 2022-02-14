@@ -21,12 +21,14 @@ class NormState(
         values += value
     }
 
-    fun <R> scope(block: NormState.() -> R): R {
+    fun pop() {
+        values.removeLast()
+    }
+
+    inline fun <R> scope(block: NormState.() -> R): R {
         val size = this.size
         return block().also {
-            repeat(this.size - size) {
-                this.values.removeLast()
-            }
+            repeat(this.size - size) { pop() }
         }
     }
 

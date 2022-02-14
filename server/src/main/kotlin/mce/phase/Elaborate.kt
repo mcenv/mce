@@ -15,6 +15,8 @@ class Elaborate private constructor(
 
     private val state: NormState = NormState(mutableListOf(), items, mutableListOf())
     private val entries: MutableList<Entry> = mutableListOf()
+    private val size: Int get() = entries.size
+    private var wavefront: Int = 0
     private var meta: Boolean = false
     private var stage: Int = 0
 
@@ -37,7 +39,7 @@ class Elaborate private constructor(
             val type = state.fresh()
             Typing(checkTerm(term, type), type)
         }
-        is S.Term.Name -> when (val level = entries.indexOfLast { it.name == term.name }) {
+        is S.Term.Name -> when (val level = entries.subList(wavefront, size).indexOfLast { it.name == term.name }) {
             -1 -> {
                 val type = when (val item = items[term.name]) {
                     null -> diagnose(Diagnostic.NameNotFound(term.name, term.id))
@@ -46,6 +48,7 @@ class Elaborate private constructor(
                 Typing(C.Term.Def(term.name), type)
             }
             else -> {
+                val level = wavefront + level
                 val entry = entries[level]
                 val type = if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
                 Typing(C.Term.Variable(term.name, level), type)
@@ -184,7 +187,7 @@ class Elaborate private constructor(
         }
         is S.Term.FunOf -> {
             val types = computation.parameters.map { state.fresh() }
-            val body = scope {
+            val body = scope(true) {
                 (computation.parameters zip types).forEach { bind(computation.id, Entry(it.first, END, ANY, it.second, stage)) }
                 inferComputation(computation.body)
             }
@@ -314,7 +317,7 @@ class Elaborate private constructor(
                 }
                 C.Term.Match(scrutinee.element, clauses)
             }
-            computation is S.Term.FunOf && type is C.Value.Fun -> scope {
+            computation is S.Term.FunOf && type is C.Value.Fun -> scope(true) {
                 (computation.parameters zip type.parameters).forEach { (name, parameter) ->
                     val lower = parameter.lower?.let { eval(it) }
                     val upper = parameter.upper?.let { eval(it) }
@@ -633,8 +636,6 @@ class Elaborate private constructor(
         val stage: Int
     )
 
-    private val size: Int get() = entries.size
-
     private fun checkPhase(id: Id, type: C.Value) {
         if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
     }
@@ -649,12 +650,15 @@ class Elaborate private constructor(
         return block().also { ++stage }
     }
 
-    private fun <R> scope(block: NormState.() -> R): R {
+    private inline fun <R> scope(closed: Boolean = false, crossinline block: NormState.() -> R): R {
         val size = this.size
-        return state.scope(block).also {
+        val wavefront = this.wavefront
+        if (closed) this.wavefront = size
+        return state.scope { block(state) }.also {
             repeat(this.size - size) {
                 this.entries.removeLast()
             }
+            this.wavefront = wavefront
         }
     }
 
