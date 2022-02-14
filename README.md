@@ -14,6 +14,7 @@ flowchart TB
    AO                        --> HP[High performance]
    AO                        --> LF[Low footprint]
    OP[Output predictability] --> E[Ergonomics]
+   FC[Fast compilation]      --> E
    S                         --> F[Fun]
    HP                        --> F
    LF                        --> F
