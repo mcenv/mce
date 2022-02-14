@@ -204,12 +204,12 @@ class Elaborate private constructor(
                             val argument = eval(it)
                             parameter.lower?.let { lower ->
                                 eval(lower).let { lower ->
-                                    if (!size.subtype(lower, argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
+                                    if (!(lower subtype argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
                                 }
                             }
                             parameter.upper?.let { upper ->
                                 eval(upper).let { upper ->
-                                    if (!size.subtype(argument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
+                                    if (!(argument subtype upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
                                 }
                             }
                             bind(lazyOf(argument)) // TODO: bind?
@@ -331,7 +331,7 @@ class Elaborate private constructor(
                 // reevaluate types under updated environment
                 val expected = state.eval(state.quote(type))
                 val actual = state.eval(state.quote(computation.type))
-                if (!size.subtype(actual, expected)) {
+                if (!(actual subtype expected)) {
                     types[id] = lazy { serializeTerm(state.quote(END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(state.quote(expected)), serializeTerm(state.quote(actual)), id))
                 }
@@ -413,12 +413,12 @@ class Elaborate private constructor(
                 C.Pattern.RefOf(element)
             }
             pattern is S.Pattern.Refl && type is C.Value.Eq -> {
-                match(type.left.value, type.right.value)
+                type.left.value match type.right.value
                 C.Pattern.Refl
             }
             else -> {
                 val inferred = inferPattern(pattern)
-                if (!size.subtype(inferred.type, type)) {
+                if (!(inferred.type subtype type)) {
                     types[pattern.id] = lazy { serializeTerm(state.quote(END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(state.quote(type)), serializeTerm(state.quote(inferred.type)), pattern.id))
                 }
@@ -435,11 +435,11 @@ class Elaborate private constructor(
     }
 
     /**
-     * Checks if the [value1] and the [value2] can be unified.
+     * Checks if the [this] value and the [that] value can be unified.
      */
-    private fun Int.unify(value1: C.Value, value2: C.Value): Boolean {
-        val value1 = state.force(value1)
-        val value2 = state.force(value2)
+    private infix fun C.Value.unify(that: C.Value): Boolean {
+        val value1 = state.force(this)
+        val value2 = state.force(that)
         return when {
             value1 is C.Value.Meta && value2 is C.Value.Meta && value1.index == value2.index -> true
             value1 is C.Value.Meta -> when (val solved1 = state.getSolution(value1.index)) {
@@ -447,15 +447,15 @@ class Elaborate private constructor(
                     state.solve(value1.index, value2)
                     true
                 }
-                else -> unify(solved1, value2)
+                else -> solved1 unify value2
             }
-            value2 is C.Value.Meta -> unify(value2, value1)
+            value2 is C.Value.Meta -> value2 unify value1
             value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level == value2.level
             value1 is C.Value.Def && value2 is C.Value.Def && value1.name == value2.name -> true
-            value1 is C.Value.Def -> unify(value1.body.value, value2)
-            value2 is C.Value.Def -> unify(value1, value2.body.value)
-            value1 is C.Value.Match && value2 is C.Value.Match -> unify(value1.scrutinee, value2.scrutinee) &&
-                    (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
+            value1 is C.Value.Def -> value1.body.value unify value2
+            value2 is C.Value.Def -> value1 unify value2.body.value
+            value1 is C.Value.Match && value2 is C.Value.Match -> value1.scrutinee unify value2.scrutinee &&
+                    (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && clause1.second.value unify clause2.second.value }
             value1 is C.Value.BoolOf && value2 is C.Value.BoolOf -> value1.value == value2.value
             value1 is C.Value.ByteOf && value2 is C.Value.ByteOf -> value1.value == value2.value
             value1 is C.Value.ShortOf && value2 is C.Value.ShortOf -> value1.value == value2.value
@@ -465,27 +465,27 @@ class Elaborate private constructor(
             value1 is C.Value.DoubleOf && value2 is C.Value.DoubleOf -> value1.value == value2.value
             value1 is C.Value.StringOf && value2 is C.Value.StringOf -> value1.value == value2.value
             value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
-            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> unify(value1.element.value, value2.element.value)
+                    (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value unify value2.element.value
             value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && state.scope {
                 value1.parameters.forEach { bind(lazyOf(C.Value.Variable(it, size))) }
-                size.unify(eval(value1.body), eval(value2.body))
+                eval(value1.body) unify eval(value2.body)
             }
-            value1 is C.Value.Apply && value2 is C.Value.Apply -> unify(value1.function, value2.function) &&
-                    (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) }
-            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> unify(value1.body.value, value2.body.value)
-            value1 is C.Value.Force && value2 is C.Value.Force -> unify(value1.element.value, value2.element.value)
-            value1 is C.Value.CodeOf && value2 is C.Value.CodeOf -> unify(value1.element.value, value2.element.value)
-            value1 is C.Value.Splice && value2 is C.Value.Splice -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Apply && value2 is C.Value.Apply -> value1.function unify value2.function &&
+                    (value1.arguments zip value2.arguments).all { it.first.value unify it.second.value }
+            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> value1.body.value unify value2.body.value
+            value1 is C.Value.Force && value2 is C.Value.Force -> value1.element.value unify value2.element.value
+            value1 is C.Value.CodeOf && value2 is C.Value.CodeOf -> value1.element.value unify value2.element.value
+            value1 is C.Value.Splice && value2 is C.Value.Splice -> value1.element.value unify value2.element.value
             value1 is C.Value.Union && value1.variants.isEmpty() && value2 is C.Value.Union && value2.variants.isEmpty() -> true
             value1 is C.Value.Intersection && value1.variants.isEmpty() && value2 is C.Value.Intersection && value2.variants.isEmpty() -> true
             value1 is C.Value.Bool && value2 is C.Value.Bool -> true
@@ -499,89 +499,89 @@ class Elaborate private constructor(
             value1 is C.Value.ByteArray && value2 is C.Value.ByteArray -> true
             value1 is C.Value.IntArray && value2 is C.Value.IntArray -> true
             value1 is C.Value.LongArray && value2 is C.Value.LongArray -> true
-            value1 is C.Value.List && value2 is C.Value.List -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.List && value2 is C.Value.List -> value1.element.value unify value2.element.value
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size && scope {
                 (value1.elements zip value2.elements).all { (element1, element2) ->
-                    size.unify(eval(element1.second), eval(element2.second)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                    (eval(element1.second) unify eval(element2.second)).also { bind(lazyOf(C.Value.Variable("", size))) }
                 }
             }
-            value1 is C.Value.Ref && value2 is C.Value.Ref -> unify(value1.element.value, value2.element.value)
-            value1 is C.Value.Eq && value2 is C.Value.Eq -> unify(value1.left.value, value2.left.value) && unify(value1.right.value, value2.right.value)
+            value1 is C.Value.Ref && value2 is C.Value.Ref -> value1.element.value unify value2.element.value
+            value1 is C.Value.Eq && value2 is C.Value.Eq -> value1.left.value unify value2.left.value && value1.right.value unify value2.right.value
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && scope {
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
-                    size.unify(eval(parameter2.type), eval(parameter1.type)).also { bind(lazyOf(C.Value.Variable("", size))) }
-                } && size.unify(eval(value1.resultant), eval(value2.resultant))
+                    (eval(parameter2.type) unify eval(parameter1.type)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                } && eval(value1.resultant) unify eval(value2.resultant)
             }
-            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> unify(value1.element.value, value2.element.value)
-            value1 is C.Value.Code && value2 is C.Value.Code -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> value1.element.value unify value2.element.value
+            value1 is C.Value.Code && value2 is C.Value.Code -> value1.element.value unify value2.element.value
             value1 is C.Value.Type && value2 is C.Value.Type -> true
             else -> false
         }
     }
 
     /**
-     * Checks if the [value1] is a subtype of the [value2] under this level.
+     * Checks if the [this] value is a subtype of the [that] value under this level.
      */
-    private fun Int.subtype(value1: C.Value, value2: C.Value): Boolean {
-        val value1 = state.force(value1)
-        val value2 = state.force(value2)
+    private infix fun C.Value.subtype(that: C.Value): Boolean {
+        val value1 = state.force(this)
+        val value2 = state.force(that)
         return when {
             value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
+                    (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { subtype(it.first.value, it.second.value) }
-            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> subtype(value1.element.value, value2.element.value)
+                    (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value subtype value2.element.value
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && scope {
                 value1.parameters.forEach { parameter -> bind(lazyOf(C.Value.Variable(parameter, size))) }
-                size.subtype(eval(value1.body), eval(value2.body))
+                eval(value1.body) subtype eval(value2.body)
             }
-            value1 is C.Value.Apply && value2 is C.Value.Apply -> subtype(value1.function, value2.function) &&
-                    (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) /* pointwise subtyping */ }
-            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> subtype(value1.body.value, value2.body.value)
-            value1 is C.Value.Force && value2 is C.Value.Force -> subtype(value1.element.value, value2.element.value)
-            value1 is C.Value.Union -> value1.variants.all { subtype(it.value, value2) }
-            value2 is C.Value.Union -> value2.variants.any { subtype(value1, it.value) }
-            value1 is C.Value.Intersection -> value1.variants.any { subtype(it.value, value2) }
-            value2 is C.Value.Intersection -> value2.variants.all { subtype(value1, it.value) }
-            value1 is C.Value.List && value2 is C.Value.List -> subtype(value1.element.value, value2.element.value)
+            value1 is C.Value.Apply && value2 is C.Value.Apply -> value1.function subtype value2.function &&
+                    (value1.arguments zip value2.arguments).all { it.first.value unify it.second.value /* pointwise subtyping */ }
+            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> value1.body.value subtype value2.body.value
+            value1 is C.Value.Force && value2 is C.Value.Force -> value1.element.value subtype value2.element.value
+            value1 is C.Value.Union -> value1.variants.all { it.value subtype value2 }
+            value2 is C.Value.Union -> value2.variants.any { value1 subtype it.value }
+            value1 is C.Value.Intersection -> value1.variants.any { it.value subtype value2 }
+            value2 is C.Value.Intersection -> value2.variants.all { value1 subtype it.value }
+            value1 is C.Value.List && value2 is C.Value.List -> value1.element.value subtype value2.element.value
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size && scope {
                 (value1.elements zip value2.elements).all { (elements1, elements2) ->
-                    size.subtype(eval(elements1.second), eval(elements2.second)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                    (eval(elements1.second) subtype eval(elements2.second)).also { bind(lazyOf(C.Value.Variable("", size))) }
                 }
             }
-            value1 is C.Value.Ref && value2 is C.Value.Ref -> subtype(value1.element.value, value2.element.value)
+            value1 is C.Value.Ref && value2 is C.Value.Ref -> value1.element.value subtype value2.element.value
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && scope {
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
-                    size.subtype(eval(parameter2.type), eval(parameter1.type)).also { bind(lazyOf(C.Value.Variable("", size))) }
-                } && size.subtype(eval(value1.resultant), eval(value2.resultant))
+                    (eval(parameter2.type) subtype eval(parameter1.type)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                } && eval(value1.resultant) subtype eval(value2.resultant)
             }
-            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> subtype(value1.element.value, value2.element.value) && value1.effects sub value2.effects
-            value1 is C.Value.Code && value2 is C.Value.Code -> subtype(value1.element.value, value2.element.value)
-            else -> unify(value1, value2)
+            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> value1.element.value subtype value2.element.value && value1.effects sub value2.effects
+            value1 is C.Value.Code && value2 is C.Value.Code -> value1.element.value subtype value2.element.value
+            else -> value1 unify value2
         }
     }
 
     /**
-     * Matches the [value1] and the [value2].
+     * Matches the [this] value and the [that] value.
      */
-    private fun match(value1: C.Value, value2: C.Value) {
-        val value1 = state.force(value1)
-        val value2 = state.force(value2)
+    private infix fun C.Value.match(that: C.Value) {
+        val value1 = state.force(this)
+        val value2 = state.force(that)
         when {
             value1 is C.Value.Variable -> state.substitute(value1.level, lazyOf(value2))
             value2 is C.Value.Variable -> state.substitute(value2.level, lazyOf(value1))
-            value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
-            value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
-            value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
-            value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
-            value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { match(it.first.value, it.second.value) }
-            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> match(value1.element.value, value2.element.value)
+            value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
+            value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
+            value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
+            value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
+            value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value match value2.element.value
             else -> { /* TODO */
             }
         }
