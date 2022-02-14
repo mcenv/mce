@@ -13,7 +13,7 @@ class Elaborate private constructor(
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val types: MutableMap<Id, Lazy<S.Term>> = mutableMapOf()
 
-    private val state: Normalizer = Normalizer(mutableListOf(), items, mutableListOf())
+    private val normalizer: Normalizer = Normalizer(mutableListOf(), items, mutableListOf())
     private val entries: MutableList<Entry> = mutableListOf()
     private val size: Int get() = entries.size
     private var wavefront: Int = 0
@@ -23,7 +23,7 @@ class Elaborate private constructor(
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Def -> {
             meta = item.modifiers.contains(S.Modifier.META)
-            val type = state.eval(checkTerm(item.type, C.Value.Type))
+            val type = normalizer.eval(checkTerm(item.type, C.Value.Type))
             val body = checkTerm(item.body, type)
             checkPhase(item.body.id, type)
             C.Item.Def(item.imports, item.exports, item.name, type, body)
@@ -34,9 +34,9 @@ class Elaborate private constructor(
      * Infers the type of the [term] under this context.
      */
     private fun inferTerm(term: S.Term): Typing<C.Term> = when (term) {
-        is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(state.quote(END)), term.id)))
+        is S.Term.Hole -> Typing(C.Term.Hole, diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(END)), term.id)))
         is S.Term.Meta -> {
-            val type = state.fresh()
+            val type = normalizer.fresh()
             Typing(checkTerm(term, type), type)
         }
         is S.Term.Name -> when (val level = entries.subList(wavefront, size).indexOfLast { it.name == term.name }) {
@@ -81,14 +81,14 @@ class Elaborate private constructor(
         }
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { "" to inferTerm(it) }
-            Typing(C.Term.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to state.quote(it.second.type) }))
+            Typing(C.Term.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
         }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)
             Typing(C.Term.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
         is S.Term.Refl -> {
-            val left = lazy { state.fresh() }
+            val left = lazy { normalizer.fresh() }
             Typing(C.Term.Refl, C.Value.Eq(left, left))
         }
         is S.Term.ThunkOf -> {
@@ -101,7 +101,7 @@ class Elaborate private constructor(
         }
         is S.Term.Splice -> {
             val element = down { inferTerm(term.element) }
-            val type = when (val type = state.force(element.type)) {
+            val type = when (val type = normalizer.force(element.type)) {
                 is C.Value.Code -> type.element.value
                 else -> diagnose(Diagnostic.CodeExpected(term.id))
             }
@@ -159,7 +159,7 @@ class Elaborate private constructor(
         else -> inferComputation(term).also {
             if (!it.effects.isPure()) diagnose(Diagnostic.EffectMismatch(term.id))
         }
-    }.also { types[term.id] = lazy { serializeTerm(state.quote(it.type)) } }
+    }.also { types[term.id] = lazy { serializeTerm(normalizer.quote(it.type)) } }
 
     /**
      * Infers the type of the [computation] under this context.
@@ -174,7 +174,7 @@ class Elaborate private constructor(
             Typing(C.Term.Let(computation.name, init.element, body.element), body.type, init.effects + body.effects)
         }
         is S.Term.Match -> {
-            val type = state.fresh() // TODO: use union of element types
+            val type = normalizer.fresh() // TODO: use union of element types
             val scrutinee = inferTerm(computation.scrutinee)
             val clauses = computation.clauses.map { (pattern, body) ->
                 scope {
@@ -186,18 +186,18 @@ class Elaborate private constructor(
             Typing(C.Term.Match(scrutinee.element, clauses), type)
         }
         is S.Term.FunOf -> {
-            val types = computation.parameters.map { state.fresh() }
+            val types = computation.parameters.map { normalizer.fresh() }
             val body = scope(true) {
                 (computation.parameters zip types).forEach { bind(computation.id, Entry(it.first, END, ANY, it.second, stage)) }
                 inferComputation(computation.body)
             }
-            val parameters = (computation.parameters zip types).map { C.Parameter(it.first, state.quote(END), state.quote(ANY), state.quote(it.second)) }
-            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, state.quote(body.type)), body.effects)
+            val parameters = (computation.parameters zip types).map { C.Parameter(it.first, normalizer.quote(END), normalizer.quote(ANY), normalizer.quote(it.second)) }
+            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, normalizer.quote(body.type)), body.effects)
         }
         is S.Term.Apply -> {
             val function = inferComputation(computation.function)
-            when (val type = state.force(function.type)) {
-                is C.Value.Fun -> state.scope {
+            when (val type = normalizer.force(function.type)) {
+                is C.Value.Fun -> normalizer.scope {
                     val arguments = (computation.arguments zip type.parameters).map { (argument, parameter) ->
                         checkTerm(argument, eval(parameter.type)).also {
                             val id = argument.id
@@ -223,7 +223,7 @@ class Elaborate private constructor(
         }
         is S.Term.Force -> {
             val element = inferTerm(computation.element)
-            when (val type = state.force(element.type)) {
+            when (val type = normalizer.force(element.type)) {
                 is C.Value.Thunk -> Typing(C.Term.Force(element.element), type.element.value, type.effects)
                 else -> Typing(C.Term.Force(element.element), diagnose(Diagnostic.ThunkExpected(computation.element.id)))
             }
@@ -253,19 +253,19 @@ class Elaborate private constructor(
      * Checks the [term] against the [type] under this context.
      */
     private fun checkTerm(term: S.Term, type: C.Value): C.Term {
-        val type = state.force(type)
-        types[term.id] = lazy { serializeTerm(state.quote(type)) }
+        val type = normalizer.force(type)
+        types[term.id] = lazy { serializeTerm(normalizer.quote(type)) }
         return when {
             term is S.Term.Hole -> {
-                diagnose(Diagnostic.TermExpected(serializeTerm(state.quote(type)), term.id))
+                diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(type)), term.id))
                 C.Term.Hole
             }
-            term is S.Term.Meta -> state.quote(state.fresh())
+            term is S.Term.Meta -> normalizer.quote(normalizer.fresh())
             term is S.Term.ListOf && type is C.Value.List -> {
                 val elements = term.elements.map { checkTerm(it, type.element.value) }
                 C.Term.ListOf(elements)
             }
-            term is S.Term.CompoundOf && type is C.Value.Compound -> state.scope {
+            term is S.Term.CompoundOf && type is C.Value.Compound -> normalizer.scope {
                 val elements = (term.elements zip type.elements).map { (term, type) ->
                     checkTerm(term, eval(type.second)).also {
                         bind(lazy { eval(it) })
@@ -293,8 +293,8 @@ class Elaborate private constructor(
      * Checks the [computation] against the [type] and the [effects] under this context.
      */
     private fun checkComputation(computation: S.Term, type: C.Value, effects: C.Effects): C.Term {
-        val type = state.force(type)
-        types[computation.id] = lazy { serializeTerm(state.quote(type)) }
+        val type = normalizer.force(type)
+        types[computation.id] = lazy { serializeTerm(normalizer.quote(type)) }
         return when {
             computation is S.Term.Let -> {
                 val init = inferComputation(computation.init)
@@ -329,11 +329,11 @@ class Elaborate private constructor(
                 val id = computation.id
                 val computation = inferComputation(computation)
                 // reevaluate types under updated environment
-                val expected = state.eval(state.quote(type))
-                val actual = state.eval(state.quote(computation.type))
+                val expected = normalizer.eval(normalizer.quote(type))
+                val actual = normalizer.eval(normalizer.quote(computation.type))
                 if (!(actual subtype expected)) {
-                    types[id] = lazy { serializeTerm(state.quote(END)) }
-                    diagnose(Diagnostic.TypeMismatch(serializeTerm(state.quote(expected)), serializeTerm(state.quote(actual)), id))
+                    types[id] = lazy { serializeTerm(normalizer.quote(END)) }
+                    diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(expected)), serializeTerm(normalizer.quote(actual)), id))
                 }
                 if (!(computation.effects sub effects)) diagnose(Diagnostic.EffectMismatch(id))
                 computation.element
@@ -346,7 +346,7 @@ class Elaborate private constructor(
      */
     private fun inferPattern(pattern: S.Pattern): Typing<C.Pattern> = when (pattern) {
         is S.Pattern.Variable -> {
-            val type = state.fresh()
+            val type = normalizer.fresh()
             bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
             Typing(C.Pattern.Variable(pattern.name), type)
         }
@@ -377,24 +377,24 @@ class Elaborate private constructor(
         }
         is S.Pattern.CompoundOf -> {
             val elements = pattern.elements.map { "" to inferPattern(it) }
-            Typing(C.Pattern.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to state.quote(it.second.type) }))
+            Typing(C.Pattern.CompoundOf(elements.map { it.second.element }), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
         }
         is S.Pattern.RefOf -> {
             val element = inferPattern(pattern.element)
             Typing(C.Pattern.RefOf(element.element), C.Value.Ref(lazyOf(element.type)))
         }
         is S.Pattern.Refl -> {
-            val left = lazy { state.fresh() }
+            val left = lazy { normalizer.fresh() }
             Typing(C.Pattern.Refl, C.Value.Eq(left, left))
         }
-    }.also { types[pattern.id] = lazy { serializeTerm(state.quote(it.type)) } }
+    }.also { types[pattern.id] = lazy { serializeTerm(normalizer.quote(it.type)) } }
 
     /**
      * Checks the [pattern] against the [type] under this context.
      */
     private fun checkPattern(pattern: S.Pattern, type: C.Value): C.Pattern {
-        val type = state.force(type)
-        types[pattern.id] = lazy { serializeTerm(state.quote(type)) }
+        val type = normalizer.force(type)
+        types[pattern.id] = lazy { serializeTerm(normalizer.quote(type)) }
         return when {
             pattern is S.Pattern.Variable -> {
                 bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
@@ -405,7 +405,7 @@ class Elaborate private constructor(
                 C.Pattern.ListOf(elements)
             }
             pattern is S.Pattern.CompoundOf && type is C.Value.Compound -> {
-                val elements = (pattern.elements zip type.elements).map { checkPattern(it.first, state.eval(it.second.second)) }
+                val elements = (pattern.elements zip type.elements).map { checkPattern(it.first, normalizer.eval(it.second.second)) }
                 C.Pattern.CompoundOf(elements)
             }
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
@@ -419,8 +419,8 @@ class Elaborate private constructor(
             else -> {
                 val inferred = inferPattern(pattern)
                 if (!(inferred.type subtype type)) {
-                    types[pattern.id] = lazy { serializeTerm(state.quote(END)) }
-                    diagnose(Diagnostic.TypeMismatch(serializeTerm(state.quote(type)), serializeTerm(state.quote(inferred.type)), pattern.id))
+                    types[pattern.id] = lazy { serializeTerm(normalizer.quote(END)) }
+                    diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(type)), serializeTerm(normalizer.quote(inferred.type)), pattern.id))
                 }
                 inferred.element
             }
@@ -438,13 +438,13 @@ class Elaborate private constructor(
      * Checks if the [this] value and the [that] value can be unified.
      */
     private infix fun C.Value.unify(that: C.Value): Boolean {
-        val value1 = state.force(this)
-        val value2 = state.force(that)
+        val value1 = normalizer.force(this)
+        val value2 = normalizer.force(that)
         return when {
             value1 is C.Value.Meta && value2 is C.Value.Meta && value1.index == value2.index -> true
-            value1 is C.Value.Meta -> when (val solved1 = state.getSolution(value1.index)) {
+            value1 is C.Value.Meta -> when (val solved1 = normalizer.getSolution(value1.index)) {
                 null -> {
-                    state.solve(value1.index, value2)
+                    normalizer.solve(value1.index, value2)
                     true
                 }
                 else -> solved1 unify value2
@@ -476,7 +476,7 @@ class Elaborate private constructor(
             value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
-            value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && state.scope {
+            value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && normalizer.scope {
                 value1.parameters.forEach { bind(lazyOf(C.Value.Variable(it, size))) }
                 eval(value1.body) unify eval(value2.body)
             }
@@ -523,8 +523,8 @@ class Elaborate private constructor(
      * Checks if the [this] value is a subtype of the [that] value under this level.
      */
     private infix fun C.Value.subtype(that: C.Value): Boolean {
-        val value1 = state.force(this)
-        val value2 = state.force(that)
+        val value1 = normalizer.force(this)
+        val value2 = normalizer.force(that)
         return when {
             value1 is C.Value.Variable && entries[value1.level].upper != null -> entries[value1.level].upper!! subtype value2
             value2 is C.Value.Variable && entries[value2.level].lower != null -> value1 subtype entries[value2.level].lower!!
@@ -573,11 +573,11 @@ class Elaborate private constructor(
      * Matches the [this] value and the [that] value.
      */
     private infix fun C.Value.match(that: C.Value) {
-        val value1 = state.force(this)
-        val value2 = state.force(that)
+        val value1 = normalizer.force(this)
+        val value2 = normalizer.force(that)
         when {
-            value1 is C.Value.Variable -> state.substitute(value1.level, lazyOf(value2))
-            value2 is C.Value.Variable -> state.substitute(value2.level, lazyOf(value1))
+            value1 is C.Value.Variable -> normalizer.substitute(value1.level, lazyOf(value2))
+            value2 is C.Value.Variable -> normalizer.substitute(value2.level, lazyOf(value1))
             value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
@@ -654,7 +654,7 @@ class Elaborate private constructor(
         val size = this.size
         val wavefront = this.wavefront
         if (closed) this.wavefront = size
-        return state.scope { block(state) }.also {
+        return normalizer.scope { block(normalizer) }.also {
             repeat(this.size - size) {
                 this.entries.removeLast()
             }
@@ -665,7 +665,7 @@ class Elaborate private constructor(
     private fun bind(id: Id, entry: Entry, value: C.Value? = null) {
         checkPhase(id, entry.type)
         entries += entry
-        state.bind(lazyOf(value ?: C.Value.Variable(entry.name, state.size)))
+        normalizer.bind(lazyOf(value ?: C.Value.Variable(entry.name, normalizer.size)))
     }
 
     companion object {
@@ -673,7 +673,7 @@ class Elaborate private constructor(
         private val ANY: C.Value.Intersection = C.Value.Intersection(emptyList())
 
         operator fun invoke(items: Map<String, C.Item>, item: S.Item): Output = Elaborate(items).run {
-            Output(elaborateItem(item), state, diagnostics, types)
+            Output(elaborateItem(item), normalizer, diagnostics, types)
         }
     }
 }
