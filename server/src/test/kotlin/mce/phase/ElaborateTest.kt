@@ -202,4 +202,9 @@ class ElaborateTest {
     fun unfoldDef() {
         elaborate("unfold_def").success()
     }
+
+    @Test
+    fun subtypeTrans() {
+        elaborate("subtype_trans").success()
+    }
 }

@@ -526,6 +526,8 @@ class Elaborate private constructor(
         val value1 = state.force(this)
         val value2 = state.force(that)
         return when {
+            value1 is C.Value.Variable && entries[value1.level].upper != null -> entries[value1.level].upper!! subtype value2
+            value2 is C.Value.Variable && entries[value2.level].lower != null -> value1 subtype entries[value2.level].lower!!
             value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> value1.elements.size == value2.elements.size &&
