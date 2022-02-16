@@ -50,13 +50,21 @@ class Parse private constructor(
     private fun parseTerm(id: Id = freshId()): S.Term {
         var left = parseAtomTerm(id)
         skipWhitespace()
-        while (canRead() && peek().isWordPart()) {
-            val operator = parseAtomTerm()
-            val right = parseAtomTerm()
-            left = S.Term.Apply(operator, listOf(left, right), id)
-            skipWhitespace()
+        return if (!canRead()) {
+            left
+        } else if (peek() == '[') {
+            skip()
+            val arguments = parseList(']', ::parseTerm)
+            S.Term.Apply(left, arguments, id)
+        } else {
+            while (canRead() && peek().isWordPart()) {
+                val operator = parseAtomTerm()
+                val right = parseAtomTerm()
+                left = S.Term.Apply(operator, listOf(left, right), id)
+                skipWhitespace()
+            }
+            left
         }
-        return left
     }
 
     private fun parseAtomTerm(id: Id = freshId()): S.Term = when (peekChar()) {
@@ -106,15 +114,6 @@ class Parse private constructor(
             val body = parseTerm()
             S.Term.FunOf(parameters, body, id)
         }
-        '@' -> {
-            skip()
-            val function = parseAtomTerm()
-            val arguments = run {
-                expect('[')
-                parseList(']', ::parseTerm)
-            }
-            S.Term.Apply(function, arguments, id)
-        }
         '~' -> {
             skip()
             S.Term.ThunkOf(parseAtomTerm(), id)
@@ -141,7 +140,7 @@ class Parse private constructor(
                 S.Term.Let(name, init, body, id)
             }
             "match" -> {
-                val scrutinee = parseTerm()
+                val scrutinee = parseAtomTerm()
                 expect('[')
                 val clauses = parseList(']') { parsePair(::parsePattern, { expectString("=>") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
