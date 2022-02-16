@@ -218,4 +218,9 @@ class ElaborateTest {
         val (_, _, diagnostics, _) = elaborate("builtin_ill_typed")
         assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun useBuiltin() {
+        elaborate("use_builtin").success()
+    }
 }

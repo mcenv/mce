@@ -343,7 +343,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    private fun Char.isWordPart(): Boolean = this.isLetterOrDigit() || this == '_' || this == '-' || this == '.'
+    private fun Char.isWordPart(): Boolean = this.isLetterOrDigit() || this == '_' || this == '-' || this == '.' || this == '/'
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 

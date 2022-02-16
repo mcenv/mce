@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.BUILTINS
 import mce.graph.Id
 import mce.graph.Core as C
 
@@ -9,10 +10,6 @@ class Normalizer(
     private val solutions: MutableList<C.Value?>
 ) {
     val size: Int get() = values.size
-
-    fun getItem(name: String): C.Item = items[name]!!
-
-    fun lookup(level: Int): C.Value = values[level].value
 
     fun substitute(level: Int, value: Lazy<C.Value>) {
         values[level] = value
@@ -67,8 +64,11 @@ class Normalizer(
     fun eval(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
         is C.Term.Meta -> getSolution(term.index) ?: C.Value.Meta(term.index, term.id)
-        is C.Term.Variable -> lookup(term.level)
-        is C.Term.Def -> C.Value.Def(term.name, lazy { eval((getItem(term.name) as C.Item.Def).body) })
+        is C.Term.Variable -> values[term.level].value
+        is C.Term.Def -> {
+            val item = items[term.name]!! as C.Item.Def
+            if (item.modifiers.contains(C.Modifier.BUILTIN)) C.Value.Def(term.name) else eval(item.body)
+        }
         is C.Term.Let -> scope {
             bind(lazy { eval(term.init) })
             eval(term.body)
@@ -91,6 +91,7 @@ class Normalizer(
         is C.Term.Refl -> C.Value.Refl
         is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body)
         is C.Term.Apply -> when (val function = eval(term.function)) {
+            is C.Value.Def -> BUILTINS[function.name]!!(term.arguments.map { lazy { eval(it) } })
             is C.Value.FunOf -> scope {
                 term.arguments.forEach { bind(lazy { eval(it) }) }
                 eval(function.body)

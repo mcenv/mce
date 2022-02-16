@@ -21,12 +21,13 @@ object Core {
     sealed class Item {
         abstract val imports: KList<KString>
         abstract val exports: KList<KString>
+        abstract val modifiers: KSet<Modifier>
         abstract val name: KString
 
         data class Def(
             override val imports: KList<KString>,
             override val exports: KList<KString>,
-            val modifiers: KSet<Modifier>,
+            override val modifiers: KSet<Modifier>,
             override val name: KString,
             val type: Value,
             val body: Term
@@ -121,7 +122,7 @@ object Core {
         object Hole : Value()
         data class Meta(val index: KInt, val id: Id) : Value()
         data class Variable(val name: KString, val level: KInt) : Value()
-        data class Def(val name: KString, val body: Lazy<Value>) : Value()
+        data class Def(val name: KString) : Value()
         data class Match(val scrutinee: Value, val clauses: KList<Pair<Pattern, Lazy<Value>>>) : Value()
         data class BoolOf(val value: KBoolean) : Value()
         data class ByteOf(val value: KByte) : Value()

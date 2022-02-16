@@ -1,0 +1,5 @@
+import {int/add}
+
+export {}
+
+def {} : eq 2 (@int/add [1, 1]) = refl

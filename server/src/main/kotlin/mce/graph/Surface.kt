@@ -14,12 +14,13 @@ object Surface {
     sealed class Item {
         abstract val imports: KList<KString>
         abstract val exports: KList<KString>
+        abstract val modifiers: KList<Modifier>
         abstract val name: KString
 
         data class Def(
             override val imports: KList<KString>,
             override val exports: KList<KString>,
-            val modifiers: KList<Modifier>,
+            override val modifiers: KList<Modifier>,
             override val name: KString,
             val type: Term,
             val body: Term
