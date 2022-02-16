@@ -22,7 +22,7 @@ class ElaborateTest {
         val (item, _, _, types) = elaborate("elaborate").success()
         assertIs<S.Term.Type>(types[UUID(0, 0)]!!.value)
         assertIs<S.Term.Bool>(types[UUID(0, 1)]!!.value)
-        assertEquals(C.Item.Def(emptyList(), emptyList(), "elaborate", C.Value.Bool, C.Term.BoolOf(false)), item)
+        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", C.Value.Bool, C.Term.BoolOf(false)), item)
     }
 
     @Test
@@ -206,5 +206,16 @@ class ElaborateTest {
     @Test
     fun subtypeTrans() {
         elaborate("subtype_trans").success()
+    }
+
+    @Test
+    fun builtin() {
+        elaborate("builtin").success()
+    }
+
+    @Test
+    fun builtinIllTyped() {
+        val (_, _, diagnostics, _) = elaborate("builtin_ill_typed")
+        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
     }
 }

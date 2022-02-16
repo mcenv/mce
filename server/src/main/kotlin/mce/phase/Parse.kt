@@ -42,12 +42,17 @@ class Parse private constructor(
     }
 
     private fun parseModifier(): S.Modifier = when (val word = readWord()) {
+        "builtin" -> S.Modifier.BUILTIN
         "meta" -> S.Modifier.META
         else -> error("unexpected modifier '$word'")
     }
 
     private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
         '(' -> parseParen { parseTerm(it) }
+        '_' -> {
+            skip()
+            S.Term.Hole(id)
+        }
         '?' -> {
             skip()
             S.Term.Meta(id)
@@ -115,7 +120,6 @@ class Parse private constructor(
             S.Term.Splice(parseTerm(), id)
         }
         else -> when (val word = readWord()) {
-            "hole" -> S.Term.Hole(id)
             "let" -> {
                 val name = readWord()
                 expect('=')

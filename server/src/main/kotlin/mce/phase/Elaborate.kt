@@ -23,11 +23,17 @@ class Elaborate private constructor(
     private fun elaborateItem(item: S.Item): C.Item = when (item) {
         is S.Item.Def -> {
             meta = item.modifiers.contains(S.Modifier.META)
+            val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
             val type = normalizer.eval(checkTerm(item.type, C.Value.Type))
-            val body = checkTerm(item.body, type)
+            val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole else checkTerm(item.body, type)
             checkPhase(item.body.id, type)
-            C.Item.Def(item.imports, item.exports, item.name, type, body)
+            C.Item.Def(item.imports, item.exports, modifiers, item.name, type, body)
         }
+    }
+
+    private fun elaborateModifier(modifier: S.Modifier): C.Modifier = when (modifier) {
+        S.Modifier.BUILTIN -> C.Modifier.BUILTIN
+        S.Modifier.META -> C.Modifier.META
     }
 
     /**

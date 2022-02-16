@@ -1,0 +1,5 @@
+import {}
+
+export {}
+
+def {builtin} : false = _

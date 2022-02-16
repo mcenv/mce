@@ -26,10 +26,16 @@ object Core {
         data class Def(
             override val imports: KList<KString>,
             override val exports: KList<KString>,
+            val modifiers: KSet<Modifier>,
             override val name: KString,
             val type: Value,
             val body: Term
         ) : Item()
+    }
+
+    enum class Modifier {
+        BUILTIN,
+        META
     }
 
     /**

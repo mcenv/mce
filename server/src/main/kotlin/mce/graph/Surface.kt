@@ -27,6 +27,7 @@ object Surface {
     }
 
     enum class Modifier {
+        BUILTIN,
         META
     }
 
