@@ -1,0 +1,5 @@
+import {int/mod}
+
+export {}
+
+def {} : fun [a : int] -> (a int/mod a) = 0 := \[a] -> refl

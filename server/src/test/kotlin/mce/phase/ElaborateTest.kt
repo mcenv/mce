@@ -288,4 +288,19 @@ class ElaborateTest {
     fun addConstComm() {
         elaborate("add_const_comm").success()
     }
+
+    @Test
+    fun subSelf() {
+        elaborate("sub_self").success()
+    }
+
+    @Test
+    fun divSelf() {
+        elaborate("div_self").success()
+    }
+
+    @Test
+    fun modSelf() {
+        elaborate("mod_self").success()
+    }
 }
