@@ -56,6 +56,10 @@ class Parse private constructor(
             skip()
             val arguments = parseList(']', ::parseTerm)
             S.Term.Apply(left, arguments, id)
+        } else if (peek() == '=') {
+            skip()
+            val right = parseAtomTerm()
+            S.Term.Eq(left, right, id)
         } else {
             while (canRead() && peek().isWordPart()) {
                 val operator = parseAtomTerm()
@@ -183,11 +187,6 @@ class Parse private constructor(
                 S.Term.Compound(elements, id)
             }
             "ref" -> S.Term.Ref(parseAtomTerm(), id)
-            "eq" -> {
-                val left = parseAtomTerm()
-                val right = parseAtomTerm()
-                S.Term.Eq(left, right, id)
-            }
             "fun" -> {
                 val parameters = run {
                     expect('[')
