@@ -1,0 +1,5 @@
+import {int/add}
+
+export {}
+
+def {} : eq (\[a, b] @int/add [a, b]) (\[a, b] @int/add [a, b]) = refl

@@ -223,4 +223,9 @@ class ElaborateTest {
     fun useBuiltin() {
         elaborate("use_builtin").success()
     }
+
+    @Test
+    fun builtinOpen() {
+        elaborate("builtin_open").success()
+    }
 }

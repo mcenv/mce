@@ -90,13 +90,17 @@ class Normalizer(
         is C.Term.RefOf -> C.Value.RefOf(lazy { eval(term.element) })
         is C.Term.Refl -> C.Value.Refl
         is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body)
-        is C.Term.Apply -> when (val function = eval(term.function)) {
-            is C.Value.Def -> BUILTINS[function.name]!!(term.arguments.map { lazy { eval(it) } })
-            is C.Value.FunOf -> scope {
-                term.arguments.forEach { bind(lazy { eval(it) }) }
-                eval(function.body)
+        is C.Term.Apply -> {
+            val function = eval(term.function)
+            val arguments = term.arguments.map { lazy { eval(it) } }
+            when {
+                function is C.Value.Def && arguments.all { it.value !is C.Value.Variable } -> BUILTINS[function.name]!!(arguments)
+                function is C.Value.FunOf -> scope {
+                    arguments.forEach { bind(it) }
+                    eval(function.body)
+                }
+                else -> C.Value.Apply(function, arguments)
             }
-            else -> C.Value.Apply(function, term.arguments.map { lazy { eval(it) } })
         }
         is C.Term.ThunkOf -> C.Value.ThunkOf(lazy { eval(term.body) })
         is C.Term.Force -> when (val thunk = eval(term.element)) {
