@@ -273,4 +273,19 @@ class ElaborateTest {
     fun modOne() {
         elaborate("mod_one").success()
     }
+
+    @Test
+    fun addComm() {
+        elaborate("add_comm").success()
+    }
+
+    @Test
+    fun mulComm() {
+        elaborate("mul_comm").success()
+    }
+
+    @Test
+    fun addConstComm() {
+        elaborate("add_const_comm").success()
+    }
 }

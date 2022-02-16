@@ -2,17 +2,27 @@ package mce
 
 import mce.graph.Core as C
 
+@Suppress("NAME_SHADOWING")
+private val COMM: Comparator<Lazy<C.Value>> = Comparator { value1, value2 ->
+    val value1 = value1.value
+    val value2 = value2.value
+    when {
+        value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level.compareTo(value2.level)
+        value1 is C.Value.Variable -> 1
+        value2 is C.Value.Variable -> -1
+        else -> 0
+    }
+}
+
 val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
     "int/add" to { arguments ->
         val a = arguments[0].value
         val b = arguments[1].value
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(a.value + b.value)
-            // 0 + b = b
             a is C.Value.IntOf && a.value == 0 -> b
-            // a + 0 = a
             b is C.Value.IntOf && b.value == 0 -> a
-            else -> C.Value.Apply(C.Value.Def("int/add"), arguments)
+            else -> C.Value.Apply(C.Value.Def("int/add"), arguments.sortedWith(COMM))
         }
     },
     "int/sub" to { arguments ->
@@ -38,7 +48,7 @@ val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
             a is C.Value.IntOf && a.value == 1 -> b
             // a * 1 = a
             b is C.Value.IntOf && b.value == 1 -> a
-            else -> C.Value.Apply(C.Value.Def("int/mul"), arguments)
+            else -> C.Value.Apply(C.Value.Def("int/mul"), arguments.sortedWith(COMM))
         }
     },
     "int/div" to { arguments ->

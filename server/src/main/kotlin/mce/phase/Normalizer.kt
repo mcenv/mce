@@ -93,7 +93,10 @@ class Normalizer(
         is C.Term.Apply -> {
             val arguments = term.arguments.map { lazy { eval(it) } }
             when (val function = eval(term.function)) {
-                is C.Value.Def -> BUILTINS[function.name]!!(arguments)
+                is C.Value.Def -> {
+                    arguments.forEach { bind(it) }
+                    BUILTINS[function.name]!!(arguments)
+                }
                 is C.Value.FunOf -> scope {
                     arguments.forEach { bind(it) }
                     eval(function.body)
