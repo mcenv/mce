@@ -2,4 +2,4 @@ import {int/mul}
 
 export {}
 
-def {} : fun [a : int] eq (0 int/mul a) 0 = \[a] refl
+def {} : fun [a : int] -> eq (0 int/mul a) 0 = \[a] -> refl

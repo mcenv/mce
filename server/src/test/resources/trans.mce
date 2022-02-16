@@ -2,8 +2,8 @@ import {}
 
 export {}
 
-def {} : fun [a : bool, b : bool, c : bool, p : eq a b, q : eq b c] eq a c =
-  \[a, b, c, p, q] match p [
+def {} : fun [a : bool, b : bool, c : bool, p : eq a b, q : eq b c] -> eq a c =
+  \[a, b, c, p, q] -> match p [
     refl => match q [
       refl => refl
     ]

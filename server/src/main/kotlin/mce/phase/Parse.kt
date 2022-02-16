@@ -111,6 +111,7 @@ class Parse private constructor(
                 expect('[')
                 parseList(']', ::readWord)
             }
+            expectString("->")
             val body = parseTerm()
             S.Term.FunOf(parameters, body, id)
         }
@@ -207,6 +208,7 @@ class Parse private constructor(
                         S.Parameter(name, lower, upper, type)
                     }
                 }
+                expectString("->")
                 val resultant = parseTerm()
                 S.Term.Fun(parameters, resultant, id)
             }
