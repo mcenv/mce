@@ -20,7 +20,9 @@ val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
         val b = arguments[1].value
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(a.value + b.value)
+            // 0 + b = b
             a is C.Value.IntOf && a.value == 0 -> b
+            // a + 0 = a
             b is C.Value.IntOf && b.value == 0 -> a
             else -> C.Value.Apply(C.Value.Def("int/add"), arguments.sortedWith(COMM))
         }
