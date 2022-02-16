@@ -228,4 +228,49 @@ class ElaborateTest {
     fun builtinOpen() {
         elaborate("builtin_open").success()
     }
+
+    @Test
+    fun zeroAdd() {
+        elaborate("zero_add").success()
+    }
+
+    @Test
+    fun addZero() {
+        elaborate("add_zero").success()
+    }
+
+    @Test
+    fun subZero() {
+        elaborate("sub_zero").success()
+    }
+
+    @Test
+    fun zeroMul() {
+        elaborate("zero_mul").success()
+    }
+
+    @Test
+    fun mulZero() {
+        elaborate("mul_zero").success()
+    }
+
+    @Test
+    fun oneMul() {
+        elaborate("one_mul").success()
+    }
+
+    @Test
+    fun mulOne() {
+        elaborate("mul_one").success()
+    }
+
+    @Test
+    fun divOne() {
+        elaborate("div_one").success()
+    }
+
+    @Test
+    fun modOne() {
+        elaborate("mod_one").success()
+    }
 }

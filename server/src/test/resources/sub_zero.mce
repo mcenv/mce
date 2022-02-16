@@ -1,0 +1,5 @@
+import {int/sub}
+
+export {}
+
+def {} : fun [a : int] eq (a int/sub 0) a = \[a] refl

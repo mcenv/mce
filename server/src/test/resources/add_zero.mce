@@ -1,0 +1,5 @@
+import {int/add}
+
+export {}
+
+def {} : fun [a : int] eq (a int/add 0) a = \[a] refl

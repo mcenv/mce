@@ -1,0 +1,5 @@
+import {int/mul}
+
+export {}
+
+def {} : fun [a : int] eq (1 int/mul a) a = \[a] refl
