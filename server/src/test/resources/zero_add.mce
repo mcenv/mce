@@ -2,4 +2,4 @@ import {int/add}
 
 export {}
 
-def {} : fun [a : int] -> eq (0 int/add a) a = \[a] -> refl
+def {} : fun [a : int] -> eq (0 int/add a) a := \[a] -> refl

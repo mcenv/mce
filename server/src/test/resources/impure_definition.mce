@@ -2,4 +2,4 @@ import {thunk_intro}
 
 export {}
 
-def {} : bool = (#0-0-0-0-0 !thunk_intro)
+def {} : bool := (#0-0-0-0-0 !thunk_intro)

@@ -2,6 +2,6 @@ import {}
 
 export {}
 
-def {meta} : code bool =
-  let b = false;
+def {meta} : code bool :=
+  let b := false;
   `(#0-0-0-0-0 b)

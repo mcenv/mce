@@ -2,4 +2,4 @@ import {}
 
 export {unfold_def}
 
-def {} : bool = false
+def {} : bool := false

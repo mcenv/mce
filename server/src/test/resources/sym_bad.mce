@@ -2,7 +2,7 @@ import {}
 
 export {}
 
-def {} : fun [a : bool, b : bool, p : eq a b] -> eq b false =
+def {} : fun [a : bool, b : bool, p : eq a b] -> eq b false :=
   \[a, b, p] -> match p [
     refl => refl
   ]

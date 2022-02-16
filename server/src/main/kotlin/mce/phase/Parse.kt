@@ -32,7 +32,7 @@ class Parse private constructor(
                     parseTerm()
                 }
                 val body = run {
-                    expect('=')
+                    expectString(":=")
                     parseTerm()
                 }
                 S.Item.Def(imports, exports, modifiers, name, type, body)
@@ -134,7 +134,7 @@ class Parse private constructor(
         else -> when (val word = readWord()) {
             "let" -> {
                 val name = readWord()
-                expect('=')
+                expectString(":=")
                 val init = parseTerm()
                 expect(';')
                 val body = parseTerm()

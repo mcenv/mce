@@ -2,4 +2,4 @@ import {}
 
 export {impure_definition}
 
-def {} : thunk bool any = ~false
+def {} : thunk bool any := ~false

@@ -2,4 +2,4 @@ import {}
 
 export {}
 
-def {} : bool = (#0-0-0-0-0 a)
+def {} : bool := (#0-0-0-0-0 a)

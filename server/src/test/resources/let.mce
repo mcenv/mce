@@ -2,6 +2,6 @@ import {}
 
 export {}
 
-def {} : bool =
-  let x = false;
+def {} : bool :=
+  let x := false;
   x

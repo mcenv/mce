@@ -2,4 +2,4 @@ import {}
 
 export {}
 
-def {builtin} : false = _
+def {builtin} : false := _
