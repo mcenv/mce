@@ -1,0 +1,5 @@
+import {int/add}
+
+export {}
+
+def {} : int = 1 int/add 2 int/add 3

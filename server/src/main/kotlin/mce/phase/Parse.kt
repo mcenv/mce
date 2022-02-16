@@ -47,7 +47,19 @@ class Parse private constructor(
         else -> error("unexpected modifier '$word'")
     }
 
-    private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
+    private fun parseTerm(id: Id = freshId()): S.Term {
+        var left = parseAtomTerm(id)
+        skipWhitespace()
+        while (canRead() && peek().isWordPart()) {
+            val operator = parseAtomTerm()
+            val right = parseAtomTerm()
+            left = S.Term.Apply(operator, listOf(left, right), id)
+            skipWhitespace()
+        }
+        return left
+    }
+
+    private fun parseAtomTerm(id: Id = freshId()): S.Term = when (peekChar()) {
         '(' -> parseParen { parseTerm(it) }
         '_' -> {
             skip()
@@ -83,7 +95,7 @@ class Parse private constructor(
         }
         '&' -> {
             skip()
-            S.Term.RefOf(parseTerm(), id)
+            S.Term.RefOf(parseAtomTerm(), id)
         }
         '\\' -> {
             skip()
@@ -96,7 +108,7 @@ class Parse private constructor(
         }
         '@' -> {
             skip()
-            val function = parseTerm()
+            val function = parseAtomTerm()
             val arguments = run {
                 expect('[')
                 parseList(']', ::parseTerm)
@@ -105,25 +117,26 @@ class Parse private constructor(
         }
         '~' -> {
             skip()
-            S.Term.ThunkOf(parseTerm(), id)
+            S.Term.ThunkOf(parseAtomTerm(), id)
         }
         '!' -> {
             skip()
-            S.Term.Force(parseTerm(), id)
+            S.Term.Force(parseAtomTerm(), id)
         }
         '`' -> {
             skip()
-            S.Term.CodeOf(parseTerm(), id)
+            S.Term.CodeOf(parseAtomTerm(), id)
         }
         '$' -> {
             skip()
-            S.Term.Splice(parseTerm(), id)
+            S.Term.Splice(parseAtomTerm(), id)
         }
         else -> when (val word = readWord()) {
             "let" -> {
                 val name = readWord()
                 expect('=')
                 val init = parseTerm()
+                expect(';')
                 val body = parseTerm()
                 S.Term.Let(name, init, body, id)
             }
@@ -163,16 +176,16 @@ class Parse private constructor(
             "byte_array" -> S.Term.ByteArray(id)
             "int_array" -> S.Term.IntArray(id)
             "long_array" -> S.Term.LongArray(id)
-            "list" -> S.Term.List(parseTerm(), id)
+            "list" -> S.Term.List(parseAtomTerm(), id)
             "compound" -> {
                 expect('{')
                 val elements = parseList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
-            "ref" -> S.Term.Ref(parseTerm(), id)
+            "ref" -> S.Term.Ref(parseAtomTerm(), id)
             "eq" -> {
-                val left = parseTerm()
-                val right = parseTerm()
+                val left = parseAtomTerm()
+                val right = parseAtomTerm()
                 S.Term.Eq(left, right, id)
             }
             "fun" -> {
@@ -198,8 +211,8 @@ class Parse private constructor(
                 val resultant = parseTerm()
                 S.Term.Fun(parameters, resultant, id)
             }
-            "thunk" -> S.Term.Thunk(parseTerm(), parseEffects(), id)
-            "code" -> S.Term.Code(parseTerm(), id)
+            "thunk" -> S.Term.Thunk(parseAtomTerm(), parseEffects(), id)
+            "code" -> S.Term.Code(parseAtomTerm(), id)
             "type" -> S.Term.Type(id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> S.Term.ByteOf(word.dropLast(1).toByte(), id)

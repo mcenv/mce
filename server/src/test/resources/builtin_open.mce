@@ -2,4 +2,4 @@ import {int/add}
 
 export {}
 
-def {} : eq (\[a, b] @int/add [a, b]) (\[a, b] @int/add [a, b]) = refl
+def {} : eq (\[a, b] a int/add b) (\[a, b] a int/add b) = refl

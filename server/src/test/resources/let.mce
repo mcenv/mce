@@ -3,5 +3,5 @@ import {}
 export {}
 
 def {} : bool =
-  let x = false
+  let x = false;
   x
