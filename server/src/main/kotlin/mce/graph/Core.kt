@@ -66,8 +66,6 @@ object Core {
         object Refl : Term()
         data class FunOf(val parameters: KList<KString>, val body: Term) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>) : Term()
-        data class ThunkOf(val body: Term) : Term()
-        data class Force(val element: Term) : Term()
         data class CodeOf(val element: Term) : Term()
         data class Splice(val element: Term) : Term()
         data class Union(val variants: KList<Term>) : Term()
@@ -88,7 +86,6 @@ object Core {
         data class Ref(val element: Term) : Term()
         data class Eq(val left: Term, val right: Term) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
-        data class Thunk(val element: Term, val effects: Effects) : Term()
         data class Code(val element: Term) : Term()
         object Type : Term()
     }
@@ -141,8 +138,6 @@ object Core {
         object Refl : Value()
         data class FunOf(val parameters: KList<KString>, val body: Term) : Value()
         data class Apply(val function: Value, val arguments: KList<Lazy<Value>>) : Value()
-        data class ThunkOf(val body: Lazy<Value>) : Value()
-        data class Force(val element: Lazy<Value>) : Value()
         data class CodeOf(val element: Lazy<Value>) : Value()
         data class Splice(val element: Lazy<Value>) : Value()
         data class Union(val variants: KList<Lazy<Value>>) : Value()
@@ -163,7 +158,6 @@ object Core {
         data class Ref(val element: Lazy<Value>) : Value()
         data class Eq(val left: Lazy<Value>, val right: Lazy<Value>) : Value()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Value()
-        data class Thunk(val element: Lazy<Value>, val effects: Effects) : Value()
         data class Code(val element: Lazy<Value>) : Value()
         object Type : Value()
     }

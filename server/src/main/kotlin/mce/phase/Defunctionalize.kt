@@ -75,17 +75,6 @@ class Defunctionalize private constructor() {
             val arguments = term.arguments.map { defunctionalizeTerm(it) }
             D.Term.Apply(function, arguments)
         }
-        is C.Term.ThunkOf -> {
-            val tag = freshTag()
-            D.Term.FunOf(tag).also {
-                val body = defunctionalizeTerm(term.body)
-                functions[tag] = body
-            }
-        }
-        is C.Term.Force -> {
-            val element = defunctionalizeTerm(term.element)
-            D.Term.Apply(element, emptyList())
-        }
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> throw Error()
         is C.Term.Union -> {
@@ -133,11 +122,6 @@ class Defunctionalize private constructor() {
             }
             val resultant = defunctionalizeTerm(term.resultant)
             D.Term.Fun(parameters, resultant)
-        }
-        is C.Term.Thunk -> {
-            val element = defunctionalizeTerm(term.element)
-            val effects = defunctionalizeEffects(term.effects)
-            D.Term.Thunk(element, effects)
         }
         is C.Term.Code -> throw Error()
         is C.Term.Type -> D.Term.Type

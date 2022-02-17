@@ -104,11 +104,6 @@ class Normalizer(
                 else -> C.Value.Apply(function, arguments)
             }
         }
-        is C.Term.ThunkOf -> C.Value.ThunkOf(lazy { eval(term.body) })
-        is C.Term.Force -> when (val thunk = eval(term.element)) {
-            is C.Value.ThunkOf -> thunk.body.value
-            else -> C.Value.Force(lazyOf(thunk))
-        }
         is C.Term.CodeOf -> C.Value.CodeOf(lazy { eval(term.element) })
         is C.Term.Splice -> when (val element = eval(term.element)) {
             is C.Value.CodeOf -> element.element.value
@@ -132,7 +127,6 @@ class Normalizer(
         is C.Term.Ref -> C.Value.Ref(lazy { eval(term.element) })
         is C.Term.Eq -> C.Value.Eq(lazy { eval(term.left) }, lazy { eval(term.right) })
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant)
-        is C.Term.Thunk -> C.Value.Thunk(lazy { eval(term.element) }, term.effects)
         is C.Term.Code -> C.Value.Code(lazy { eval(term.element) })
         is C.Term.Type -> C.Value.Type
     }
@@ -167,8 +161,6 @@ class Normalizer(
             quote(eval(value.body))
         })
         is C.Value.Apply -> C.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) })
-        is C.Value.ThunkOf -> C.Term.ThunkOf(quote(value.body.value))
-        is C.Value.Force -> C.Term.Force(quote(value.element.value))
         is C.Value.CodeOf -> C.Term.CodeOf(quote(value.element.value))
         is C.Value.Splice -> C.Term.Splice(quote(value.element.value))
         is C.Value.Union -> C.Term.Union(value.variants.map { quote(it.value) })
@@ -192,7 +184,6 @@ class Normalizer(
             value.parameters.forEach { (name, _) -> bind(lazyOf(C.Value.Var(name, size))) }
             quote(eval(value.resultant))
         })
-        is C.Value.Thunk -> C.Term.Thunk(quote(value.element.value), value.effects)
         is C.Value.Code -> C.Term.Code(quote(value.element.value))
         is C.Value.Type -> C.Term.Type
     }

@@ -114,7 +114,6 @@ class Pack private constructor() {
             is D.Term.Ref -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Eq -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Fun -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.Thunk -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Type -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
         }
     }

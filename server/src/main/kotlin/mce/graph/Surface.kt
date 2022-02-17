@@ -57,8 +57,6 @@ object Surface {
         data class Refl(override val id: Id) : Term()
         data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id) : Term()
-        data class ThunkOf(val body: Term, override val id: Id) : Term()
-        data class Force(val element: Term, override val id: Id) : Term()
         data class CodeOf(val element: Term, override val id: Id) : Term()
         data class Splice(val element: Term, override val id: Id) : Term()
         data class Union(val variants: KList<Term>, override val id: Id) : Term()
@@ -79,7 +77,6 @@ object Surface {
         data class Ref(val element: Term, override val id: Id) : Term()
         data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
-        data class Thunk(val element: Term, val effects: Effects, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
         data class Type(override val id: Id) : Term()
     }

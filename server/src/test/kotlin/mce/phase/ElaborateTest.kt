@@ -118,22 +118,6 @@ class ElaborateTest {
     }
 
     @Test
-    fun thunkIntro() {
-        elaborate("thunk_intro").success()
-    }
-
-    @Test
-    fun thunkElim() {
-        elaborate("thunk_elim").success()
-    }
-
-    @Test
-    fun impureDefinition() {
-        val (_, _, diagnostics, _) = elaborate("impure_definition")
-        assert(diagnostics.contains(Diagnostic.EffectMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
-    }
-
-    @Test
     fun eqIntro() {
         elaborate("eq_intro").success()
     }

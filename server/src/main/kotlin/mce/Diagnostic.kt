@@ -44,8 +44,6 @@ sealed class Diagnostic {
             is C.Term.Refl -> S.Term.Refl(freshId())
             is C.Term.FunOf -> S.Term.FunOf(term.parameters, serializeTerm(term.body), freshId())
             is C.Term.Apply -> S.Term.Apply(serializeTerm(term.function), term.arguments.map { serializeTerm(it) }, freshId())
-            is C.Term.ThunkOf -> S.Term.ThunkOf(serializeTerm(term.body), freshId())
-            is C.Term.Force -> S.Term.Force(serializeTerm(term.element), freshId())
             is C.Term.CodeOf -> S.Term.CodeOf(serializeTerm(term.element), freshId())
             is C.Term.Splice -> S.Term.Splice(serializeTerm(term.element), freshId())
             is C.Term.Union -> S.Term.Union(term.variants.map { serializeTerm(it) }, freshId())
@@ -66,7 +64,6 @@ sealed class Diagnostic {
             is C.Term.Ref -> S.Term.Ref(serializeTerm(term.element), freshId())
             is C.Term.Eq -> S.Term.Eq(serializeTerm(term.left), serializeTerm(term.right), freshId())
             is C.Term.Fun -> S.Term.Fun(term.parameters.map { S.Parameter(it.name, it.lower?.let(::serializeTerm), it.upper?.let(::serializeTerm), serializeTerm(it.type)) }, serializeTerm(term.resultant), freshId())
-            is C.Term.Thunk -> S.Term.Thunk(serializeTerm(term.element), serializeEffects(term.effects), freshId())
             is C.Term.Code -> S.Term.Code(serializeTerm(term.element), freshId())
             is C.Term.Type -> S.Term.Type(freshId())
         }

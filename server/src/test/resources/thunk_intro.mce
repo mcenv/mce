@@ -1,5 +1,0 @@
-import {}
-
-export {impure_definition}
-
-def {} : thunk bool any := ~false

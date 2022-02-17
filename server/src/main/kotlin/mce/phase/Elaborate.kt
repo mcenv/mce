@@ -97,10 +97,6 @@ class Elaborate private constructor(
             val left = lazy { normalizer.fresh(term.id) }
             Typing(C.Term.Refl, C.Value.Eq(left, left))
         }
-        is S.Term.ThunkOf -> {
-            val body = inferComputation(term.body)
-            Typing(C.Term.ThunkOf(body.element), C.Value.Thunk(lazyOf(body.type), body.effects))
-        }
         is S.Term.CodeOf -> {
             val element = up { inferTerm(term.element) }
             Typing(C.Term.CodeOf(element.element), C.Value.Code(lazyOf(element.type)))
@@ -154,11 +150,6 @@ class Elaborate private constructor(
             val left = inferTerm(term.left)
             val right = checkTerm(term.right, left.type)
             Typing(C.Term.Eq(left.element, right), C.Value.Type)
-        }
-        is S.Term.Thunk -> {
-            val element = checkTerm(term.element, C.Value.Type)
-            val effects = elaborateEffects(term.effects)
-            Typing(C.Term.Thunk(element, effects), C.Value.Type)
         }
         is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
@@ -227,13 +218,6 @@ class Elaborate private constructor(
                 else -> Typing(C.Term.Apply(function.element, computation.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
             }
         }
-        is S.Term.Force -> {
-            val element = inferTerm(computation.element)
-            when (val type = normalizer.force(element.type)) {
-                is C.Value.Thunk -> Typing(C.Term.Force(element.element), type.element.value, type.effects)
-                else -> Typing(C.Term.Force(element.element), diagnose(Diagnostic.ThunkExpected(computation.element.id)))
-            }
-        }
         is S.Term.Fun -> Typing(
             scope {
                 val parameters = computation.parameters.map { (name, lower, upper, parameter) ->
@@ -282,10 +266,6 @@ class Elaborate private constructor(
             term is S.Term.RefOf && type is C.Value.Ref -> {
                 val element = checkTerm(term.element, type.element.value)
                 C.Term.RefOf(element)
-            }
-            term is S.Term.ThunkOf && type is C.Value.Thunk -> {
-                val body = checkTerm(term.body, type.element.value)
-                C.Term.ThunkOf(body)
             }
             term is S.Term.CodeOf && type is C.Value.Code -> {
                 val element = up { checkTerm(term.element, type.element.value) }
@@ -486,8 +466,6 @@ class Elaborate private constructor(
             }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> value1.function unify value2.function &&
                     (value1.arguments zip value2.arguments).all { it.first.value unify it.second.value }
-            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> value1.body.value unify value2.body.value
-            value1 is C.Value.Force && value2 is C.Value.Force -> value1.element.value unify value2.element.value
             value1 is C.Value.CodeOf && value2 is C.Value.CodeOf -> value1.element.value unify value2.element.value
             value1 is C.Value.Splice && value2 is C.Value.Splice -> value1.element.value unify value2.element.value
             value1 is C.Value.Union && value1.variants.isEmpty() && value2 is C.Value.Union && value2.variants.isEmpty() -> true
@@ -516,7 +494,6 @@ class Elaborate private constructor(
                     (eval(parameter2.type) unify eval(parameter1.type)).also { bind(lazyOf(C.Value.Var("", size))) }
                 } && eval(value1.resultant) unify eval(value2.resultant)
             }
-            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> value1.element.value unify value2.element.value
             value1 is C.Value.Code && value2 is C.Value.Code -> value1.element.value unify value2.element.value
             value1 is C.Value.Type && value2 is C.Value.Type -> true
             else -> false
@@ -549,8 +526,6 @@ class Elaborate private constructor(
             }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> value1.function subtype value2.function &&
                     (value1.arguments zip value2.arguments).all { it.first.value unify it.second.value /* pointwise subtyping */ }
-            value1 is C.Value.ThunkOf && value2 is C.Value.ThunkOf -> value1.body.value subtype value2.body.value
-            value1 is C.Value.Force && value2 is C.Value.Force -> value1.element.value subtype value2.element.value
             value1 is C.Value.Union -> value1.variants.all { it.value subtype value2 }
             value2 is C.Value.Union -> value2.variants.any { value1 subtype it.value }
             value1 is C.Value.Intersection -> value1.variants.any { it.value subtype value2 }
@@ -567,7 +542,6 @@ class Elaborate private constructor(
                     (eval(parameter2.type) subtype eval(parameter1.type)).also { bind(lazyOf(C.Value.Var("", size))) }
                 } && eval(value1.resultant) subtype eval(value2.resultant)
             }
-            value1 is C.Value.Thunk && value2 is C.Value.Thunk -> value1.element.value subtype value2.element.value && value1.effects sub value2.effects
             value1 is C.Value.Code && value2 is C.Value.Code -> value1.element.value subtype value2.element.value
             else -> value1 unify value2
         }

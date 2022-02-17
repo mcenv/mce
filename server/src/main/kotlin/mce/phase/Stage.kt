@@ -73,14 +73,6 @@ class Stage private constructor(
             val arguments = term.arguments.map { stageTerm(it) }
             C.Term.Apply(function, arguments)
         }
-        is C.Term.ThunkOf -> {
-            val body = stageTerm(term.body)
-            C.Term.ThunkOf(body)
-        }
-        is C.Term.Force -> {
-            val element = stageTerm(term.element)
-            C.Term.Force(element)
-        }
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> {
             val staged = normalizer.norm(term)
@@ -131,10 +123,6 @@ class Stage private constructor(
             }
             val resultant = stageTerm(term.resultant)
             C.Term.Fun(parameters, resultant)
-        }
-        is C.Term.Thunk -> {
-            val element = stageTerm(term.element)
-            C.Term.Thunk(element, term.effects)
         }
         is C.Term.Code -> throw Error()
         is C.Term.Type -> term

@@ -65,7 +65,6 @@ object Defunctionalized {
         data class Ref(val element: Term) : Term()
         data class Eq(val left: Term, val right: Term) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
-        data class Thunk(val element: Term, val effects: Effects) : Term()
         object Type : Term()
     }
 

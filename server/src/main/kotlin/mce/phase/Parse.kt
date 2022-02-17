@@ -119,14 +119,6 @@ class Parse private constructor(
             val body = parseTerm()
             S.Term.FunOf(parameters, body, id)
         }
-        '~' -> {
-            skip()
-            S.Term.ThunkOf(parseAtomTerm(), id)
-        }
-        '!' -> {
-            skip()
-            S.Term.Force(parseAtomTerm(), id)
-        }
         '`' -> {
             skip()
             S.Term.CodeOf(parseAtomTerm(), id)
@@ -211,7 +203,6 @@ class Parse private constructor(
                 val resultant = parseTerm()
                 S.Term.Fun(parameters, resultant, id)
             }
-            "thunk" -> S.Term.Thunk(parseAtomTerm(), parseEffects(), id)
             "code" -> S.Term.Code(parseAtomTerm(), id)
             "type" -> S.Term.Type(id)
             else -> when {

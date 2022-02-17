@@ -82,14 +82,6 @@ class Zonk private constructor(
             val arguments = term.arguments.map { zonkTerm(it) }
             C.Term.Apply(function, arguments)
         }
-        is C.Term.ThunkOf -> {
-            val body = zonkTerm(term.body)
-            C.Term.ThunkOf(body)
-        }
-        is C.Term.Force -> {
-            val element = zonkTerm(term.element)
-            C.Term.Force(element)
-        }
         is C.Term.CodeOf -> {
             val element = zonkTerm(term.element)
             C.Term.CodeOf(element)
@@ -143,10 +135,6 @@ class Zonk private constructor(
             }
             val resultant = zonkTerm(term.resultant)
             C.Term.Fun(parameters, resultant)
-        }
-        is C.Term.Thunk -> {
-            val element = zonkTerm(term.element)
-            C.Term.Thunk(element, term.effects)
         }
         is C.Term.Code -> {
             val element = zonkTerm(term.element)
