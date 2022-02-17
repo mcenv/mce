@@ -8,17 +8,20 @@ A programming environment[^1] for Minecraft[^2].
 
 ```mermaid
 flowchart TB
-   LC[Logical consistency]   --> S[Safety]
-   SE[Static expressivity]   --> AO[Aggressive optimization]
-   SE                        --> S[Safety]
-   AO                        --> HP[High performance]
-   AO                        --> LF[Low footprint]
-   OP[Output predictability] --> E[Ergonomics]
-   FC[Fast compilation]      --> E
-   S                         --> F[Fun]
-   HP                        --> F
-   LF                        --> F
-   E                         --> F
+   LC[Logical consistency]       --> S
+   SE[Static expressivity]       --> AO
+   SE                          x-.-x FC
+   SE                            --> S
+   AO[Aggressive optimization]   --> HP
+   AO                            --> LF
+   AO                          x-.-x OP
+   AO                          x-.-x FC
+   OP[Output predictability]     --> E
+   FC[Fast compilation]          --> E
+   S[Safety]                     --> FP
+   HP[High performance]          --> FP
+   LF[Low footprint]             --> FP
+   E[Ergonomics]                 --> FP[Fun programming]
 ```
 
 ## Features
