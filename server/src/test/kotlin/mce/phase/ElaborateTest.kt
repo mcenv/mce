@@ -287,4 +287,10 @@ class ElaborateTest {
     fun modSelf() {
         elaborate("mod_self").success()
     }
+
+    @Test
+    fun arityMismatch() {
+        val (_, _, diagnostics, _) = elaborate("arity_mismatch")
+        assert(diagnostics.contains(Diagnostic.ArityMismatch(2, 1, UUID(0, 0)))) { diagnostics.joinToString("\n") }
+    }
 }

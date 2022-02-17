@@ -194,26 +194,31 @@ class Elaborate private constructor(
         is S.Term.Apply -> {
             val function = inferComputation(computation.function)
             when (val type = normalizer.force(function.type)) {
-                is C.Value.Fun -> normalizer.scope {
-                    val arguments = (computation.arguments zip type.parameters).map { (argument, parameter) ->
-                        checkTerm(argument, eval(parameter.type)).also {
-                            val id = argument.id
-                            val argument = eval(it)
-                            parameter.lower?.let { lower ->
-                                eval(lower).let { lower ->
-                                    if (!(lower subtype argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
-                                }
-                            }
-                            parameter.upper?.let { upper ->
-                                eval(upper).let { upper ->
-                                    if (!(argument subtype upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
-                                }
-                            }
-                            bind(lazyOf(argument)) // TODO: bind?
-                        }
+                is C.Value.Fun -> {
+                    if (type.parameters.size != computation.arguments.size) {
+                        diagnose(Diagnostic.ArityMismatch(type.parameters.size, computation.arguments.size, computation.id))
                     }
-                    val resultant = eval(type.resultant)
-                    Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
+                    normalizer.scope {
+                        val arguments = (computation.arguments zip type.parameters).map { (argument, parameter) ->
+                            checkTerm(argument, eval(parameter.type)).also {
+                                val id = argument.id
+                                val argument = eval(it)
+                                parameter.lower?.let { lower ->
+                                    eval(lower).let { lower ->
+                                        if (!(lower subtype argument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(argument)), serializeTerm(quote(lower)), id))
+                                    }
+                                }
+                                parameter.upper?.let { upper ->
+                                    eval(upper).let { upper ->
+                                        if (!(argument subtype upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
+                                    }
+                                }
+                                bind(lazyOf(argument)) // TODO: bind?
+                            }
+                        }
+                        val resultant = eval(type.resultant)
+                        Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
+                    }
                 }
                 else -> Typing(C.Term.Apply(function.element, computation.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
             }
@@ -301,15 +306,20 @@ class Elaborate private constructor(
                 }
                 C.Term.Match(scrutinee.element, clauses)
             }
-            computation is S.Term.FunOf && type is C.Value.Fun -> scope(true) {
-                (computation.parameters zip type.parameters).forEach { (name, parameter) ->
-                    val lower = parameter.lower?.let { eval(it) }
-                    val upper = parameter.upper?.let { eval(it) }
-                    val type = eval(parameter.type)
-                    bind(computation.id, Entry(name, lower, upper, type, stage))
+            computation is S.Term.FunOf && type is C.Value.Fun -> {
+                if (type.parameters.size != computation.parameters.size) {
+                    diagnose(Diagnostic.ArityMismatch(type.parameters.size, computation.parameters.size, computation.id))
                 }
-                val resultant = checkComputation(computation.body, eval(type.resultant), effects)
-                C.Term.FunOf(computation.parameters, resultant)
+                scope(true) {
+                    (computation.parameters zip type.parameters).forEach { (name, parameter) ->
+                        val lower = parameter.lower?.let { eval(it) }
+                        val upper = parameter.upper?.let { eval(it) }
+                        val type = eval(parameter.type)
+                        bind(computation.id, Entry(name, lower, upper, type, stage))
+                    }
+                    val resultant = checkComputation(computation.body, eval(type.resultant), effects)
+                    C.Term.FunOf(computation.parameters, resultant)
+                }
             }
             else -> {
                 val id = computation.id
