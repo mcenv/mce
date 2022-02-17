@@ -2,7 +2,7 @@ import {}
 
 export {}
 
-def {} : bool :=
+def : bool :=
   match false [
     false => true,
     true  => false

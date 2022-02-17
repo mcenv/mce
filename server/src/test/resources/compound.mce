@@ -2,4 +2,4 @@ import {}
 
 export {}
 
-def {} : compound {α : type, a : α} := {bool, false}
+def : compound {α : type, a : α} := {bool, false}

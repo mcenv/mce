@@ -23,10 +23,10 @@ class Parse private constructor(
         }
         return when (val word = readWord()) {
             "def" -> {
-                val modifiers = run {
-                    expect('{')
+                val modifiers = if (peekChar() == '{') {
+                    skip()
                     parseList('}', ::parseModifier)
-                }
+                } else emptyList()
                 val type = run {
                     expect(':')
                     parseTerm()

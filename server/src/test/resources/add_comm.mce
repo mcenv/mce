@@ -2,4 +2,4 @@ import {int/add}
 
 export {}
 
-def {} : fun [a : int, b : int] -> (a int/add b) = (b int/add a) := \[a, b] -> refl
+def : fun [a : int, b : int] -> (a int/add b) = (b int/add a) := \[a, b] -> refl

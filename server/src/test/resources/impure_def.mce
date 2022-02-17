@@ -2,4 +2,4 @@ import {effect}
 
 export {}
 
-def {} : int := (#0-0-0-0-0 effect [])
+def : int := (#0-0-0-0-0 effect [])

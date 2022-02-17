@@ -2,4 +2,4 @@ import {}
 
 export {}
 
-def {} : false = false := refl
+def : false = false := refl

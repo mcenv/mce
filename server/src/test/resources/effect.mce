@@ -2,4 +2,4 @@ import {}
 
 export {impure_def}
 
-def {} : fun [] -> int ! {a} := \[] -> 0
+def : fun [] -> int ! {a} := \[] -> 0

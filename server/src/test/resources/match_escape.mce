@@ -2,7 +2,7 @@ import {}
 
 export {}
 
-def {} : bool :=
+def : bool :=
   match false [
     a => a,
     b => (#0-0-0-0-0 a)

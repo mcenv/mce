@@ -2,4 +2,4 @@ import {identity}
 
 export {}
 
-def {} : bool := identity [bool, false]
+def : bool := identity [bool, false]

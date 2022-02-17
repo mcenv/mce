@@ -2,4 +2,4 @@ import {}
 
 export {}
 
-def {} : fun [a : int, b : int] -> int := (#0-0-0-0-0 \[a] -> 0)
+def : fun [a : int, b : int] -> int := (#0-0-0-0-0 \[a] -> 0)

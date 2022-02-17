@@ -2,4 +2,4 @@ import {int/sub}
 
 export {}
 
-def {} : fun [a : int] -> (a int/sub a) = 0 := \[a] -> refl
+def : fun [a : int] -> (a int/sub a) = 0 := \[a] -> refl

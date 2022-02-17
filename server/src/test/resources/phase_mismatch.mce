@@ -2,4 +2,4 @@ import {}
 
 export {}
 
-def {} : code bool := (#0-0-0-0-0 `false)
+def : code bool := (#0-0-0-0-0 `false)
