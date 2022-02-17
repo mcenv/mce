@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.graph.Id
 import java.util.concurrent.atomic.AtomicInteger
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
@@ -18,54 +19,54 @@ class Defunctionalize private constructor() {
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {
         is C.Term.Hole -> throw Error()
         is C.Term.Meta -> throw Error()
-        is C.Term.Var -> D.Term.Var(term.name, term.level)
-        is C.Term.Def -> D.Term.Def(term.name)
+        is C.Term.Var -> D.Term.Var(term.name, term.level, term.id!!)
+        is C.Term.Def -> D.Term.Def(term.name, term.id!!)
         is C.Term.Let -> {
             val init = defunctionalizeTerm(term.init)
             val body = defunctionalizeTerm(term.body)
-            D.Term.Let(term.name, init, body)
+            D.Term.Let(term.name, init, body, term.id!!)
         }
         is C.Term.Match -> {
             val scrutinee = defunctionalizeTerm(term.scrutinee)
             val clauses = term.clauses.map { defunctionalizePattern(it.first) to defunctionalizeTerm(it.second) }
-            D.Term.Match(scrutinee, clauses)
+            D.Term.Match(scrutinee, clauses, term.id!!)
         }
-        is C.Term.BoolOf -> D.Term.BoolOf(term.value)
-        is C.Term.ByteOf -> D.Term.ByteOf(term.value)
-        is C.Term.ShortOf -> D.Term.ShortOf(term.value)
-        is C.Term.IntOf -> D.Term.IntOf(term.value)
-        is C.Term.LongOf -> D.Term.LongOf(term.value)
-        is C.Term.FloatOf -> D.Term.FloatOf(term.value)
-        is C.Term.DoubleOf -> D.Term.DoubleOf(term.value)
-        is C.Term.StringOf -> D.Term.StringOf(term.value)
+        is C.Term.BoolOf -> D.Term.BoolOf(term.value, term.id!!)
+        is C.Term.ByteOf -> D.Term.ByteOf(term.value, term.id!!)
+        is C.Term.ShortOf -> D.Term.ShortOf(term.value, term.id!!)
+        is C.Term.IntOf -> D.Term.IntOf(term.value, term.id!!)
+        is C.Term.LongOf -> D.Term.LongOf(term.value, term.id!!)
+        is C.Term.FloatOf -> D.Term.FloatOf(term.value, term.id!!)
+        is C.Term.DoubleOf -> D.Term.DoubleOf(term.value, term.id!!)
+        is C.Term.StringOf -> D.Term.StringOf(term.value, term.id!!)
         is C.Term.ByteArrayOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.ByteArrayOf(elements)
+            D.Term.ByteArrayOf(elements, term.id!!)
         }
         is C.Term.IntArrayOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.IntArrayOf(elements)
+            D.Term.IntArrayOf(elements, term.id!!)
         }
         is C.Term.LongArrayOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.LongArrayOf(elements)
+            D.Term.LongArrayOf(elements, term.id!!)
         }
         is C.Term.ListOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.ListOf(elements)
+            D.Term.ListOf(elements, term.id!!)
         }
         is C.Term.CompoundOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.CompoundOf(elements)
+            D.Term.CompoundOf(elements, term.id!!)
         }
         is C.Term.RefOf -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.RefOf(element)
+            D.Term.RefOf(element, term.id!!)
         }
-        is C.Term.Refl -> D.Term.Refl
+        is C.Term.Refl -> D.Term.Refl(term.id!!)
         is C.Term.FunOf -> {
             val tag = freshTag()
-            D.Term.FunOf(tag).also {
+            D.Term.FunOf(tag, term.id!!).also {
                 val body = defunctionalizeTerm(term.body)
                 functions[tag] = body
             }
@@ -73,45 +74,45 @@ class Defunctionalize private constructor() {
         is C.Term.Apply -> {
             val function = defunctionalizeTerm(term.function)
             val arguments = term.arguments.map { defunctionalizeTerm(it) }
-            D.Term.Apply(function, arguments)
+            D.Term.Apply(function, arguments, term.id!!)
         }
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> throw Error()
         is C.Term.Union -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
-            D.Term.Union(variants)
+            D.Term.Union(variants, term.id!!)
         }
         is C.Term.Intersection -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
-            D.Term.Intersection(variants)
+            D.Term.Intersection(variants, term.id!!)
         }
-        is C.Term.Bool -> D.Term.Bool
-        is C.Term.Byte -> D.Term.Byte
-        is C.Term.Short -> D.Term.Short
-        is C.Term.Int -> D.Term.Int
-        is C.Term.Long -> D.Term.Long
-        is C.Term.Float -> D.Term.Float
-        is C.Term.Double -> D.Term.Double
-        is C.Term.String -> D.Term.String
-        is C.Term.ByteArray -> D.Term.ByteArray
-        is C.Term.IntArray -> D.Term.IntArray
-        is C.Term.LongArray -> D.Term.LongArray
+        is C.Term.Bool -> D.Term.Bool(term.id!!)
+        is C.Term.Byte -> D.Term.Byte(term.id!!)
+        is C.Term.Short -> D.Term.Short(term.id!!)
+        is C.Term.Int -> D.Term.Int(term.id!!)
+        is C.Term.Long -> D.Term.Long(term.id!!)
+        is C.Term.Float -> D.Term.Float(term.id!!)
+        is C.Term.Double -> D.Term.Double(term.id!!)
+        is C.Term.String -> D.Term.String(term.id!!)
+        is C.Term.ByteArray -> D.Term.ByteArray(term.id!!)
+        is C.Term.IntArray -> D.Term.IntArray(term.id!!)
+        is C.Term.LongArray -> D.Term.LongArray(term.id!!)
         is C.Term.List -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.List(element)
+            D.Term.List(element, term.id!!)
         }
         is C.Term.Compound -> {
             val elements = term.elements.map { it.first to defunctionalizeTerm(it.second) }
-            D.Term.Compound(elements)
+            D.Term.Compound(elements, term.id!!)
         }
         is C.Term.Ref -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.Ref(element)
+            D.Term.Ref(element, term.id!!)
         }
         is C.Term.Eq -> {
             val left = defunctionalizeTerm(term.left)
             val right = defunctionalizeTerm(term.right)
-            D.Term.Eq(left, right)
+            D.Term.Eq(left, right, term.id!!)
         }
         is C.Term.Fun -> {
             val parameters = term.parameters.map { (name, lower, upper, type) ->
@@ -122,55 +123,56 @@ class Defunctionalize private constructor() {
             }
             val resultant = defunctionalizeTerm(term.resultant)
             val effects = term.effects.map { defunctionalizeEffect(it) }.toSet()
-            D.Term.Fun(parameters, resultant, effects)
+            D.Term.Fun(parameters, resultant, effects, term.id!!)
         }
         is C.Term.Code -> throw Error()
-        is C.Term.Type -> D.Term.Type
+        is C.Term.Type -> D.Term.Type(term.id!!)
     }
 
     private fun defunctionalizePattern(pattern: C.Pattern): D.Pattern = when (pattern) {
-        is C.Pattern.Var -> D.Pattern.Var(pattern.name)
-        is C.Pattern.BoolOf -> D.Pattern.BoolOf(pattern.value)
-        is C.Pattern.ByteOf -> D.Pattern.ByteOf(pattern.value)
-        is C.Pattern.ShortOf -> D.Pattern.ShortOf(pattern.value)
-        is C.Pattern.IntOf -> D.Pattern.IntOf(pattern.value)
-        is C.Pattern.LongOf -> D.Pattern.LongOf(pattern.value)
-        is C.Pattern.FloatOf -> D.Pattern.FloatOf(pattern.value)
-        is C.Pattern.DoubleOf -> D.Pattern.DoubleOf(pattern.value)
-        is C.Pattern.StringOf -> D.Pattern.StringOf(pattern.value)
+        is C.Pattern.Var -> D.Pattern.Var(pattern.name, pattern.id)
+        is C.Pattern.BoolOf -> D.Pattern.BoolOf(pattern.value, pattern.id)
+        is C.Pattern.ByteOf -> D.Pattern.ByteOf(pattern.value, pattern.id)
+        is C.Pattern.ShortOf -> D.Pattern.ShortOf(pattern.value, pattern.id)
+        is C.Pattern.IntOf -> D.Pattern.IntOf(pattern.value, pattern.id)
+        is C.Pattern.LongOf -> D.Pattern.LongOf(pattern.value, pattern.id)
+        is C.Pattern.FloatOf -> D.Pattern.FloatOf(pattern.value, pattern.id)
+        is C.Pattern.DoubleOf -> D.Pattern.DoubleOf(pattern.value, pattern.id)
+        is C.Pattern.StringOf -> D.Pattern.StringOf(pattern.value, pattern.id)
         is C.Pattern.ByteArrayOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.ByteArrayOf(elements)
+            D.Pattern.ByteArrayOf(elements, pattern.id)
         }
         is C.Pattern.IntArrayOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.IntArrayOf(elements)
+            D.Pattern.IntArrayOf(elements, pattern.id)
         }
         is C.Pattern.LongArrayOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.LongArrayOf(elements)
+            D.Pattern.LongArrayOf(elements, pattern.id)
         }
         is C.Pattern.ListOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.ListOf(elements)
+            D.Pattern.ListOf(elements, pattern.id)
         }
         is C.Pattern.CompoundOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.CompoundOf(elements)
+            D.Pattern.CompoundOf(elements, pattern.id)
         }
         is C.Pattern.RefOf -> {
             val element = defunctionalizePattern(pattern.element)
-            D.Pattern.RefOf(element)
+            D.Pattern.RefOf(element, pattern.id)
         }
-        is C.Pattern.Refl -> D.Pattern.Refl
+        is C.Pattern.Refl -> D.Pattern.Refl(pattern.id)
     }
 
     private fun defunctionalizeEffect(effect: C.Effect): D.Effect = when (effect) {
         is C.Effect.Name -> D.Effect.Name(effect.name)
     }
 
-    data class Output(
+    data class Result(
         val item: D.Item,
+        val types: Map<Id, C.Value>,
         val functions: Map<Int, D.Term>
     )
 
@@ -179,8 +181,8 @@ class Defunctionalize private constructor() {
 
         private fun freshTag(): Int = tag.getAndIncrement()
 
-        operator fun invoke(item: C.Item): Output = Defunctionalize().run {
-            Output(defunctionalizeItem(item), functions)
+        operator fun invoke(input: Stage.Result): Result = Defunctionalize().run {
+            Result(defunctionalizeItem(input.item), input.types, functions)
         }
     }
 }

@@ -25,9 +25,9 @@ class ServerTest {
             Server { read("/$it.mce") }.run {
                 val name = "server"
                 hover(name, UUID(0, 0))
-                assertEquals(1, getCount(Key.ElaboratedOutput(name)))
+                assertEquals(1, getCount(Key.ElaborateResult(name)))
                 hover(name, UUID(0, 0))
-                assertEquals(1, getCount(Key.ElaboratedOutput(name)))
+                assertEquals(1, getCount(Key.ElaborateResult(name)))
             }
         }
     }

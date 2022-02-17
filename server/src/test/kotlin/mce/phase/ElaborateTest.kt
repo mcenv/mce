@@ -11,18 +11,18 @@ import mce.graph.Core as C
 import mce.graph.Surface as S
 
 class ElaborateTest {
-    private fun elaborate(name: String): Elaborate.Output = fetch(Key.ElaboratedOutput(name))
+    private fun elaborate(name: String): Elaborate.Result = fetch(Key.ElaborateResult(name))
 
-    private fun Elaborate.Output.success(): Elaborate.Output = apply {
+    private fun Elaborate.Result.success(): Elaborate.Result = apply {
         assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
     }
 
     @Test
     fun elaborate() {
-        val (item, _, _, types) = elaborate("elaborate").success()
-        assertIs<S.Term.Type>(types[UUID(0, 0)]!!.value)
-        assertIs<S.Term.Bool>(types[UUID(0, 1)]!!.value)
-        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", C.Value.Bool, C.Term.BoolOf(false)), item)
+        val result = elaborate("elaborate").success()
+        assertIs<C.Value.Type>(result.types[UUID(0, 0)])
+        assertIs<C.Value.Bool>(result.types[UUID(0, 1)])
+        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", C.Value.Bool(UUID(0, 0)), C.Term.BoolOf(false, UUID(0, 1))), result.item)
     }
 
     @Test
@@ -42,8 +42,8 @@ class ElaborateTest {
 
     @Test
     fun functionClosed() {
-        val (_, _, diagnostics, _) = elaborate("function_closed")
-        assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("function_closed")
+        assert(result.diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -53,14 +53,14 @@ class ElaborateTest {
 
     @Test
     fun letEscape() {
-        val (_, _, diagnostics, _) = elaborate("let_escape")
-        assert(diagnostics.contains(Diagnostic.NameNotFound("b", UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("let_escape")
+        assert(result.diagnostics.contains(Diagnostic.NameNotFound("b", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun nameNotFound() {
-        val (_, _, diagnostics, _) = elaborate("name_not_found")
-        assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("name_not_found")
+        assert(result.diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -80,20 +80,20 @@ class ElaborateTest {
 
     @Test
     fun stageMismatch() {
-        val (_, _, diagnostics, _) = elaborate("stage_mismatch")
-        assert(diagnostics.contains(Diagnostic.StageMismatch(1, 0, UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("stage_mismatch")
+        assert(result.diagnostics.contains(Diagnostic.StageMismatch(1, 0, UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun phaseMismatch() {
-        val (_, _, diagnostics, _) = elaborate("phase_mismatch")
-        assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("phase_mismatch")
+        assert(result.diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun phaseMismatchLocal() {
-        val (_, _, diagnostics, _) = elaborate("phase_mismatch_local")
-        assert(diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("phase_mismatch_local")
+        assert(result.diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -108,8 +108,8 @@ class ElaborateTest {
 
     @Test
     fun matchEscape() {
-        val (_, _, diagnostics, _) = elaborate("match_escape")
-        assert(diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("match_escape")
+        assert(result.diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -129,14 +129,14 @@ class ElaborateTest {
 
     @Test
     fun notEq() {
-        val (_, _, diagnostics, _) = elaborate("not_eq")
-        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+        val result = elaborate("not_eq")
+        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun meta() {
-        val (_, state, _, _) = elaborate("meta").success()
-        assertEquals(C.Value.Bool, state.getSolution(0))
+        val result = elaborate("meta").success()
+        assertIs<C.Value.Bool>(result.normalizer.getSolution(0))
     }
 
     @Test
@@ -146,8 +146,8 @@ class ElaborateTest {
 
     @Test
     fun symBad() {
-        val (_, _, diagnostics, _) = elaborate("sym_bad")
-        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+        val result = elaborate("sym_bad")
+        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -157,8 +157,8 @@ class ElaborateTest {
 
     @Test
     fun transBad() {
-        val (_, _, diagnostics, _) = elaborate("trans_bad")
-        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+        val result = elaborate("trans_bad")
+        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -173,8 +173,8 @@ class ElaborateTest {
 
     @Test
     fun invalidImport() {
-        val (_, _, diagnostics, _) = elaborate("invalid_import")
-        assert(diagnostics.any { it is Diagnostic.NameNotFound }) { diagnostics.joinToString("\n") }
+        val result = elaborate("invalid_import")
+        assert(result.diagnostics.any { it is Diagnostic.NameNotFound }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -199,8 +199,9 @@ class ElaborateTest {
 
     @Test
     fun builtinIllTyped() {
-        val (_, _, diagnostics, _) = elaborate("builtin_ill_typed")
-        assert(diagnostics.any { it is Diagnostic.TypeMismatch }) { diagnostics.joinToString("\n") }
+        val result = elaborate("builtin_ill_typed")
+        println(result.diagnostics)
+        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -290,13 +291,13 @@ class ElaborateTest {
 
     @Test
     fun arityMismatch() {
-        val (_, _, diagnostics, _) = elaborate("arity_mismatch")
-        assert(diagnostics.contains(Diagnostic.ArityMismatch(2, 1, UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("arity_mismatch")
+        assert(result.diagnostics.contains(Diagnostic.ArityMismatch(2, 1, UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun impureDef() {
-        val (_, _, diagnostics, _) = elaborate("impure_def")
-        assert(diagnostics.contains(Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))) { diagnostics.joinToString("\n") }
+        val result = elaborate("impure_def")
+        assert(result.diagnostics.contains(Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 }

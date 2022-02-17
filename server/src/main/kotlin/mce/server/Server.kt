@@ -4,6 +4,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.BUILTINS
+import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.phase.*
 import java.nio.charset.Charset
@@ -21,35 +22,20 @@ class Server(
             incrementCount(key)
             when (key) {
                 is Key.Source -> (if (BUILTINS.containsKey(key.name)) read("/${key.name}.mce") else sources(key.name)) as V
-                is Key.SurfaceItem -> {
-                    val source = fetch(Key.Source(key.name))
-                    Parse(key.name, source) as V
-                }
-                is Key.ElaboratedOutput -> {
+                is Key.SurfaceItem -> Parse(key.name, fetch(Key.Source(key.name))) as V
+                is Key.ElaborateResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
                     val items = surfaceItem.imports
                         .filter { fetch(Key.SurfaceItem(it)).let { item -> item.modifiers.contains(S.Modifier.BUILTIN) || item.exports.contains(surfaceItem.name) } }
-                        .map { async { fetch(Key.ElaboratedOutput(it)).item } }
+                        .map { async { fetch(Key.ElaborateResult(it)).item } }
                         .awaitAll()
                         .associateBy { it.name }
-                    Elaborate(items, surfaceItem) as V
+                    Elaborate(surfaceItem, items) as V
                 }
-                is Key.ZonkedOutput -> {
-                    val elaboratedOutput = fetch(Key.ElaboratedOutput(key.name))
-                    Zonk(elaboratedOutput.normalizer, elaboratedOutput.item) as V
-                }
-                is Key.StagedItem -> {
-                    val zonkedOutput = fetch(Key.ZonkedOutput(key.name))
-                    Stage(zonkedOutput.normalizer, zonkedOutput.item) as V
-                }
-                is Key.DefunctionalizedOutput -> {
-                    val item = fetch(Key.StagedItem(key.name))
-                    Defunctionalize(item) as V
-                }
-                is Key.Datapack -> {
-                    val output = fetch(Key.DefunctionalizedOutput(key.name))
-                    Pack(output.functions, output.item) as V
-                }
+                is Key.ZonkResult -> Zonk(fetch(Key.ElaborateResult(key.name))) as V
+                is Key.StageResult -> Stage(fetch(Key.ZonkResult(key.name))) as V
+                is Key.DefunctionalizeResult -> Defunctionalize(fetch(Key.StageResult(key.name))) as V
+                is Key.Datapack -> Pack(fetch(Key.DefunctionalizeResult(key.name))) as V
             }.also {
                 setValue(key, it)
             }
@@ -62,7 +48,11 @@ class Server(
 
     fun edit(name: String): Nothing = TODO()
 
-    suspend fun hover(name: String, id: Id): HoverItem = HoverItem(fetch(Key.ElaboratedOutput(name)).types[id]!!.value)
+    suspend fun hover(name: String, id: Id): HoverItem {
+        val output = fetch(Key.ElaborateResult(name))
+        val type = serializeTerm(output.normalizer.quote(output.types[id]!!))
+        return HoverItem(type)
+    }
 
     suspend fun build(): Nothing = TODO()
 

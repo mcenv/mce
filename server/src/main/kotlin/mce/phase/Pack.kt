@@ -1,9 +1,13 @@
 package mce.phase
 
+import mce.graph.Id
+import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
 
-class Pack private constructor() {
+class Pack private constructor(
+    private val types: Map<Id, C.Value>
+) {
     private fun pack(functions: Map<Int, D.Term>, item: D.Item): P.Datapack = P.Datapack(functions.map { (tag, term) ->
         Context().run {
             packTerm(term)
@@ -163,6 +167,6 @@ class Pack private constructor() {
 
         fun nbtCompoundOf(vararg elements: Pair<String, P.Nbt>): P.Nbt.Compound = P.Nbt.Compound(elements.toMap())
 
-        operator fun invoke(functions: Map<Int, D.Term>, item: D.Item): P.Datapack = Pack().pack(functions, item)
+        operator fun invoke(input: Defunctionalize.Result): P.Datapack = Pack(input.types).pack(input.functions, input.item)
     }
 }
