@@ -263,17 +263,14 @@ class Parse private constructor(
         }
     }
 
-    private fun parseEffect(): S.Effect = TODO()
+    private fun parseEffects(): List<S.Effect> {
+        expect('{')
+        return parseList('}', ::parseEffect)
+    }
 
-    private fun parseEffects(): S.Effects = when (peekChar()) {
-        '{' -> {
-            skip()
-            S.Effects.Set(parseList('}', ::parseEffect))
-        }
-        else -> when (val word = readWord()) {
-            "any" -> S.Effects.Any
-            else -> error("unexpected effects: $word")
-        }
+    private fun parseEffect(): S.Effect {
+        val name = readWord()
+        return S.Effect.Name(name)
     }
 
     private inline fun <A> parseParen(parseA: (Id) -> A): A {

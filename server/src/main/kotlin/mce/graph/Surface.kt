@@ -104,10 +104,7 @@ object Surface {
 
     data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
-    sealed class Effect
-
-    sealed class Effects {
-        object Any : Effects()
-        data class Set(val effects: KList<Effect>) : Effects()
+    sealed class Effect {
+        data class Name(val name: KString) : Effect()
     }
 }

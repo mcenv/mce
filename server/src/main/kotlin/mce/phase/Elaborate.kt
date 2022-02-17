@@ -1,6 +1,7 @@
 package mce.phase
 
 import mce.Diagnostic
+import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.graph.Core as C
@@ -153,8 +154,10 @@ class Elaborate private constructor(
         }
         is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, C.Value.Type)), C.Value.Type)
         is S.Term.Type -> Typing(C.Term.Type, C.Value.Type)
-        else -> inferComputation(term).also {
-            if (!it.effects.isPure()) diagnose(Diagnostic.EffectMismatch(term.id))
+        else -> inferComputation(term).also { computation ->
+            if (computation.effects.isNotEmpty()) {
+                diagnose(Diagnostic.EffectMismatch(emptyList(), computation.effects.map { serializeEffect(it) }, term.id))
+            }
         }
     }.also { types[term.id] = lazy { serializeTerm(normalizer.quote(it.type)) } }
 
@@ -276,14 +279,14 @@ class Elaborate private constructor(
                 val element = up { checkTerm(term.element, type.element.value) }
                 C.Term.CodeOf(element)
             }
-            else -> checkComputation(term, type, C.Effects.Set(emptySet()))
+            else -> checkComputation(term, type, emptySet())
         }
     }
 
     /**
      * Checks the [computation] against the [type] and the [effects] under this context.
      */
-    private fun checkComputation(computation: S.Term, type: C.Value, effects: C.Effects): C.Term {
+    private fun checkComputation(computation: S.Term, type: C.Value, effects: Set<C.Effect>): C.Term {
         val type = normalizer.force(type)
         types[computation.id] = lazy { serializeTerm(normalizer.quote(type)) }
         return when {
@@ -331,7 +334,9 @@ class Elaborate private constructor(
                     types[id] = lazy { serializeTerm(normalizer.quote(END)) }
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(expected)), serializeTerm(normalizer.quote(actual)), id))
                 }
-                if (!(computation.effects sub effects)) diagnose(Diagnostic.EffectMismatch(id))
+                if (!(effects.containsAll(computation.effects))) {
+                    diagnose(Diagnostic.EffectMismatch(effects.map { serializeEffect(it) }, computation.effects.map { serializeEffect(it) }, id))
+                }
                 computation.element
             }
         }
@@ -423,11 +428,8 @@ class Elaborate private constructor(
         }
     }
 
-    private fun elaborateEffect(effect: S.Effect): C.Effect = TODO()
-
-    private fun elaborateEffects(effects: S.Effects): C.Effects = when (effects) {
-        is S.Effects.Any -> C.Effects.Any
-        is S.Effects.Set -> C.Effects.Set(effects.effects.map { elaborateEffect(it) }.toSet())
+    private fun elaborateEffect(effect: S.Effect): C.Effect = when (effect) {
+        is S.Effect.Name -> C.Effect.Name(effect.name)
     }
 
     /**
@@ -582,27 +584,6 @@ class Elaborate private constructor(
         return END
     }
 
-    private fun C.Effects.isPure(): Boolean = when (this) {
-        is C.Effects.Any -> false
-        is C.Effects.Set -> effects.isEmpty()
-    }
-
-    private operator fun C.Effects.plus(that: C.Effects): C.Effects = when (this) {
-        is C.Effects.Any -> C.Effects.Any
-        is C.Effects.Set -> when (that) {
-            is C.Effects.Any -> C.Effects.Any
-            is C.Effects.Set -> C.Effects.Set(this.effects + that.effects)
-        }
-    }
-
-    private infix fun C.Effects.sub(that: C.Effects): Boolean = when (that) {
-        is C.Effects.Any -> true
-        is C.Effects.Set -> when (this) {
-            is C.Effects.Any -> false
-            is C.Effects.Set -> that.effects.containsAll(this.effects)
-        }
-    }
-
     data class Output(
         val item: C.Item,
         val normalizer: Normalizer,
@@ -613,7 +594,7 @@ class Elaborate private constructor(
     private data class Typing<out E>(
         val element: E,
         val type: C.Value,
-        val effects: C.Effects = C.Effects.Set(emptySet())
+        val effects: Set<C.Effect> = emptySet()
     )
 
     private data class Entry(

@@ -164,11 +164,8 @@ class Defunctionalize private constructor() {
         is C.Pattern.Refl -> D.Pattern.Refl
     }
 
-    private fun defunctionalizeEffect(effect: C.Effect): D.Effect = TODO()
-
-    private fun defunctionalizeEffects(effects: C.Effects): D.Effects = when (effects) {
-        is C.Effects.Any -> D.Effects.Any
-        is C.Effects.Set -> D.Effects.Set(effects.effects.map { defunctionalizeEffect(it) }.toSet())
+    private fun defunctionalizeEffect(effect: C.Effect): D.Effect = when (effect) {
+        is C.Effect.Name -> D.Effect.Name(effect.name)
     }
 
     data class Output(

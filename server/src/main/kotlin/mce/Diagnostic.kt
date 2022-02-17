@@ -16,7 +16,7 @@ sealed class Diagnostic {
     data class TypeMismatch(val expected: S.Term, val actual: S.Term, override val id: Id) : Diagnostic()
     data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
-    data class EffectMismatch(override val id: Id) : Diagnostic()
+    data class EffectMismatch(val expected: List<S.Effect>, val actual: List<S.Effect>, override val id: Id) : Diagnostic()
     data class UnsolvedMeta(override val id: Id) : Diagnostic()
 
     companion object {
@@ -87,11 +87,8 @@ sealed class Diagnostic {
             is C.Pattern.Refl -> S.Pattern.Refl(freshId())
         }
 
-        fun serializeEffect(effect: C.Effect): S.Effect = TODO()
-
-        fun serializeEffects(effects: C.Effects): S.Effects = when (effects) {
-            is C.Effects.Any -> S.Effects.Any
-            is C.Effects.Set -> S.Effects.Set(effects.effects.map { serializeEffect(it) })
+        fun serializeEffect(effect: C.Effect): S.Effect = when (effect) {
+            is C.Effect.Name -> S.Effect.Name(effect.name)
         }
     }
 }
