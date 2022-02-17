@@ -64,7 +64,7 @@ class Normalizer(
     fun eval(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole
         is C.Term.Meta -> getSolution(term.index) ?: C.Value.Meta(term.index, term.id)
-        is C.Term.Variable -> values[term.level].value
+        is C.Term.Var -> values[term.level].value
         is C.Term.Def -> {
             val item = items[term.name]!! as C.Item.Def
             if (item.modifiers.contains(C.Modifier.BUILTIN)) C.Value.Def(term.name) else eval(item.body)
@@ -144,7 +144,7 @@ class Normalizer(
     fun quote(value: C.Value): C.Term = when (val value = force(value)) {
         is C.Value.Hole -> C.Term.Hole
         is C.Value.Meta -> getSolution(value.index)?.let { quote(it) } ?: C.Term.Meta(value.index, value.id)
-        is C.Value.Variable -> C.Term.Variable(value.name, value.level)
+        is C.Value.Var -> C.Term.Var(value.name, value.level)
         is C.Value.Def -> C.Term.Def(value.name)
         is C.Value.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) })
         is C.Value.BoolOf -> C.Term.BoolOf(value.value)
@@ -163,7 +163,7 @@ class Normalizer(
         is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value))
         is C.Value.Refl -> C.Term.Refl
         is C.Value.FunOf -> C.Term.FunOf(value.parameters, scope {
-            value.parameters.forEach { bind(lazyOf(C.Value.Variable(it, size))) }
+            value.parameters.forEach { bind(lazyOf(C.Value.Var(it, size))) }
             quote(eval(value.body))
         })
         is C.Value.Apply -> C.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) })
@@ -189,7 +189,7 @@ class Normalizer(
         is C.Value.Ref -> C.Term.Ref(quote(value.element.value))
         is C.Value.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value))
         is C.Value.Fun -> C.Term.Fun(value.parameters, scope {
-            value.parameters.forEach { (name, _) -> bind(lazyOf(C.Value.Variable(name, size))) }
+            value.parameters.forEach { (name, _) -> bind(lazyOf(C.Value.Var(name, size))) }
             quote(eval(value.resultant))
         })
         is C.Value.Thunk -> C.Term.Thunk(quote(value.element.value), value.effects)

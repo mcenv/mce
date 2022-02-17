@@ -18,7 +18,7 @@ class Defunctionalize private constructor() {
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {
         is C.Term.Hole -> throw Error()
         is C.Term.Meta -> throw Error()
-        is C.Term.Variable -> D.Term.Variable(term.name, term.level)
+        is C.Term.Var -> D.Term.Var(term.name, term.level)
         is C.Term.Def -> D.Term.Def(term.name)
         is C.Term.Let -> {
             val init = defunctionalizeTerm(term.init)
@@ -144,7 +144,7 @@ class Defunctionalize private constructor() {
     }
 
     private fun defunctionalizePattern(pattern: C.Pattern): D.Pattern = when (pattern) {
-        is C.Pattern.Variable -> D.Pattern.Variable(pattern.name)
+        is C.Pattern.Var -> D.Pattern.Var(pattern.name)
         is C.Pattern.BoolOf -> D.Pattern.BoolOf(pattern.value)
         is C.Pattern.ByteOf -> D.Pattern.ByteOf(pattern.value)
         is C.Pattern.ShortOf -> D.Pattern.ShortOf(pattern.value)

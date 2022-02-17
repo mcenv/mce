@@ -7,9 +7,9 @@ private val COMM: Comparator<Lazy<C.Value>> = Comparator { value1, value2 ->
     val value1 = value1.value
     val value2 = value2.value
     when {
-        value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level.compareTo(value2.level)
-        value1 is C.Value.Variable -> 1
-        value2 is C.Value.Variable -> -1
+        value1 is C.Value.Var && value2 is C.Value.Var -> value1.level.compareTo(value2.level)
+        value1 is C.Value.Var -> 1
+        value2 is C.Value.Var -> -1
         else -> 0
     }
 }
@@ -35,7 +35,7 @@ val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
             // a - 0 = a
             b is C.Value.IntOf && b.value == 0 -> a
             // a - a = 0
-            a is C.Value.Variable && b is C.Value.Variable && a.level == b.level -> C.Value.IntOf(0)
+            a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
             else -> C.Value.Apply(C.Value.Def("int/sub"), arguments)
         }
     },
@@ -63,7 +63,7 @@ val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
             // a / 1 = a
             b is C.Value.IntOf && b.value == 1 -> a
             // a / a = 1
-            a is C.Value.Variable && b is C.Value.Variable && a.level == b.level -> C.Value.IntOf(1)
+            a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(1)
             else -> C.Value.Apply(C.Value.Def("int/div"), arguments)
         }
     },
@@ -75,7 +75,7 @@ val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
             // a % 1 = 0
             b is C.Value.IntOf && b.value == 1 -> a
             // a % a = 0
-            a is C.Value.Variable && b is C.Value.Variable && a.level == b.level -> C.Value.IntOf(0)
+            a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
             else -> C.Value.Apply(C.Value.Def("int/mod"), arguments)
         }
     }

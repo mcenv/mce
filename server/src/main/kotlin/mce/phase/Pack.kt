@@ -10,7 +10,7 @@ class Pack private constructor() {
 
     private fun Context.packTerm(term: D.Term) {
         when (term) {
-            is D.Term.Variable -> TODO()
+            is D.Term.Var -> TODO()
             is D.Term.Def -> TODO()
             is D.Term.Let -> TODO()
             is D.Term.Match -> TODO()

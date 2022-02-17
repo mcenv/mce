@@ -45,7 +45,7 @@ object Core {
     sealed class Term {
         object Hole : Term()
         data class Meta(val index: KInt, val id: Id) : Term()
-        data class Variable(val name: KString, val level: KInt) : Term()
+        data class Var(val name: KString, val level: KInt) : Term()
         data class Def(val name: KString) : Term()
         data class Let(val name: KString, val init: Term, val body: Term) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>) : Term()
@@ -97,7 +97,7 @@ object Core {
      * A syntactic pattern.
      */
     sealed class Pattern {
-        data class Variable(val name: KString) : Pattern()
+        data class Var(val name: KString) : Pattern()
         data class BoolOf(val value: KBoolean) : Pattern()
         data class ByteOf(val value: KByte) : Pattern()
         data class ShortOf(val value: KShort) : Pattern()
@@ -121,7 +121,7 @@ object Core {
     sealed class Value {
         object Hole : Value()
         data class Meta(val index: KInt, val id: Id) : Value()
-        data class Variable(val name: KString, val level: KInt) : Value()
+        data class Var(val name: KString, val level: KInt) : Value()
         data class Def(val name: KString) : Value()
         data class Match(val scrutinee: Value, val clauses: KList<Pair<Pattern, Lazy<Value>>>) : Value()
         data class BoolOf(val value: KBoolean) : Value()

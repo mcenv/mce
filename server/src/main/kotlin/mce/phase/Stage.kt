@@ -19,7 +19,7 @@ class Stage private constructor(
     private fun stageTerm(term: C.Term): C.Term = when (term) {
         is C.Term.Hole -> throw Error()
         is C.Term.Meta -> throw Error()
-        is C.Term.Variable -> term
+        is C.Term.Var -> term
         is C.Term.Def -> term
         is C.Term.Let -> {
             val init = stageTerm(term.init)

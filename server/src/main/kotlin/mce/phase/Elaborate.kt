@@ -57,7 +57,7 @@ class Elaborate private constructor(
                 val level = wavefront + level
                 val entry = entries[level]
                 val type = if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
-                Typing(C.Term.Variable(term.name, level), type)
+                Typing(C.Term.Var(term.name, level), type)
             }
         }
         is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value), C.Value.Bool)
@@ -354,7 +354,7 @@ class Elaborate private constructor(
         is S.Pattern.Variable -> {
             val type = normalizer.fresh(pattern.id)
             bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
-            Typing(C.Pattern.Variable(pattern.name), type)
+            Typing(C.Pattern.Var(pattern.name), type)
         }
         is S.Pattern.BoolOf -> Typing(C.Pattern.BoolOf(pattern.value), C.Value.Bool)
         is S.Pattern.ByteOf -> Typing(C.Pattern.ByteOf(pattern.value), C.Value.Byte)
@@ -404,7 +404,7 @@ class Elaborate private constructor(
         return when {
             pattern is S.Pattern.Variable -> {
                 bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
-                C.Pattern.Variable(pattern.name)
+                C.Pattern.Var(pattern.name)
             }
             pattern is S.Pattern.ListOf && type is C.Value.List -> {
                 val elements = pattern.elements.map { checkPattern(it, type.element.value) }
@@ -456,7 +456,7 @@ class Elaborate private constructor(
                 else -> solved1 unify value2
             }
             value2 is C.Value.Meta -> value2 unify value1
-            value1 is C.Value.Variable && value2 is C.Value.Variable -> value1.level == value2.level
+            value1 is C.Value.Var && value2 is C.Value.Var -> value1.level == value2.level
             value1 is C.Value.Def && value2 is C.Value.Def && value1.name == value2.name -> true
             value1 is C.Value.Match && value2 is C.Value.Match -> value1.scrutinee unify value2.scrutinee &&
                     (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && clause1.second.value unify clause2.second.value }
@@ -481,7 +481,7 @@ class Elaborate private constructor(
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && normalizer.scope {
-                value1.parameters.forEach { bind(lazyOf(C.Value.Variable(it, size))) }
+                value1.parameters.forEach { bind(lazyOf(C.Value.Var(it, size))) }
                 eval(value1.body) unify eval(value2.body)
             }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> value1.function unify value2.function &&
@@ -506,14 +506,14 @@ class Elaborate private constructor(
             value1 is C.Value.List && value2 is C.Value.List -> value1.element.value unify value2.element.value
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size && scope {
                 (value1.elements zip value2.elements).all { (element1, element2) ->
-                    (eval(element1.second) unify eval(element2.second)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                    (eval(element1.second) unify eval(element2.second)).also { bind(lazyOf(C.Value.Var("", size))) }
                 }
             }
             value1 is C.Value.Ref && value2 is C.Value.Ref -> value1.element.value unify value2.element.value
             value1 is C.Value.Eq && value2 is C.Value.Eq -> value1.left.value unify value2.left.value && value1.right.value unify value2.right.value
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && scope {
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
-                    (eval(parameter2.type) unify eval(parameter1.type)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                    (eval(parameter2.type) unify eval(parameter1.type)).also { bind(lazyOf(C.Value.Var("", size))) }
                 } && eval(value1.resultant) unify eval(value2.resultant)
             }
             value1 is C.Value.Thunk && value2 is C.Value.Thunk -> value1.element.value unify value2.element.value
@@ -530,8 +530,8 @@ class Elaborate private constructor(
         val value1 = normalizer.force(this)
         val value2 = normalizer.force(that)
         return when {
-            value1 is C.Value.Variable && entries[value1.level].upper != null -> entries[value1.level].upper!! subtype value2
-            value2 is C.Value.Variable && entries[value2.level].lower != null -> value1 subtype entries[value2.level].lower!!
+            value1 is C.Value.Var && entries[value1.level].upper != null -> entries[value1.level].upper!! subtype value2
+            value2 is C.Value.Var && entries[value2.level].lower != null -> value1 subtype entries[value2.level].lower!!
             value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> value1.elements.size == value2.elements.size &&
@@ -544,7 +544,7 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { it.first.value subtype it.second.value }
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value subtype value2.element.value
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && scope {
-                value1.parameters.forEach { parameter -> bind(lazyOf(C.Value.Variable(parameter, size))) }
+                value1.parameters.forEach { parameter -> bind(lazyOf(C.Value.Var(parameter, size))) }
                 eval(value1.body) subtype eval(value2.body)
             }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> value1.function subtype value2.function &&
@@ -558,13 +558,13 @@ class Elaborate private constructor(
             value1 is C.Value.List && value2 is C.Value.List -> value1.element.value subtype value2.element.value
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size && scope {
                 (value1.elements zip value2.elements).all { (elements1, elements2) ->
-                    (eval(elements1.second) subtype eval(elements2.second)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                    (eval(elements1.second) subtype eval(elements2.second)).also { bind(lazyOf(C.Value.Var("", size))) }
                 }
             }
             value1 is C.Value.Ref && value2 is C.Value.Ref -> value1.element.value subtype value2.element.value
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && scope {
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
-                    (eval(parameter2.type) subtype eval(parameter1.type)).also { bind(lazyOf(C.Value.Variable("", size))) }
+                    (eval(parameter2.type) subtype eval(parameter1.type)).also { bind(lazyOf(C.Value.Var("", size))) }
                 } && eval(value1.resultant) subtype eval(value2.resultant)
             }
             value1 is C.Value.Thunk && value2 is C.Value.Thunk -> value1.element.value subtype value2.element.value && value1.effects sub value2.effects
@@ -580,8 +580,8 @@ class Elaborate private constructor(
         val value1 = normalizer.force(this)
         val value2 = normalizer.force(that)
         when {
-            value1 is C.Value.Variable -> normalizer.substitute(value1.level, lazyOf(value2))
-            value2 is C.Value.Variable -> normalizer.substitute(value2.level, lazyOf(value1))
+            value1 is C.Value.Var -> normalizer.substitute(value1.level, lazyOf(value2))
+            value2 is C.Value.Var -> normalizer.substitute(value2.level, lazyOf(value1))
             value1 is C.Value.ByteArrayOf && value2 is C.Value.ByteArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.IntArrayOf && value2 is C.Value.IntArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
@@ -669,7 +669,7 @@ class Elaborate private constructor(
     private fun bind(id: Id, entry: Entry, value: C.Value? = null) {
         checkPhase(id, entry.type)
         entries += entry
-        normalizer.bind(lazyOf(value ?: C.Value.Variable(entry.name, normalizer.size)))
+        normalizer.bind(lazyOf(value ?: C.Value.Var(entry.name, normalizer.size)))
     }
 
     companion object {

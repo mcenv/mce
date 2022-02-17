@@ -28,7 +28,7 @@ class Zonk private constructor(
             }
             else -> normalizer.quote(solution)
         }
-        is C.Term.Variable -> term
+        is C.Term.Var -> term
         is C.Term.Def -> term
         is C.Term.Let -> {
             val init = zonkTerm(term.init)

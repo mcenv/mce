@@ -23,7 +23,7 @@ sealed class Diagnostic {
         fun serializeTerm(term: C.Term): S.Term = when (term) {
             is C.Term.Hole -> S.Term.Hole(freshId())
             is C.Term.Meta -> S.Term.Meta(freshId())
-            is C.Term.Variable -> S.Term.Name(term.name, freshId())
+            is C.Term.Var -> S.Term.Name(term.name, freshId())
             is C.Term.Def -> S.Term.Name(term.name, freshId())
             is C.Term.Let -> S.Term.Let(term.name, serializeTerm(term.init), serializeTerm(term.body), freshId())
             is C.Term.Match -> S.Term.Match(serializeTerm(term.scrutinee), term.clauses.map { serializePattern(it.first) to serializeTerm(it.second) }, freshId())
@@ -72,7 +72,7 @@ sealed class Diagnostic {
         }
 
         fun serializePattern(pattern: C.Pattern): S.Pattern = when (pattern) {
-            is C.Pattern.Variable -> S.Pattern.Variable(pattern.name, freshId())
+            is C.Pattern.Var -> S.Pattern.Variable(pattern.name, freshId())
             is C.Pattern.BoolOf -> S.Pattern.BoolOf(pattern.value, freshId())
             is C.Pattern.ByteOf -> S.Pattern.ByteOf(pattern.value, freshId())
             is C.Pattern.ShortOf -> S.Pattern.ShortOf(pattern.value, freshId())
