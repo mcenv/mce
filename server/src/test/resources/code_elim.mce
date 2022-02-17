@@ -1,5 +1,1 @@
-import {}
-
-export {}
-
 def : bool := $`false

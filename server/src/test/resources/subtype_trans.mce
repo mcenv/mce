@@ -1,5 +1,1 @@
-import {}
-
-export {}
-
 def : fun [α <: bool : type, a : α] -> union {bool, int} := \[α, a] -> a

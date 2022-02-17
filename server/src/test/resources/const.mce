@@ -1,5 +1,3 @@
-import {}
-
 export {unfold_def}
 
 def : bool := false

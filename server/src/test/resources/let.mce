@@ -1,7 +1,3 @@
-import {}
-
-export {}
-
 def : bool :=
   let x := false;
   x

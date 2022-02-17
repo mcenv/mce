@@ -1,5 +1,3 @@
 import {int/add}
 
-export {}
-
 def : 2 = (1 int/add 1) := refl

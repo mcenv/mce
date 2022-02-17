@@ -1,5 +1,1 @@
-import {}
-
-export {}
-
 def {builtin} : bool := _

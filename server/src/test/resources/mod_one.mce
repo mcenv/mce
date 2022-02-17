@@ -1,5 +1,3 @@
 import {int/mod}
 
-export {}
-
 def : fun [a : int] -> (a int/mod 1) = a := \[a] -> refl

@@ -1,7 +1,3 @@
-import {}
-
-export {}
-
 def : fun [α : type, β : type, p : α = β, a : α] -> β :=
   \[α, β, p, a] -> match p [
     refl => a

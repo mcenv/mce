@@ -11,17 +11,16 @@ class Parse private constructor(
     private var cursor: Int = 0
 
     private fun parseItem(name: String): S.Item {
-        val imports = run {
-            expectString("import")
+        var word = readWord()
+        val imports = if (word == "import") {
             expect('{')
-            parseList('}', ::readWord)
-        }
-        val exports = run {
-            expectString("export")
+            parseList('}', ::readWord).also { word = readWord() }
+        } else emptyList()
+        val exports = if (word == "export") {
             expect('{')
-            parseList('}', ::readWord)
-        }
-        return when (val word = readWord()) {
+            parseList('}', ::readWord).also { word = readWord() }
+        } else emptyList()
+        return when (word) {
             "def" -> {
                 val modifiers = if (peekChar() == '{') {
                     skip()

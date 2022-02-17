@@ -1,5 +1,3 @@
 import {int/mul}
 
-export {}
-
 def : fun [a : int] -> (1 int/mul a) = a := \[a] -> refl

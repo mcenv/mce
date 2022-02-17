@@ -1,5 +1,3 @@
 import {identity}
 
-export {}
-
 def : bool := identity [bool, false]

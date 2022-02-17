@@ -1,5 +1,3 @@
 import {const}
 
-export {}
-
 def : const = false := refl

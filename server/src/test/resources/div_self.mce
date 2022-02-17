@@ -1,5 +1,3 @@
 import {int/div}
 
-export {}
-
 def : fun [a : int] -> (a int/div a) = 1 := \[a] -> refl
