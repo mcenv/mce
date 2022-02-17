@@ -70,6 +70,21 @@ object Packed {
         data class LongArray(val data: KList<KLong>) : Nbt()
     }
 
+    enum class NbtType {
+        BYTE,
+        SHORT,
+        INT,
+        LONG,
+        FLOAT,
+        DOUBLE,
+        BYTE_ARRAY,
+        STRING,
+        LIST,
+        COMPOUND,
+        INT_ARRAY,
+        LONG_ARRAY
+    }
+
     data class ResourceLocation(
         val namespace: KString,
         val path: KString

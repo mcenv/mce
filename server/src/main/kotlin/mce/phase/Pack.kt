@@ -6,8 +6,10 @@ import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
 
 class Pack private constructor(
-    private val types: Map<Id, C.Value>
+    types: Map<Id, C.Value>
 ) {
+    private val types: Map<Id, P.NbtType> = types.mapValues { erase(it.value) }
+
     private fun pack(functions: Map<Int, D.Term>, item: D.Item): P.Datapack = P.Datapack(functions.map { (tag, term) ->
         Context().run {
             packTerm(term)
@@ -24,11 +26,19 @@ class Pack private constructor(
 
     private fun Context.packTerm(term: D.Term) {
         when (term) {
-            is D.Term.Var -> TODO()
+            is D.Term.Var -> {
+                val type = getType(term.id)
+                val path = type.toPath()
+                val index = getIndex(type, term.name)
+                +P.Command.InsertAtIndex(STACK, path, -1, P.SourceProvider.From(STACK, path[index]))
+            }
             is D.Term.Def -> +P.Command.RunFunction(P.ResourceLocation(term.name))
             is D.Term.Let -> {
+                val type = getType(term.init.id)
                 packTerm(term.init)
+                bind(type, term.name)
                 packTerm(term.body)
+                pop(type)
             }
             is D.Term.Match -> {
                 packTerm(term.scrutinee)
@@ -90,8 +100,32 @@ class Pack private constructor(
                     }
                 }
             }
-            is D.Term.ListOf -> TODO()
-            is D.Term.CompoundOf -> TODO()
+            is D.Term.ListOf -> {
+                +P.Command.InsertAtIndex(STACK, LIST, -1, P.SourceProvider.Value(P.Nbt.List(emptyList())))
+                if (term.elements.isNotEmpty()) {
+                    val type = getType(term.elements.first().id)
+                    val targetPath = LIST[if (type == P.NbtType.LIST) -2 else -1]
+                    val sourcePath = type.toPath()[-1]
+                    term.elements.forEach { element ->
+                        packTerm(element)
+                        +P.Command.InsertAtIndex(STACK, targetPath, -1, P.SourceProvider.From(STACK, sourcePath))
+                        +P.Command.RemoveData(STACK, sourcePath)
+                    }
+                }
+            }
+            is D.Term.CompoundOf -> {
+                +P.Command.InsertAtIndex(STACK, COMPOUND, -1, P.SourceProvider.Value(P.Nbt.Compound(emptyMap())))
+                if (term.elements.isNotEmpty()) {
+                    term.elements.forEachIndexed { index, element ->
+                        val type = getType(element.id)
+                        val targetPath = COMPOUND[if (type == P.NbtType.COMPOUND) -2 else -1]["$index"]
+                        val sourcePath = type.toPath()[-1]
+                        packTerm(element)
+                        +P.Command.SetData(STACK, targetPath, P.SourceProvider.From(STACK, sourcePath))
+                        +P.Command.RemoveData(STACK, sourcePath)
+                    }
+                }
+            }
             is D.Term.RefOf -> TODO()
             is D.Term.Refl -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.FunOf -> +P.Command.InsertAtIndex(STACK, INT, -1, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
@@ -122,13 +156,76 @@ class Pack private constructor(
         }
     }
 
+    private fun getType(id: Id): P.NbtType = types[id]!!
+
+    private fun erase(type: C.Value): P.NbtType = when (type) {
+        is C.Value.Hole -> throw Error()
+        is C.Value.Meta -> throw Error()
+        is C.Value.Var -> TODO()
+        is C.Value.Def -> TODO()
+        is C.Value.Match -> TODO()
+        is C.Value.BoolOf -> TODO()
+        is C.Value.ByteOf -> TODO()
+        is C.Value.ShortOf -> TODO()
+        is C.Value.IntOf -> TODO()
+        is C.Value.LongOf -> TODO()
+        is C.Value.FloatOf -> TODO()
+        is C.Value.DoubleOf -> TODO()
+        is C.Value.StringOf -> TODO()
+        is C.Value.ByteArrayOf -> TODO()
+        is C.Value.IntArrayOf -> TODO()
+        is C.Value.LongArrayOf -> TODO()
+        is C.Value.ListOf -> TODO()
+        is C.Value.CompoundOf -> TODO()
+        is C.Value.RefOf -> TODO()
+        is C.Value.Refl -> TODO()
+        is C.Value.FunOf -> TODO()
+        is C.Value.Apply -> TODO()
+        is C.Value.CodeOf -> throw Error()
+        is C.Value.Splice -> throw Error()
+        is C.Value.Union -> TODO()
+        is C.Value.Intersection -> TODO()
+        is C.Value.Bool -> P.NbtType.BYTE
+        is C.Value.Byte -> P.NbtType.BYTE
+        is C.Value.Short -> P.NbtType.SHORT
+        is C.Value.Int -> P.NbtType.INT
+        is C.Value.Long -> P.NbtType.LONG
+        is C.Value.Float -> P.NbtType.FLOAT
+        is C.Value.Double -> P.NbtType.DOUBLE
+        is C.Value.String -> P.NbtType.STRING
+        is C.Value.ByteArray -> P.NbtType.BYTE_ARRAY
+        is C.Value.IntArray -> P.NbtType.INT_ARRAY
+        is C.Value.LongArray -> P.NbtType.LONG_ARRAY
+        is C.Value.List -> P.NbtType.LIST
+        is C.Value.Compound -> P.NbtType.COMPOUND
+        is C.Value.Ref -> P.NbtType.INT
+        is C.Value.Eq -> P.NbtType.BYTE
+        is C.Value.Fun -> P.NbtType.BYTE
+        is C.Value.Code -> throw Error()
+        is C.Value.Type -> P.NbtType.BYTE
+    }
+
     private class Context(
-        private val _commands: MutableList<P.Command> = mutableListOf()
+        private val _commands: MutableList<P.Command> = mutableListOf(),
+        private val entries: Map<P.NbtType, MutableList<String>> = P.NbtType.values().associateWith { mutableListOf() }
     ) {
         val commands: List<P.Command> get() = _commands
 
         operator fun P.Command.unaryPlus() {
             _commands.add(this)
+        }
+
+        fun getIndex(type: P.NbtType, name: String): Int {
+            val entry = entries[type]!!
+            return entry.lastIndexOf(name) - entry.size
+        }
+
+        fun bind(type: P.NbtType, name: String) {
+            entries[type]!! += name
+        }
+
+        fun pop(type: P.NbtType) {
+            entries[type]!!.removeLast()
         }
     }
 
@@ -152,6 +249,21 @@ class Pack private constructor(
         val COMPOUND = P.NbtPath()["j"]
         val INT_ARRAY = P.NbtPath()["k"]
         val LONG_ARRAY = P.NbtPath()["l"]
+
+        private fun P.NbtType.toPath(): P.NbtPath = when (this) {
+            P.NbtType.BYTE -> BYTE
+            P.NbtType.SHORT -> SHORT
+            P.NbtType.INT -> INT
+            P.NbtType.LONG -> LONG
+            P.NbtType.FLOAT -> FLOAT
+            P.NbtType.DOUBLE -> DOUBLE
+            P.NbtType.BYTE_ARRAY -> BYTE_ARRAY
+            P.NbtType.STRING -> STRING
+            P.NbtType.LIST -> LIST
+            P.NbtType.COMPOUND -> COMPOUND
+            P.NbtType.INT_ARRAY -> INT_ARRAY
+            P.NbtType.LONG_ARRAY -> LONG_ARRAY
+        }
 
         operator fun P.NbtPath.get(pattern: P.Nbt.Compound): P.NbtPath = P.NbtPath(nodes + P.NbtNode.MatchElement(pattern))
 
