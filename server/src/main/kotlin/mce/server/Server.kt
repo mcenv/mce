@@ -42,9 +42,13 @@ class Server(
                     val zonkedOutput = fetch(Key.ZonkedOutput(key.name))
                     Stage(zonkedOutput.normalizer, zonkedOutput.item) as V
                 }
-                is Key.DefunctionalizedItem -> {
+                is Key.DefunctionalizedOutput -> {
                     val item = fetch(Key.StagedItem(key.name))
                     Defunctionalize(item) as V
+                }
+                is Key.Datapack -> {
+                    val output = fetch(Key.DefunctionalizedOutput(key.name))
+                    Pack(output.functions, output.item) as V
                 }
             }.also {
                 setValue(key, it)

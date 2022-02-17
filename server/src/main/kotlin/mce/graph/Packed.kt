@@ -11,11 +11,11 @@ import kotlin.collections.List as KList
 
 object Packed {
     data class Datapack(
-        val functions: Map<KString, Function>
+        val functions: KList<Function>
     )
 
     data class Function(
-        val name: KString,
+        val name: ResourceLocation,
         val commands: KList<Command>
     )
 
