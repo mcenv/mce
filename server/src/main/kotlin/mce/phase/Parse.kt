@@ -201,7 +201,11 @@ class Parse private constructor(
                 }
                 expectString("->")
                 val resultant = parseTerm()
-                S.Term.Fun(parameters, resultant, id)
+                val effects = if (peekChar() == '!') {
+                    skip()
+                    parseEffects()
+                } else emptyList()
+                S.Term.Fun(parameters, resultant, effects, id)
             }
             "code" -> S.Term.Code(parseAtomTerm(), id)
             "type" -> S.Term.Type(id)

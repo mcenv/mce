@@ -63,7 +63,12 @@ sealed class Diagnostic {
             is C.Term.Compound -> S.Term.Compound(term.elements.map { it.first to serializeTerm(it.second) }, freshId())
             is C.Term.Ref -> S.Term.Ref(serializeTerm(term.element), freshId())
             is C.Term.Eq -> S.Term.Eq(serializeTerm(term.left), serializeTerm(term.right), freshId())
-            is C.Term.Fun -> S.Term.Fun(term.parameters.map { S.Parameter(it.name, it.lower?.let(::serializeTerm), it.upper?.let(::serializeTerm), serializeTerm(it.type)) }, serializeTerm(term.resultant), freshId())
+            is C.Term.Fun -> S.Term.Fun(
+                term.parameters.map { S.Parameter(it.name, it.lower?.let(::serializeTerm), it.upper?.let(::serializeTerm), serializeTerm(it.type)) },
+                serializeTerm(term.resultant),
+                term.effects.map(::serializeEffect),
+                freshId()
+            )
             is C.Term.Code -> S.Term.Code(serializeTerm(term.element), freshId())
             is C.Term.Type -> S.Term.Type(freshId())
         }

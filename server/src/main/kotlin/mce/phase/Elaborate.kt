@@ -192,7 +192,7 @@ class Elaborate private constructor(
                 inferComputation(computation.body)
             }
             val parameters = (computation.parameters zip types).map { C.Parameter(it.first, normalizer.quote(END), normalizer.quote(ANY), normalizer.quote(it.second)) }
-            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, normalizer.quote(body.type)), body.effects)
+            Typing(C.Term.FunOf(computation.parameters, body.element), C.Value.Fun(parameters, normalizer.quote(body.type), body.effects))
         }
         is S.Term.Apply -> {
             val function = inferComputation(computation.function)
@@ -216,11 +216,11 @@ class Elaborate private constructor(
                                         if (!(argument subtype upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(quote(upper)), serializeTerm(quote(argument)), id))
                                     }
                                 }
-                                bind(lazyOf(argument)) // TODO: bind?
+                                bind(lazyOf(argument)) // TODO: entry bind?
                             }
                         }
                         val resultant = eval(type.resultant)
-                        Typing(C.Term.Apply(function.element, arguments), resultant, function.effects)
+                        Typing(C.Term.Apply(function.element, arguments), resultant, type.effects)
                     }
                 }
                 else -> Typing(C.Term.Apply(function.element, computation.arguments.map { checkTerm(it, ANY) }), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
@@ -240,7 +240,8 @@ class Elaborate private constructor(
                     }
                 }
                 val resultant = checkTerm(computation.resultant, C.Value.Type) /* TODO */
-                C.Term.Fun(parameters, resultant)
+                val effects = computation.effects.map { elaborateEffect(it) }.toSet()
+                C.Term.Fun(parameters, resultant, effects)
             },
             C.Value.Type
         )
@@ -279,14 +280,14 @@ class Elaborate private constructor(
                 val element = up { checkTerm(term.element, type.element.value) }
                 C.Term.CodeOf(element)
             }
-            else -> checkComputation(term, type, emptySet())
+            else -> checkComputation(term, type, emptySet()).term
         }
     }
 
     /**
      * Checks the [computation] against the [type] and the [effects] under this context.
      */
-    private fun checkComputation(computation: S.Term, type: C.Value, effects: Set<C.Effect>): C.Term {
+    private fun checkComputation(computation: S.Term, type: C.Value, effects: Set<C.Effect>): Effecting {
         val type = normalizer.force(type)
         types[computation.id] = lazy { serializeTerm(normalizer.quote(type)) }
         return when {
@@ -296,7 +297,7 @@ class Elaborate private constructor(
                     bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage))
                     checkComputation(computation.body, type, effects)
                 }
-                C.Term.Let(computation.name, init.element, body)
+                Effecting(C.Term.Let(computation.name, init.element, body.term), init.effects + body.effects)
             }
             computation is S.Term.Match -> {
                 val scrutinee = inferTerm(computation.scrutinee)
@@ -304,10 +305,10 @@ class Elaborate private constructor(
                     scope {
                         val pattern = checkPattern(pattern, scrutinee.type)
                         val body = checkComputation(body, type, effects)
-                        (pattern to body)
+                        pattern to body
                     }
                 }
-                C.Term.Match(scrutinee.element, clauses)
+                Effecting(C.Term.Match(scrutinee.element, clauses.map { (pattern, body) -> pattern to body.term }), clauses.flatMap { (_, body) -> body.effects }.toSet())
             }
             computation is S.Term.FunOf && type is C.Value.Fun -> {
                 if (type.parameters.size != computation.parameters.size) {
@@ -321,7 +322,7 @@ class Elaborate private constructor(
                         bind(computation.id, Entry(name, lower, upper, type, stage))
                     }
                     val resultant = checkComputation(computation.body, eval(type.resultant), effects)
-                    C.Term.FunOf(computation.parameters, resultant)
+                    Effecting(C.Term.FunOf(computation.parameters, resultant.term), emptySet())
                 }
             }
             else -> {
@@ -337,7 +338,7 @@ class Elaborate private constructor(
                 if (!(effects.containsAll(computation.effects))) {
                     diagnose(Diagnostic.EffectMismatch(effects.map { serializeEffect(it) }, computation.effects.map { serializeEffect(it) }, id))
                 }
-                computation.element
+                Effecting(computation.element, computation.effects)
             }
         }
     }
@@ -505,7 +506,7 @@ class Elaborate private constructor(
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
                     (eval(parameter2.type) unify eval(parameter1.type)).also { bind(lazyOf(C.Value.Var("", size))) }
                 } && eval(value1.resultant) unify eval(value2.resultant)
-            }
+            } && value1.effects == value2.effects
             value1 is C.Value.Code && value2 is C.Value.Code -> value1.element.value unify value2.element.value
             value1 is C.Value.Type && value2 is C.Value.Type -> true
             else -> false
@@ -553,7 +554,7 @@ class Elaborate private constructor(
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
                     (eval(parameter2.type) subtype eval(parameter1.type)).also { bind(lazyOf(C.Value.Var("", size))) }
                 } && eval(value1.resultant) subtype eval(value2.resultant)
-            }
+            } && value2.effects.containsAll(value1.effects)
             value1 is C.Value.Code && value2 is C.Value.Code -> value1.element.value subtype value2.element.value
             else -> value1 unify value2
         }
@@ -595,6 +596,11 @@ class Elaborate private constructor(
         val element: E,
         val type: C.Value,
         val effects: Set<C.Effect> = emptySet()
+    )
+
+    private data class Effecting(
+        val term: C.Term,
+        val effects: Set<C.Effect>
     )
 
     private data class Entry(

@@ -63,7 +63,7 @@ object Defunctionalized {
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Ref(val element: Term) : Term()
         data class Eq(val left: Term, val right: Term) : Term()
-        data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: Set<Effect>) : Term()
         object Type : Term()
     }
 

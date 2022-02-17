@@ -122,7 +122,7 @@ class Stage private constructor(
                 C.Parameter(name, lower, upper, type)
             }
             val resultant = stageTerm(term.resultant)
-            C.Term.Fun(parameters, resultant)
+            C.Term.Fun(parameters, resultant, term.effects)
         }
         is C.Term.Code -> throw Error()
         is C.Term.Type -> term

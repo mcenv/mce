@@ -134,7 +134,7 @@ class Zonk private constructor(
                 C.Parameter(name, lower, upper, type)
             }
             val resultant = zonkTerm(term.resultant)
-            C.Term.Fun(parameters, resultant)
+            C.Term.Fun(parameters, resultant, term.effects)
         }
         is C.Term.Code -> {
             val element = zonkTerm(term.element)

@@ -293,4 +293,10 @@ class ElaborateTest {
         val (_, _, diagnostics, _) = elaborate("arity_mismatch")
         assert(diagnostics.contains(Diagnostic.ArityMismatch(2, 1, UUID(0, 0)))) { diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun impureDef() {
+        val (_, _, diagnostics, _) = elaborate("impure_def")
+        assert(diagnostics.contains(Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))) { diagnostics.joinToString("\n") }
+    }
 }

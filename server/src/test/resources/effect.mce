@@ -1,0 +1,5 @@
+import {}
+
+export {impure_def}
+
+def {} : fun [] -> int ! {a} := \[] -> 0

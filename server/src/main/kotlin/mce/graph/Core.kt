@@ -85,7 +85,7 @@ object Core {
         data class Compound(val elements: KList<Pair<KString, Term>>) : Term()
         data class Ref(val element: Term) : Term()
         data class Eq(val left: Term, val right: Term) : Term()
-        data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Term()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>) : Term()
         data class Code(val element: Term) : Term()
         object Type : Term()
     }
@@ -157,7 +157,7 @@ object Core {
         data class Compound(val elements: KList<Pair<KString, Term>>) : Value()
         data class Ref(val element: Lazy<Value>) : Value()
         data class Eq(val left: Lazy<Value>, val right: Lazy<Value>) : Value()
-        data class Fun(val parameters: KList<Parameter>, val resultant: Term) : Value()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>) : Value()
         data class Code(val element: Lazy<Value>) : Value()
         object Type : Value()
     }

@@ -76,7 +76,7 @@ object Surface {
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
         data class Ref(val element: Term, override val id: Id) : Term()
         data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
-        data class Fun(val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Term()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KList<Effect>, override val id: Id) : Term()
         data class Code(val element: Term, override val id: Id) : Term()
         data class Type(override val id: Id) : Term()
     }

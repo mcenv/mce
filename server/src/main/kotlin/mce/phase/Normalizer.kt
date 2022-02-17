@@ -126,7 +126,7 @@ class Normalizer(
         is C.Term.Compound -> C.Value.Compound(term.elements)
         is C.Term.Ref -> C.Value.Ref(lazy { eval(term.element) })
         is C.Term.Eq -> C.Value.Eq(lazy { eval(term.left) }, lazy { eval(term.right) })
-        is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant)
+        is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant, term.effects)
         is C.Term.Code -> C.Value.Code(lazy { eval(term.element) })
         is C.Term.Type -> C.Value.Type
     }
@@ -183,7 +183,7 @@ class Normalizer(
         is C.Value.Fun -> C.Term.Fun(value.parameters, scope {
             value.parameters.forEach { (name, _) -> bind(lazyOf(C.Value.Var(name, size))) }
             quote(eval(value.resultant))
-        })
+        }, value.effects)
         is C.Value.Code -> C.Term.Code(quote(value.element.value))
         is C.Value.Type -> C.Term.Type
     }

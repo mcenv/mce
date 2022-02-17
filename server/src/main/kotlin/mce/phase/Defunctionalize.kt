@@ -121,7 +121,8 @@ class Defunctionalize private constructor() {
                 D.Parameter(name, lower, upper, type)
             }
             val resultant = defunctionalizeTerm(term.resultant)
-            D.Term.Fun(parameters, resultant)
+            val effects = term.effects.map { defunctionalizeEffect(it) }.toSet()
+            D.Term.Fun(parameters, resultant, effects)
         }
         is C.Term.Code -> throw Error()
         is C.Term.Type -> D.Term.Type
