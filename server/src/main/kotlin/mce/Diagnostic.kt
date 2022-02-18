@@ -17,6 +17,7 @@ sealed class Diagnostic {
     data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
     data class EffectMismatch(val expected: List<S.Effect>, val actual: List<S.Effect>, override val id: Id) : Diagnostic()
+    data class PolymorphicRepresentation(override val id: Id) : Diagnostic()
     data class UnsolvedMeta(override val id: Id) : Diagnostic()
 
     companion object {

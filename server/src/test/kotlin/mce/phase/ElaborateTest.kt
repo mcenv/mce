@@ -300,4 +300,21 @@ class ElaborateTest {
         val result = elaborate("impure_def")
         assert(result.diagnostics.contains(Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun homogeneousList() {
+        elaborate("homogeneous_list").success()
+    }
+
+    @Test
+    fun heterogeneousList() {
+        val result = elaborate("heterogeneous_list")
+        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun heterogeneousListInfer() {
+        val result = elaborate("heterogeneous_list_infer")
+        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    }
 }

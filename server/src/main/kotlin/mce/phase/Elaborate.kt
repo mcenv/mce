@@ -84,6 +84,7 @@ class Elaborate private constructor(
             Typing(C.Term.ListOf(emptyList(), term.id), C.Value.List(lazyOf(END)))
         } else { // TODO: use union of element types
             val first = inferTerm(term.elements.first())
+            checkRepresentation(term.elements.first().id, first.type)
             val elements = listOf(first.element) + term.elements.drop(1).map { checkTerm(it, first.type) }
             Typing(C.Term.ListOf(elements, term.id), C.Value.List(lazyOf(first.type)))
         }
@@ -132,6 +133,7 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray(term.id), TYPE)
         is S.Term.List -> {
             val element = checkTerm(term.element, TYPE)
+            checkRepresentation(term.element.id, normalizer.eval(element))
             Typing(C.Term.List(element, term.id), TYPE)
         }
         is S.Term.Compound -> {
@@ -585,8 +587,7 @@ class Elaborate private constructor(
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value match value2.element.value
-            else -> { /* TODO */
-            }
+            else -> {} // TODO
         }
     }
 
@@ -620,6 +621,13 @@ class Elaborate private constructor(
         val type: C.Value,
         val stage: Int
     )
+
+    private fun checkRepresentation(id: Id, value: C.Value) {
+        when (value) {
+            is C.Value.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
+            else -> {}
+        }
+    }
 
     private fun checkPhase(id: Id, type: C.Value) {
         if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
