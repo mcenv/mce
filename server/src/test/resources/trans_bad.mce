@@ -1,4 +1,4 @@
-def : fun [a : bool, b : bool, c : bool, p : a = b, q : b = c] -> a = c :=
+def : fun [a : bool, b : bool, c : bool, p : (a = b), q : (b = c)] -> a = c :=
   \[a, b, c, p, q] -> match p [
     refl => match p [
       refl => refl

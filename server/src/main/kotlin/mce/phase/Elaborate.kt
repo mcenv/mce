@@ -45,6 +45,10 @@ class Elaborate private constructor(
             val type = normalizer.fresh(term.id)
             Typing(checkTerm(term, type), type)
         }
+        is S.Term.Anno -> {
+            val type = normalizer.eval(checkTerm(term.type, TYPE))
+            Typing(checkTerm(term.element, type), type)
+        }
         is S.Term.Name -> when (val level = entries.subList(wavefront, size).indexOfLast { it.name == term.name }) {
             -1 -> {
                 val type = when (val item = items[term.name]) {

@@ -28,7 +28,7 @@ class Parse private constructor(
                 } else emptyList()
                 val type = run {
                     expect(':')
-                    parseTerm()
+                    parseAtomTerm()
                 }
                 val body = run {
                     expectString(":=")
@@ -55,6 +55,10 @@ class Parse private constructor(
             skip()
             val arguments = parseList(']', ::parseTerm)
             S.Term.Apply(left, arguments, id)
+        } else if (peek() == ':' && peek(1) != '=') {
+            skip()
+            val right = parseAtomTerm()
+            S.Term.Anno(left, right, id)
         } else if (peek() == '=') {
             skip()
             val right = parseAtomTerm()
@@ -185,15 +189,15 @@ class Parse private constructor(
                         val name = readWord()
                         val lower = if (peekChar() == '>') {
                             expectString(">:")
-                            parseTerm()
+                            parseAtomTerm()
                         } else null
                         val upper = if (peekChar() == '<') {
                             expectString("<:")
-                            parseTerm()
+                            parseAtomTerm()
                         } else null
                         val type = run {
                             expect(':')
-                            parseTerm()
+                            parseAtomTerm()
                         }
                         S.Parameter(name, lower, upper, type)
                     }

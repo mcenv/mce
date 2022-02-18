@@ -317,4 +317,9 @@ class ElaborateTest {
         val result = elaborate("heterogeneous_list_infer")
         assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun anno() {
+        elaborate("anno").success()
+    }
 }
