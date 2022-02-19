@@ -108,6 +108,11 @@ class Parse private constructor(
             skip()
             S.Term.CompoundOf(parseList('}', ::parseTerm), id)
         }
+        '#' -> {
+            skip()
+            val content = parseAtomTerm()
+            S.Term.BoxOf(content, id)
+        }
         '&' -> {
             skip()
             S.Term.RefOf(parseAtomTerm(), id)
@@ -181,6 +186,10 @@ class Parse private constructor(
                 val elements = parseList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
+            "box" -> {
+                val content = parseAtomTerm()
+                S.Term.Box(content, id)
+            }
             "ref" -> S.Term.Ref(parseAtomTerm(), id)
             "fun" -> {
                 val parameters = run {
@@ -249,6 +258,11 @@ class Parse private constructor(
         '{' -> {
             skip()
             S.Pattern.CompoundOf(parseList('}', ::parsePattern), id)
+        }
+        '#' -> {
+            skip()
+            val content = parsePattern()
+            S.Pattern.BoxOf(content, id)
         }
         '&' -> {
             skip()

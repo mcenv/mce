@@ -59,6 +59,10 @@ class Defunctionalize private constructor() {
             val elements = term.elements.map { defunctionalizeTerm(it) }
             D.Term.CompoundOf(elements, term.id!!)
         }
+        is C.Term.BoxOf -> {
+            val content = defunctionalizeTerm(term.content)
+            D.Term.BoxOf(content, term.id!!)
+        }
         is C.Term.RefOf -> {
             val element = defunctionalizeTerm(term.element)
             D.Term.RefOf(element, term.id!!)
@@ -104,6 +108,10 @@ class Defunctionalize private constructor() {
         is C.Term.Compound -> {
             val elements = term.elements.map { it.first to defunctionalizeTerm(it.second) }
             D.Term.Compound(elements, term.id!!)
+        }
+        is C.Term.Box -> {
+            val content = defunctionalizeTerm(term.content)
+            D.Term.Box(content, term.id!!)
         }
         is C.Term.Ref -> {
             val element = defunctionalizeTerm(term.element)
@@ -158,6 +166,10 @@ class Defunctionalize private constructor() {
         is C.Pattern.CompoundOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
             D.Pattern.CompoundOf(elements, pattern.id)
+        }
+        is C.Pattern.BoxOf -> {
+            val content = defunctionalizePattern(pattern.content)
+            D.Pattern.BoxOf(content, pattern.id)
         }
         is C.Pattern.RefOf -> {
             val element = defunctionalizePattern(pattern.element)

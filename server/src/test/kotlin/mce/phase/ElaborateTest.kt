@@ -322,4 +322,14 @@ class ElaborateTest {
     fun anno() {
         elaborate("anno").success()
     }
+
+    @Test
+    fun boxIntro() {
+        elaborate("box_intro").success()
+    }
+
+    @Test
+    fun boxElim() {
+        elaborate("box_elim").success()
+    }
 }

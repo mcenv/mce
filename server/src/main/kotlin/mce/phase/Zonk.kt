@@ -69,6 +69,10 @@ class Zonk private constructor(
             val elements = term.elements.map { zonkTerm(it) }
             C.Term.CompoundOf(elements, term.id)
         }
+        is C.Term.BoxOf -> {
+            val content = zonkTerm(term.content)
+            C.Term.BoxOf(content, term.id)
+        }
         is C.Term.RefOf -> {
             val element = zonkTerm(term.element)
             C.Term.RefOf(element, term.id)
@@ -117,6 +121,10 @@ class Zonk private constructor(
         is C.Term.Compound -> {
             val elements = term.elements.map { it.first to zonkTerm(it.second) }
             C.Term.Compound(elements, term.id)
+        }
+        is C.Term.Box -> {
+            val content = zonkTerm(term.content)
+            C.Term.Box(content, term.id)
         }
         is C.Term.Ref -> {
             val element = zonkTerm(term.element)

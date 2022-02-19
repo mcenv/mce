@@ -88,6 +88,7 @@ class Normalizer(
         is C.Term.LongArrayOf -> C.Value.LongArrayOf(term.elements.map { lazy { eval(it) } }, term.id)
         is C.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { eval(it) } }, term.id)
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { eval(it) } }, term.id)
+        is C.Term.BoxOf -> C.Value.BoxOf(lazy { eval(term.content) }, term.id)
         is C.Term.RefOf -> C.Value.RefOf(lazy { eval(term.element) }, term.id)
         is C.Term.Refl -> C.Value.Refl(term.id)
         is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body, term.id)
@@ -125,6 +126,7 @@ class Normalizer(
         is C.Term.LongArray -> C.Value.LongArray(term.id)
         is C.Term.List -> C.Value.List(lazy { eval(term.element) }, term.id)
         is C.Term.Compound -> C.Value.Compound(term.elements, term.id)
+        is C.Term.Box -> C.Value.Box(lazy { eval(term.content) }, term.id)
         is C.Term.Ref -> C.Value.Ref(lazy { eval(term.element) }, term.id)
         is C.Term.Eq -> C.Value.Eq(lazy { eval(term.left) }, lazy { eval(term.right) }, term.id)
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant, term.effects, term.id)
@@ -155,6 +157,7 @@ class Normalizer(
         is C.Value.LongArrayOf -> C.Term.LongArrayOf(value.elements.map { quote(it.value) }, value.id)
         is C.Value.ListOf -> C.Term.ListOf(value.elements.map { quote(it.value) }, value.id)
         is C.Value.CompoundOf -> C.Term.CompoundOf(value.elements.map { quote(it.value) }, value.id)
+        is C.Value.BoxOf -> C.Term.BoxOf(quote(value.content.value), value.id)
         is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value), value.id)
         is C.Value.Refl -> C.Term.Refl(value.id)
         is C.Value.FunOf -> C.Term.FunOf(value.parameters, scope {
@@ -179,6 +182,7 @@ class Normalizer(
         is C.Value.LongArray -> C.Term.LongArray(value.id)
         is C.Value.List -> C.Term.List(quote(value.element.value), value.id)
         is C.Value.Compound -> C.Term.Compound(value.elements, value.id)
+        is C.Value.Box -> C.Term.Box(quote(value.content.value), value.id)
         is C.Value.Ref -> C.Term.Ref(quote(value.element.value), value.id)
         is C.Value.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value), value.id)
         is C.Value.Fun -> C.Term.Fun(value.parameters, scope {

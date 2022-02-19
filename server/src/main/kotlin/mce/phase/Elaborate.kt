@@ -96,6 +96,10 @@ class Elaborate private constructor(
             val elements = term.elements.map { "" to inferTerm(it) }
             Typing(C.Term.CompoundOf(elements.map { it.second.element }, term.id), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
         }
+        is S.Term.BoxOf -> {
+            val content = inferTerm(term.content)
+            Typing(C.Term.BoxOf(content.element, term.id), C.Value.Box(lazyOf(content.type)))
+        }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)
             Typing(C.Term.RefOf(element.element, term.id), C.Value.Ref(lazyOf(element.type)))
@@ -149,6 +153,10 @@ class Elaborate private constructor(
                 }
             }
             Typing(C.Term.Compound(elements, term.id), TYPE)
+        }
+        is S.Term.Box -> {
+            val content = checkTerm(term.content, TYPE)
+            Typing(C.Term.Box(content, term.id), TYPE)
         }
         is S.Term.Ref -> {
             val element = checkTerm(term.element, TYPE)
@@ -281,6 +289,10 @@ class Elaborate private constructor(
                 }
                 C.Term.CompoundOf(elements, term.id)
             }
+            term is S.Term.BoxOf && type is C.Value.Box -> {
+                val content = checkTerm(term.content, type.content.value)
+                C.Term.BoxOf(content, term.id)
+            }
             term is S.Term.RefOf && type is C.Value.Ref -> {
                 val element = checkTerm(term.element, type.element.value)
                 C.Term.RefOf(element, term.id)
@@ -394,6 +406,10 @@ class Elaborate private constructor(
             val elements = pattern.elements.map { "" to inferPattern(it) }
             Typing(C.Pattern.CompoundOf(elements.map { it.second.element }, pattern.id), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
         }
+        is S.Pattern.BoxOf -> {
+            val content = inferPattern(pattern.content)
+            Typing(C.Pattern.BoxOf(content.element, pattern.id), C.Value.Box(lazyOf(content.type)))
+        }
         is S.Pattern.RefOf -> {
             val element = inferPattern(pattern.element)
             Typing(C.Pattern.RefOf(element.element, pattern.id), C.Value.Ref(lazyOf(element.type)))
@@ -424,6 +440,10 @@ class Elaborate private constructor(
             pattern is S.Pattern.CompoundOf && type is C.Value.Compound -> {
                 val elements = (pattern.elements zip type.elements).map { checkPattern(it.first, normalizer.eval(it.second.second)) }
                 C.Pattern.CompoundOf(elements, pattern.id)
+            }
+            pattern is S.Pattern.BoxOf && type is C.Value.Box -> {
+                val content = checkPattern(pattern.content, type.content.value)
+                C.Pattern.BoxOf(content, pattern.id)
             }
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
                 val element = checkPattern(pattern.element, type.element.value)
@@ -485,10 +505,11 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
-            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value unify value2.element.value
-            value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
+            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.content.value unify value2.content.value
+            value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value unify value2.element.value
+            value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && normalizer.scope {
                 value1.parameters.forEach { bind(lazyOf(C.Value.Var(it, size))) }
                 eval(value1.body) unify eval(value2.body)
@@ -516,6 +537,7 @@ class Elaborate private constructor(
                     (eval(element1.second) unify eval(element2.second)).also { bind(lazyOf(C.Value.Var("", size))) }
                 }
             }
+            value1 is C.Value.Box && value2 is C.Value.Box -> value1.content.value unify value2.content.value
             value1 is C.Value.Ref && value2 is C.Value.Ref -> value1.element.value unify value2.element.value
             value1 is C.Value.Eq && value2 is C.Value.Eq -> value1.left.value unify value2.left.value && value1.right.value unify value2.right.value
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && scope {
@@ -565,6 +587,7 @@ class Elaborate private constructor(
                     (eval(elements1.second) subtype eval(elements2.second)).also { bind(lazyOf(C.Value.Var("", size))) }
                 }
             }
+            value1 is C.Value.Box && value2 is C.Value.Box -> value1.content.value subtype value2.content.value
             value1 is C.Value.Ref && value2 is C.Value.Ref -> value1.element.value subtype value2.element.value
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && scope {
                 (value1.parameters zip value2.parameters).all { (parameter1, parameter2) ->
@@ -590,6 +613,7 @@ class Elaborate private constructor(
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
+            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.content.value match value2.content.value
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value match value2.element.value
             else -> {} // TODO
         }

@@ -60,6 +60,10 @@ class Stage private constructor(
             val elements = term.elements.map { stageTerm(it) }
             C.Term.CompoundOf(elements, term.id)
         }
+        is C.Term.BoxOf -> {
+            val content = stageTerm(term.content)
+            C.Term.BoxOf(content, term.id)
+        }
         is C.Term.RefOf -> {
             val element = stageTerm(term.element)
             C.Term.RefOf(element, term.id)
@@ -105,6 +109,10 @@ class Stage private constructor(
         is C.Term.Compound -> {
             val elements = term.elements.map { it.first to stageTerm(it.second) }
             C.Term.Compound(elements, term.id)
+        }
+        is C.Term.Box -> {
+            val content = stageTerm(term.content)
+            C.Term.Box(content, term.id)
         }
         is C.Term.Ref -> {
             val element = stageTerm(term.element)

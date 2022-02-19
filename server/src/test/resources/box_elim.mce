@@ -1,0 +1,4 @@
+def : fun [a : box int] -> int :=
+  \[a] -> match a [
+    #a => a
+  ]

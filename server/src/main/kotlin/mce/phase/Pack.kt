@@ -126,6 +126,10 @@ class Pack private constructor(
                     }
                 }
             }
+            is D.Term.BoxOf -> {
+                +P.Command.InsertAtIndex(STACK, LIST, -1, P.SourceProvider.Value(P.Nbt.List(emptyList())))
+                TODO()
+            }
             is D.Term.RefOf -> TODO()
             is D.Term.Refl -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.FunOf -> +P.Command.InsertAtIndex(STACK, INT, -1, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
@@ -149,6 +153,7 @@ class Pack private constructor(
             is D.Term.LongArray -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.List -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Compound -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
+            is D.Term.Box -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Ref -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Eq -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.Fun -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
@@ -164,22 +169,23 @@ class Pack private constructor(
         is C.Value.Var -> TODO()
         is C.Value.Def -> TODO()
         is C.Value.Match -> TODO()
-        is C.Value.BoolOf -> TODO()
-        is C.Value.ByteOf -> TODO()
-        is C.Value.ShortOf -> TODO()
-        is C.Value.IntOf -> TODO()
-        is C.Value.LongOf -> TODO()
-        is C.Value.FloatOf -> TODO()
-        is C.Value.DoubleOf -> TODO()
-        is C.Value.StringOf -> TODO()
-        is C.Value.ByteArrayOf -> TODO()
-        is C.Value.IntArrayOf -> TODO()
-        is C.Value.LongArrayOf -> TODO()
-        is C.Value.ListOf -> TODO()
-        is C.Value.CompoundOf -> TODO()
-        is C.Value.RefOf -> TODO()
-        is C.Value.Refl -> TODO()
-        is C.Value.FunOf -> TODO()
+        is C.Value.BoolOf -> throw Error()
+        is C.Value.ByteOf -> throw Error()
+        is C.Value.ShortOf -> throw Error()
+        is C.Value.IntOf -> throw Error()
+        is C.Value.LongOf -> throw Error()
+        is C.Value.FloatOf -> throw Error()
+        is C.Value.DoubleOf -> throw Error()
+        is C.Value.StringOf -> throw Error()
+        is C.Value.ByteArrayOf -> throw Error()
+        is C.Value.IntArrayOf -> throw Error()
+        is C.Value.LongArrayOf -> throw Error()
+        is C.Value.ListOf -> throw Error()
+        is C.Value.CompoundOf -> throw Error()
+        is C.Value.BoxOf -> throw Error()
+        is C.Value.RefOf -> throw Error()
+        is C.Value.Refl -> throw Error()
+        is C.Value.FunOf -> throw Error()
         is C.Value.Apply -> TODO()
         is C.Value.CodeOf -> throw Error()
         is C.Value.Splice -> throw Error()
@@ -198,6 +204,7 @@ class Pack private constructor(
         is C.Value.LongArray -> P.NbtType.LONG_ARRAY
         is C.Value.List -> P.NbtType.LIST
         is C.Value.Compound -> P.NbtType.COMPOUND
+        is C.Value.Box -> P.NbtType.LIST
         is C.Value.Ref -> P.NbtType.INT
         is C.Value.Eq -> P.NbtType.BYTE
         is C.Value.Fun -> P.NbtType.BYTE
