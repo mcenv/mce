@@ -1,3 +1,3 @@
 export {function_elim}
 
-def : fun [α : type, a : α] -> α := \[α, a] -> a
+def : fun [α : type, a : α] -> box α := \[α, a] -> a # α

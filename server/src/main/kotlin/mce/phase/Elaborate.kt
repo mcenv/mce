@@ -106,7 +106,7 @@ class Elaborate private constructor(
             if (!(actual subtype expected)) {
                 diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(expected)), serializeTerm(normalizer.quote(actual)), term.id))
             }
-            Typing(C.Term.BoxOf(term.content, level, tag, term.id), C.Value.Box(lazy { normalizer.eval(tag) }))
+            Typing(C.Term.BoxOf(term.content, level, tag, term.id), C.Value.Box(lazyOf(actual)))
         }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)

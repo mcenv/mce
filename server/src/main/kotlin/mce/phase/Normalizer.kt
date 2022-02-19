@@ -126,7 +126,7 @@ class Normalizer(
         is C.Term.LongArray -> C.Value.LongArray(term.id)
         is C.Term.List -> C.Value.List(lazy { eval(term.element) }, term.id)
         is C.Term.Compound -> C.Value.Compound(term.elements, term.id)
-        is C.Term.Box -> C.Value.Box(lazy { eval(term.content) }, term.id)
+        is C.Term.Box -> C.Value.Box(lazyOf(eval(term.content)), term.id) // TODO: environment inconsistency due to mutability?
         is C.Term.Ref -> C.Value.Ref(lazy { eval(term.element) }, term.id)
         is C.Term.Eq -> C.Value.Eq(lazy { eval(term.left) }, lazy { eval(term.right) }, term.id)
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant, term.effects, term.id)

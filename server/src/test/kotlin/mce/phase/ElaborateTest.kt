@@ -31,6 +31,11 @@ class ElaborateTest {
     }
 
     @Test
+    fun identity() {
+        elaborate("identity").success()
+    }
+
+    @Test
     fun functionIntro() {
         elaborate("function_intro").success()
     }
