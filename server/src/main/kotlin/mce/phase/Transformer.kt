@@ -22,7 +22,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.LongArrayOf -> C.Term.LongArrayOf(elements.map(transform), id)
     is C.Term.ListOf -> C.Term.ListOf(elements.map(transform), id)
     is C.Term.CompoundOf -> C.Term.CompoundOf(elements.map(transform), id)
-    is C.Term.BoxOf -> C.Term.BoxOf(transform(content), id)
+    is C.Term.BoxOf -> C.Term.BoxOf(transform(content), transform(tag), id)
     is C.Term.RefOf -> C.Term.RefOf(transform(element), id)
     is C.Term.Refl -> C.Term.Refl(id)
     is C.Term.FunOf -> C.Term.FunOf(parameters, transform(body), id)

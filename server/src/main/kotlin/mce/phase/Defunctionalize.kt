@@ -61,7 +61,8 @@ class Defunctionalize private constructor() {
         }
         is C.Term.BoxOf -> {
             val content = defunctionalizeTerm(term.content)
-            D.Term.BoxOf(content, term.id!!)
+            val tag = defunctionalizeTerm(term.tag)
+            D.Term.BoxOf(content, tag, term.id!!)
         }
         is C.Term.RefOf -> {
             val element = defunctionalizeTerm(term.element)
@@ -169,7 +170,8 @@ class Defunctionalize private constructor() {
         }
         is C.Pattern.BoxOf -> {
             val content = defunctionalizePattern(pattern.content)
-            D.Pattern.BoxOf(content, pattern.id)
+            val tag = defunctionalizePattern(pattern.tag)
+            D.Pattern.BoxOf(content, tag, pattern.id)
         }
         is C.Pattern.RefOf -> {
             val element = defunctionalizePattern(pattern.element)

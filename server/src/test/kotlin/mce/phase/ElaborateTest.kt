@@ -332,4 +332,10 @@ class ElaborateTest {
     fun boxElim() {
         elaborate("box_elim").success()
     }
+
+    @Test
+    fun boxIllTypedTag() {
+        val result = elaborate("box_ill_typed_tag")
+        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+    }
 }

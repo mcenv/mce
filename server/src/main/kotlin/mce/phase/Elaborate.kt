@@ -97,8 +97,10 @@ class Elaborate private constructor(
             Typing(C.Term.CompoundOf(elements.map { it.second.element }, term.id), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
         }
         is S.Term.BoxOf -> {
-            val content = inferTerm(term.content)
-            Typing(C.Term.BoxOf(content.element, term.id), C.Value.Box(lazyOf(content.type)))
+            val tag = checkTerm(term.tag, TYPE)
+            val t = normalizer.eval(tag)
+            val content = checkTerm(term.content, t)
+            Typing(C.Term.BoxOf(content, tag, term.id), C.Value.Box(lazyOf(t)))
         }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)
@@ -289,10 +291,6 @@ class Elaborate private constructor(
                 }
                 C.Term.CompoundOf(elements, term.id)
             }
-            term is S.Term.BoxOf && type is C.Value.Box -> {
-                val content = checkTerm(term.content, type.content.value)
-                C.Term.BoxOf(content, term.id)
-            }
             term is S.Term.RefOf && type is C.Value.Ref -> {
                 val element = checkTerm(term.element, type.element.value)
                 C.Term.RefOf(element, term.id)
@@ -408,7 +406,8 @@ class Elaborate private constructor(
         }
         is S.Pattern.BoxOf -> {
             val content = inferPattern(pattern.content)
-            Typing(C.Pattern.BoxOf(content.element, pattern.id), C.Value.Box(lazyOf(content.type)))
+            val tag = checkPattern(pattern.tag, TYPE)
+            Typing(C.Pattern.BoxOf(content.element, tag, pattern.id), C.Value.Box(lazyOf(content.type)))
         }
         is S.Pattern.RefOf -> {
             val element = inferPattern(pattern.element)
@@ -443,7 +442,8 @@ class Elaborate private constructor(
             }
             pattern is S.Pattern.BoxOf && type is C.Value.Box -> {
                 val content = checkPattern(pattern.content, type.content.value)
-                C.Pattern.BoxOf(content, pattern.id)
+                val tag = checkPattern(pattern.tag, TYPE)
+                C.Pattern.BoxOf(content, tag, pattern.id)
             }
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
                 val element = checkPattern(pattern.element, type.element.value)
@@ -507,7 +507,7 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
-            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.content.value unify value2.content.value
+            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.content.value unify value2.content.value && value1.tag.value unify value2.tag.value
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value unify value2.element.value
             value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && normalizer.scope {
@@ -613,7 +613,10 @@ class Elaborate private constructor(
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
-            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.content.value match value2.content.value
+            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> {
+                value1.content.value match value2.content.value
+                value1.tag.value match value2.tag.value
+            }
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value match value2.element.value
             else -> {} // TODO
         }

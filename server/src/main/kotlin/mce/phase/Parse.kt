@@ -59,6 +59,10 @@ class Parse private constructor(
             skip()
             val right = parseAtomTerm()
             S.Term.Anno(left, right, id)
+        } else if (peek() == '#') {
+            skip()
+            val right = parseAtomTerm()
+            S.Term.BoxOf(left, right, id)
         } else if (peek() == '=') {
             skip()
             val right = parseAtomTerm()
@@ -107,11 +111,6 @@ class Parse private constructor(
         '{' -> {
             skip()
             S.Term.CompoundOf(parseList('}', ::parseTerm), id)
-        }
-        '#' -> {
-            skip()
-            val content = parseAtomTerm()
-            S.Term.BoxOf(content, id)
         }
         '&' -> {
             skip()
@@ -233,7 +232,19 @@ class Parse private constructor(
         }
     }
 
-    private fun parsePattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
+    private fun parsePattern(id: Id = freshId()): S.Pattern {
+        val left = parseAtomPattern(id)
+        skipWhitespace()
+        return if (!canRead() || peek() != '#') {
+            left
+        } else {
+            skip()
+            val right = parseAtomPattern()
+            S.Pattern.BoxOf(left, right, id)
+        }
+    }
+
+    private fun parseAtomPattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
         '(' -> parseParen { parsePattern(it) }
         '"' -> S.Pattern.StringOf(readString(), id)
         '[' -> {
@@ -259,14 +270,9 @@ class Parse private constructor(
             skip()
             S.Pattern.CompoundOf(parseList('}', ::parsePattern), id)
         }
-        '#' -> {
-            skip()
-            val content = parsePattern()
-            S.Pattern.BoxOf(content, id)
-        }
         '&' -> {
             skip()
-            S.Pattern.RefOf(parsePattern(), id)
+            S.Pattern.RefOf(parseAtomPattern(), id)
         }
         else -> when (val word = readWord()) {
             "false" -> S.Pattern.BoolOf(false, id)

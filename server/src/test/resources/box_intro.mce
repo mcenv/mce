@@ -1,1 +1,1 @@
-def : fun [α : type, a : α] -> box α := \[α, a] -> #a
+def : fun [α : type, a : α] -> box α := \[α, a] -> a # α

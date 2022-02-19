@@ -41,7 +41,7 @@ sealed class Diagnostic {
             is C.Term.LongArrayOf -> S.Term.LongArrayOf(term.elements.map { serializeTerm(it) }, freshId())
             is C.Term.ListOf -> S.Term.ListOf(term.elements.map { serializeTerm(it) }, freshId())
             is C.Term.CompoundOf -> S.Term.CompoundOf(term.elements.map { serializeTerm(it) }, freshId())
-            is C.Term.BoxOf -> S.Term.BoxOf(serializeTerm(term.content), freshId())
+            is C.Term.BoxOf -> S.Term.BoxOf(serializeTerm(term.content), serializeTerm(term.tag), freshId())
             is C.Term.RefOf -> S.Term.RefOf(serializeTerm(term.element), freshId())
             is C.Term.Refl -> S.Term.Refl(freshId())
             is C.Term.FunOf -> S.Term.FunOf(term.parameters, serializeTerm(term.body), freshId())
@@ -91,7 +91,7 @@ sealed class Diagnostic {
             is C.Pattern.LongArrayOf -> S.Pattern.LongArrayOf(pattern.elements.map { serializePattern(it) }, freshId())
             is C.Pattern.ListOf -> S.Pattern.ListOf(pattern.elements.map { serializePattern(it) }, freshId())
             is C.Pattern.CompoundOf -> S.Pattern.CompoundOf(pattern.elements.map { serializePattern(it) }, freshId())
-            is C.Pattern.BoxOf -> S.Pattern.BoxOf(serializePattern(pattern.content), freshId())
+            is C.Pattern.BoxOf -> S.Pattern.BoxOf(serializePattern(pattern.content), serializePattern(pattern.tag), freshId())
             is C.Pattern.RefOf -> S.Pattern.RefOf(serializePattern(pattern.element), freshId())
             is C.Pattern.Refl -> S.Pattern.Refl(freshId())
         }
