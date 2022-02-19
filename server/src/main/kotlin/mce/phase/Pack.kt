@@ -63,7 +63,7 @@ class Pack private constructor(
                 term.elements.mapIndexed { index, element ->
                     if (element !is D.Term.ByteOf) {
                         packTerm(element)
-                        +P.Command.SetData(STACK, BYTE_ARRAY[index], P.SourceProvider.From(STACK, BYTE[-1]))
+                        +P.Command.SetData(STACK, BYTE_ARRAY[-1][index], P.SourceProvider.From(STACK, BYTE[-1]))
                         +P.Command.RemoveData(STACK, BYTE[-1])
                     }
                 }
@@ -79,7 +79,7 @@ class Pack private constructor(
                 term.elements.mapIndexed { index, element ->
                     if (element !is D.Term.IntOf) {
                         packTerm(element)
-                        +P.Command.SetData(STACK, INT_ARRAY[index], P.SourceProvider.From(STACK, INT[-1]))
+                        +P.Command.SetData(STACK, INT_ARRAY[-1][index], P.SourceProvider.From(STACK, INT[-1]))
                         +P.Command.RemoveData(STACK, INT[-1])
                     }
                 }
@@ -95,7 +95,7 @@ class Pack private constructor(
                 term.elements.mapIndexed { index, element ->
                     if (element !is D.Term.LongOf) {
                         packTerm(element)
-                        +P.Command.SetData(STACK, LONG_ARRAY[index], P.SourceProvider.From(STACK, LONG[-1]))
+                        +P.Command.SetData(STACK, LONG_ARRAY[-1][index], P.SourceProvider.From(STACK, LONG[-1]))
                         +P.Command.RemoveData(STACK, LONG[-1])
                     }
                 }
