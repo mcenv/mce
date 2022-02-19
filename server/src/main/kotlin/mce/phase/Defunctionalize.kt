@@ -60,9 +60,8 @@ class Defunctionalize private constructor() {
             D.Term.CompoundOf(elements, term.id!!)
         }
         is C.Term.BoxOf -> {
-            val content = defunctionalizeTerm(term.content)
             val tag = defunctionalizeTerm(term.tag)
-            D.Term.BoxOf(content, tag, term.id!!)
+            D.Term.BoxOf(term.content, term.level, tag, term.id!!)
         }
         is C.Term.RefOf -> {
             val element = defunctionalizeTerm(term.element)

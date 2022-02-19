@@ -62,7 +62,7 @@ class Parse private constructor(
         } else if (peek() == '#') {
             skip()
             val right = parseAtomTerm()
-            S.Term.BoxOf(left, right, id)
+            S.Term.BoxOf((left as S.Term.Name).name, right, id)
         } else if (peek() == '=') {
             skip()
             val right = parseAtomTerm()

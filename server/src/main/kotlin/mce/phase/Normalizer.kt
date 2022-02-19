@@ -88,7 +88,7 @@ class Normalizer(
         is C.Term.LongArrayOf -> C.Value.LongArrayOf(term.elements.map { lazy { eval(it) } }, term.id)
         is C.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { eval(it) } }, term.id)
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.BoxOf -> C.Value.BoxOf(lazy { eval(term.content) }, lazy { eval(term.tag) }, term.id)
+        is C.Term.BoxOf -> C.Value.BoxOf(term.content, term.level, lazy { eval(term.tag) }, term.id)
         is C.Term.RefOf -> C.Value.RefOf(lazy { eval(term.element) }, term.id)
         is C.Term.Refl -> C.Value.Refl(term.id)
         is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body, term.id)
@@ -157,7 +157,7 @@ class Normalizer(
         is C.Value.LongArrayOf -> C.Term.LongArrayOf(value.elements.map { quote(it.value) }, value.id)
         is C.Value.ListOf -> C.Term.ListOf(value.elements.map { quote(it.value) }, value.id)
         is C.Value.CompoundOf -> C.Term.CompoundOf(value.elements.map { quote(it.value) }, value.id)
-        is C.Value.BoxOf -> C.Term.BoxOf(quote(value.content.value), quote(value.tag.value), value.id)
+        is C.Value.BoxOf -> C.Term.BoxOf(value.content, value.level, quote(value.tag.value), value.id)
         is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value), value.id)
         is C.Value.Refl -> C.Term.Refl(value.id)
         is C.Value.FunOf -> C.Term.FunOf(value.parameters, scope {

@@ -308,13 +308,12 @@ class ElaborateTest {
 
     @Test
     fun heterogeneousList() {
-        val result = elaborate("heterogeneous_list")
-        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        elaborate("heterogeneous_list").success()
     }
 
     @Test
-    fun heterogeneousListInfer() {
-        val result = elaborate("heterogeneous_list_infer")
+    fun usePolymorphicVar() {
+        val result = elaborate("use_polymorphic_var")
         assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 

@@ -49,7 +49,7 @@ class Elaborate private constructor(
             val type = normalizer.eval(checkTerm(term.type, TYPE))
             Typing(checkTerm(term.element, type), type)
         }
-        is S.Term.Name -> when (val level = entries.subList(wavefront, size).indexOfLast { it.name == term.name }) {
+        is S.Term.Name -> when (val level = lookup(term.name)) {
             -1 -> {
                 val type = when (val item = items[term.name]) {
                     null -> diagnose(Diagnostic.NameNotFound(term.name, term.id))
@@ -58,9 +58,9 @@ class Elaborate private constructor(
                 Typing(C.Term.Def(term.name, term.id), type)
             }
             else -> {
-                val level = wavefront + level
                 val entry = entries[level]
                 val type = if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
+                checkRepresentation(term.id, type)
                 Typing(C.Term.Var(term.name, level, term.id), type)
             }
         }
@@ -88,7 +88,6 @@ class Elaborate private constructor(
             Typing(C.Term.ListOf(emptyList(), term.id), C.Value.List(lazyOf(END)))
         } else { // TODO: use union of element types
             val first = inferTerm(term.elements.first())
-            checkRepresentation(term.elements.first().id, first.type)
             val elements = listOf(first.element) + term.elements.drop(1).map { checkTerm(it, first.type) }
             Typing(C.Term.ListOf(elements, term.id), C.Value.List(lazyOf(first.type)))
         }
@@ -97,10 +96,17 @@ class Elaborate private constructor(
             Typing(C.Term.CompoundOf(elements.map { it.second.element }, term.id), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
         }
         is S.Term.BoxOf -> {
+            val level = lookup(term.content)
+            val actual = when (level) {
+                -1 -> diagnose(Diagnostic.NameNotFound(term.content, term.id))
+                else -> entries[level].type
+            }
             val tag = checkTerm(term.tag, TYPE)
-            val t = normalizer.eval(tag)
-            val content = checkTerm(term.content, t)
-            Typing(C.Term.BoxOf(content, tag, term.id), C.Value.Box(lazyOf(t)))
+            val expected = normalizer.eval(tag)
+            if (!(actual subtype expected)) {
+                diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(expected)), serializeTerm(normalizer.quote(actual)), term.id))
+            }
+            Typing(C.Term.BoxOf(term.content, level, tag, term.id), C.Value.Box(lazy { normalizer.eval(tag) }))
         }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)
@@ -143,7 +149,6 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray(term.id), TYPE)
         is S.Term.List -> {
             val element = checkTerm(term.element, TYPE)
-            checkRepresentation(term.element.id, normalizer.eval(element))
             Typing(C.Term.List(element, term.id), TYPE)
         }
         is S.Term.Compound -> {
@@ -507,7 +512,7 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { it.first.value unify it.second.value }
-            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.content.value unify value2.content.value && value1.tag.value unify value2.tag.value
+            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.level == value2.level && value1.tag.value unify value2.tag.value
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value unify value2.element.value
             value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size && normalizer.scope {
@@ -613,10 +618,7 @@ class Elaborate private constructor(
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).forEach { it.first.value match it.second.value }
-            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> {
-                value1.content.value match value2.content.value
-                value1.tag.value match value2.tag.value
-            }
+            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.tag.value match value2.tag.value // TODO: match contents?
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> value1.element.value match value2.element.value
             else -> {} // TODO
         }
@@ -684,6 +686,11 @@ class Elaborate private constructor(
             }
             this.wavefront = wavefront
         }
+    }
+
+    private fun lookup(name: String): Int = when (val level = entries.subList(wavefront, size).indexOfLast { it.name == name }) {
+        -1 -> level
+        else -> wavefront + level
     }
 
     private fun bind(id: Id, entry: Entry, value: C.Value? = null) {

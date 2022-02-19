@@ -1,1 +1,1 @@
-def : box int := 0 # string
+def : fun [a : int] -> box int := a # string

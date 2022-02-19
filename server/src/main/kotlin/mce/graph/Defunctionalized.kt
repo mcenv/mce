@@ -44,7 +44,7 @@ object Defunctionalized {
         data class LongArrayOf(val elements: KList<Term>, override val id: Id) : Term()
         data class ListOf(val elements: KList<Term>, override val id: Id) : Term()
         data class CompoundOf(val elements: KList<Term>, override val id: Id) : Term()
-        data class BoxOf(val content: Term, val tag: Term, override val id: Id) : Term()
+        data class BoxOf(val content: KString, val level: KInt, val tag: Term, override val id: Id) : Term()
         data class RefOf(val element: Term, override val id: Id) : Term()
         data class Refl(override val id: Id) : Term()
         data class FunOf(val tag: KInt, override val id: Id) : Term()

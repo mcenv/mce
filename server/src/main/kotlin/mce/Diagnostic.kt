@@ -41,7 +41,7 @@ sealed class Diagnostic {
             is C.Term.LongArrayOf -> S.Term.LongArrayOf(term.elements.map { serializeTerm(it) }, freshId())
             is C.Term.ListOf -> S.Term.ListOf(term.elements.map { serializeTerm(it) }, freshId())
             is C.Term.CompoundOf -> S.Term.CompoundOf(term.elements.map { serializeTerm(it) }, freshId())
-            is C.Term.BoxOf -> S.Term.BoxOf(serializeTerm(term.content), serializeTerm(term.tag), freshId())
+            is C.Term.BoxOf -> S.Term.BoxOf(term.content, serializeTerm(term.tag), freshId())
             is C.Term.RefOf -> S.Term.RefOf(serializeTerm(term.element), freshId())
             is C.Term.Refl -> S.Term.Refl(freshId())
             is C.Term.FunOf -> S.Term.FunOf(term.parameters, serializeTerm(term.body), freshId())

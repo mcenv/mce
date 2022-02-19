@@ -1,1 +1,1 @@
-def : fun [α : type, as : list (#0-0-0-0-0 α)] -> list α := \[α, as] -> as
+def : fun [α : type, as : list α] -> list α := \[α, as] -> as
