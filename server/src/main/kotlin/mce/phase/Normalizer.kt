@@ -1,35 +1,27 @@
 package mce.phase
 
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
 import mce.BUILTINS
 import mce.graph.Id
 import mce.graph.freshId
 import mce.graph.Core as C
 
 class Normalizer(
-    private val values: MutableList<Lazy<C.Value>>,
+    val values: PersistentList<Lazy<C.Value>>,
     private val items: Map<String, C.Item>,
     private val solutions: MutableList<C.Value?>
 ) {
     val size: Int get() = values.size
 
-    fun substitute(level: Int, value: Lazy<C.Value>) {
-        values[level] = value
-    }
+    fun lookup(level: Int): C.Value = values[level].value
 
-    fun bind(value: Lazy<C.Value>) {
-        values += value
-    }
+    fun subst(level: Int, value: Lazy<C.Value>): Normalizer = Normalizer(values.set(level, value), items, solutions)
 
-    fun pop() {
-        values.removeLast()
-    }
+    fun bind(value: Lazy<C.Value>): Normalizer = Normalizer(values + value, items, solutions)
 
-    inline fun <R> scope(block: Normalizer.() -> R): R {
-        val size = this.size
-        return block().also {
-            repeat(this.size - size) { pop() }
-        }
-    }
+    fun empty(): Normalizer = Normalizer(persistentListOf(), items, solutions)
 
     /**
      * Returns the solution at the [index].
@@ -49,12 +41,26 @@ class Normalizer(
     fun fresh(id: Id): C.Value = C.Value.Meta(solutions.size, id).also { solutions += null }
 
     /**
-     * Unfolds meta-variables of the [value] recursively.
+     * Reveals the head constructor of the [value].
      */
     tailrec fun force(value: C.Value): C.Value = when (value) {
         is C.Value.Meta -> when (val forced = getSolution(value.index)) {
-            null -> value
+            null -> forceSubst(value)
             else -> force(forced)
+        }
+        else -> forceSubst(value)
+    }
+
+    /**
+     * Performs the pending substitution for the [value].
+     */
+    private tailrec fun forceSubst(value: C.Value): C.Value = when (value) {
+        is C.Value.Var -> {
+            val forced = lookup(value.level)
+            when {
+                forced is C.Value.Var && value.level != forced.level -> forceSubst(forced)
+                else -> forced
+            }
         }
         else -> value
     }
@@ -65,15 +71,12 @@ class Normalizer(
     fun eval(term: C.Term): C.Value = when (term) {
         is C.Term.Hole -> C.Value.Hole(term.id)
         is C.Term.Meta -> getSolution(term.index) ?: C.Value.Meta(term.index, term.id)
-        is C.Term.Var -> values[term.level].value
+        is C.Term.Var -> lookup(term.level)
         is C.Term.Def -> {
             val item = items[term.name]!! as C.Item.Def
             if (item.modifiers.contains(C.Modifier.BUILTIN)) C.Value.Def(term.name, term.id) else eval(item.body)
         }
-        is C.Term.Let -> scope {
-            bind(lazy { eval(term.init) })
-            eval(term.body)
-        }
+        is C.Term.Let -> bind(lazy { eval(term.init) }).eval(term.body)
         is C.Term.Match -> C.Value.Match(eval(term.scrutinee), term.clauses.map { it.first to lazy { eval(it.second) /* TODO: collect variables */ } }, term.id)
         is C.Term.BoolOf -> C.Value.BoolOf(term.value, term.id)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value, term.id)
@@ -96,13 +99,10 @@ class Normalizer(
             val arguments = term.arguments.map { lazy { eval(it) } }
             when (val function = eval(term.function)) {
                 is C.Value.Def -> {
-                    arguments.forEach { bind(it) }
-                    BUILTINS[function.name]!!(arguments)
+                    val normalizer = arguments.fold(this) { normalizer, argument -> normalizer.bind(argument) }
+                    BUILTINS[function.name]!!(normalizer)
                 }
-                is C.Value.FunOf -> scope {
-                    arguments.forEach { bind(it) }
-                    eval(function.body)
-                }
+                is C.Value.FunOf -> arguments.fold(this) { normalizer, argument -> normalizer.bind(argument) }.eval(function.body)
                 else -> C.Value.Apply(function, arguments, term.id)
             }
         }
@@ -126,7 +126,7 @@ class Normalizer(
         is C.Term.LongArray -> C.Value.LongArray(term.id)
         is C.Term.List -> C.Value.List(lazy { eval(term.element) }, term.id)
         is C.Term.Compound -> C.Value.Compound(term.elements, term.id)
-        is C.Term.Box -> C.Value.Box(lazyOf(eval(term.content)), term.id) // TODO: environment inconsistency due to mutability?
+        is C.Term.Box -> C.Value.Box(lazy { eval(term.content) }, term.id)
         is C.Term.Ref -> C.Value.Ref(lazy { eval(term.element) }, term.id)
         is C.Term.Eq -> C.Value.Eq(lazy { eval(term.left) }, lazy { eval(term.right) }, term.id)
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant, term.effects, term.id)
@@ -160,10 +160,7 @@ class Normalizer(
         is C.Value.BoxOf -> C.Term.BoxOf(value.content, value.level, quote(value.tag.value), value.id)
         is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value), value.id)
         is C.Value.Refl -> C.Term.Refl(value.id)
-        is C.Value.FunOf -> C.Term.FunOf(value.parameters, scope {
-            value.parameters.forEach { bind(lazyOf(C.Value.Var(it, size, freshId()))) }
-            quote(eval(value.body))
-        }, value.id)
+        is C.Value.FunOf -> C.Term.FunOf(value.parameters, value.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.Value.Var(parameter, normalizer.size, freshId()))) }.quote(eval(value.body)), value.id)
         is C.Value.Apply -> C.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) }, value.id)
         is C.Value.CodeOf -> C.Term.CodeOf(quote(value.element.value), value.id)
         is C.Value.Splice -> C.Term.Splice(quote(value.element.value), value.id)
@@ -185,10 +182,7 @@ class Normalizer(
         is C.Value.Box -> C.Term.Box(quote(value.content.value), value.id)
         is C.Value.Ref -> C.Term.Ref(quote(value.element.value), value.id)
         is C.Value.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value), value.id)
-        is C.Value.Fun -> C.Term.Fun(value.parameters, scope {
-            value.parameters.forEach { (name, _) -> bind(lazyOf(C.Value.Var(name, size, freshId()))) }
-            quote(eval(value.resultant))
-        }, value.effects, value.id)
+        is C.Value.Fun -> C.Term.Fun(value.parameters, value.parameters.fold(this) { normalizer, (name, _) -> normalizer.bind(lazyOf(C.Value.Var(name, normalizer.size, freshId()))) }.quote(eval(value.resultant)), value.effects, value.id)
         is C.Value.Code -> C.Term.Code(quote(value.element.value), value.id)
         is C.Value.Type -> C.Term.Type(value.id)
     }

@@ -1,11 +1,10 @@
 package mce
 
+import mce.phase.Normalizer
 import mce.graph.Core as C
 
 @Suppress("NAME_SHADOWING")
-private val COMM: Comparator<Lazy<C.Value>> = Comparator { value1, value2 ->
-    val value1 = value1.value
-    val value2 = value2.value
+private val COMM: Comparator<C.Value> = Comparator { value1, value2 ->
     when {
         value1 is C.Value.Var && value2 is C.Value.Var -> value1.level.compareTo(value2.level)
         value1 is C.Value.Var -> 1
@@ -14,34 +13,34 @@ private val COMM: Comparator<Lazy<C.Value>> = Comparator { value1, value2 ->
     }
 }
 
-val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
-    "int/add" to { arguments ->
-        val a = arguments[0].value
-        val b = arguments[1].value
+val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
+    "int/add" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(a.value + b.value)
             // 0 + b = b
             a is C.Value.IntOf && a.value == 0 -> b
             // a + 0 = a
             b is C.Value.IntOf && b.value == 0 -> a
-            else -> C.Value.Apply(C.Value.Def("int/add"), arguments.sortedWith(COMM))
+            else -> C.Value.Apply(C.Value.Def("int/add"), mutableListOf(a, b).sortedWith(COMM).map(::lazyOf))
         }
     },
-    "int/sub" to { arguments ->
-        val a = arguments[0].value
-        val b = arguments[1].value
+    "int/sub" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(a.value - b.value)
             // a - 0 = a
             b is C.Value.IntOf && b.value == 0 -> a
             // a - a = 0
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
-            else -> C.Value.Apply(C.Value.Def("int/sub"), arguments)
+            else -> C.Value.Apply(C.Value.Def("int/sub"), mutableListOf(a, b).map(::lazyOf))
         }
     },
-    "int/mul" to { arguments ->
-        val a = arguments[0].value
-        val b = arguments[1].value
+    "int/mul" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(a.value * b.value)
             // 0 * b = 0
@@ -52,31 +51,31 @@ val BUILTINS: Map<String, (List<Lazy<C.Value>>) -> C.Value> = mapOf(
             a is C.Value.IntOf && a.value == 1 -> b
             // a * 1 = a
             b is C.Value.IntOf && b.value == 1 -> a
-            else -> C.Value.Apply(C.Value.Def("int/mul"), arguments.sortedWith(COMM))
+            else -> C.Value.Apply(C.Value.Def("int/mul"), mutableListOf(a, b).sortedWith(COMM).map(::lazyOf))
         }
     },
-    "int/div" to { arguments ->
-        val a = arguments[0].value
-        val b = arguments[1].value
+    "int/div" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(Math.floorDiv(a.value, b.value))
             // a / 1 = a
             b is C.Value.IntOf && b.value == 1 -> a
             // a / a = 1
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(1)
-            else -> C.Value.Apply(C.Value.Def("int/div"), arguments)
+            else -> C.Value.Apply(C.Value.Def("int/div"), mutableListOf(a, b).map(::lazyOf))
         }
     },
-    "int/mod" to { arguments ->
-        val a = arguments[0].value
-        val b = arguments[1].value
+    "int/mod" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
         when {
             a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.IntOf(Math.floorMod(a.value, b.value))
             // a % 1 = 0
             b is C.Value.IntOf && b.value == 1 -> a
             // a % a = 0
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
-            else -> C.Value.Apply(C.Value.Def("int/mod"), arguments)
+            else -> C.Value.Apply(C.Value.Def("int/mod"), mutableListOf(a, b).map(::lazyOf))
         }
     }
 )
