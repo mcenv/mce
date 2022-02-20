@@ -1,1 +1,1 @@
-def : bool := (\[x] -> x) [false]
+def : bool ≔ (λ[x] → x) [false]

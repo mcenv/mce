@@ -1,3 +1,3 @@
 import {identity}
 
-def : box bool := identity [bool, false]
+def : box bool ≔ identity [bool, false]

@@ -1,1 +1,1 @@
-def : fun [as : list int] -> list int := \[as] -> as
+def : fun [as : list int] → list int ≔ λ[as] → as

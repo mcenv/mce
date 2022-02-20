@@ -1,1 +1,1 @@
-def {builtin} : bool := _
+def {builtin} : bool ≔ _

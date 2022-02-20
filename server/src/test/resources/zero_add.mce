@@ -1,3 +1,3 @@
 import {int/add}
 
-def : fun [a : int] -> (0 int/add a) = a := \[a] -> refl
+def : fun [a : int] → (0 int/add a) = a ≔ λ[a] → refl

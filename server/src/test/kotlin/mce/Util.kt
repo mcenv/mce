@@ -3,10 +3,9 @@ package mce
 import kotlinx.coroutines.runBlocking
 import mce.server.Key
 import mce.server.Server
-import java.nio.charset.Charset
 
 fun read(name: String): String = ::read::class.java.getResourceAsStream(name)!!.use {
-    it.readAllBytes().toString(Charset.defaultCharset())
+    it.readAllBytes().toString(Charsets.UTF_8)
 }
 
 fun <V> fetch(key: Key<V>): V = runBlocking {

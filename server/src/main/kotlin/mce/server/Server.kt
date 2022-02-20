@@ -7,7 +7,6 @@ import mce.BUILTINS
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.phase.*
-import java.nio.charset.Charset
 import mce.graph.Surface as S
 
 class Server(
@@ -43,7 +42,7 @@ class Server(
     }
 
     private fun read(name: String): String = Server::class.java.getResourceAsStream(name)!!.use {
-        it.readAllBytes().toString(Charset.defaultCharset())
+        it.readAllBytes().toString(Charsets.UTF_8)
     }
 
     fun edit(name: String): Nothing = TODO()

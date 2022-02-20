@@ -1,1 +1,1 @@
-def {meta} : code bool := `false
+def {meta} : code bool ≔ `false

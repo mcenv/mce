@@ -31,7 +31,7 @@ class Parse private constructor(
                     parseAtomTerm()
                 }
                 val body = run {
-                    expectString(":=")
+                    expectString("≔")
                     parseTerm()
                 }
                 S.Item.Def(imports, exports, modifiers, name, type, body)
@@ -55,7 +55,7 @@ class Parse private constructor(
             skip()
             val arguments = parseList(']', ::parseTerm)
             S.Term.Apply(left, arguments, id)
-        } else if (peek() == ':' && peek(1) != '=') {
+        } else if (peek() == ':') {
             skip()
             val right = parseAtomTerm()
             S.Term.Anno(left, right, id)
@@ -116,13 +116,13 @@ class Parse private constructor(
             skip()
             S.Term.RefOf(parseAtomTerm(), id)
         }
-        '\\' -> {
+        'λ' -> {
             skip()
             val parameters = run {
                 expect('[')
                 parseList(']', ::readWord)
             }
-            expectString("->")
+            expectString("→")
             val body = parseTerm()
             S.Term.FunOf(parameters, body, id)
         }
@@ -137,7 +137,7 @@ class Parse private constructor(
         else -> when (val word = readWord()) {
             "let" -> {
                 val name = readWord()
-                expectString(":=")
+                expectString("≔")
                 val init = parseTerm()
                 expect(';')
                 val body = parseTerm()
@@ -146,7 +146,7 @@ class Parse private constructor(
             "match" -> {
                 val scrutinee = parseAtomTerm()
                 expect('[')
-                val clauses = parseList(']') { parsePair(::parsePattern, { expectString("=>") }, ::parseTerm) }
+                val clauses = parseList(']') { parsePair(::parsePattern, { expectString("⇒") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
             }
             "false" -> S.Term.BoolOf(false, id)
@@ -195,12 +195,12 @@ class Parse private constructor(
                     expect('[')
                     parseList(']') {
                         val name = readWord()
-                        val lower = if (peekChar() == '>') {
-                            expectString(">:")
+                        val lower = if (peekChar() == '≥') {
+                            skip()
                             parseAtomTerm()
                         } else null
-                        val upper = if (peekChar() == '<') {
-                            expectString("<:")
+                        val upper = if (peekChar() == '≤') {
+                            skip()
                             parseAtomTerm()
                         } else null
                         val type = run {
@@ -210,7 +210,7 @@ class Parse private constructor(
                         S.Parameter(name, lower, upper, type)
                     }
                 }
-                expectString("->")
+                expectString("→")
                 val resultant = parseTerm()
                 val effects = if (peekChar() == '!') {
                     skip()

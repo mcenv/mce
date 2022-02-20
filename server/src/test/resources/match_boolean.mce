@@ -1,5 +1,5 @@
-def : bool :=
+def : bool ≔
   match false [
-    false => true,
-    true  => false
+    false ⇒ true,
+    true  ⇒ false
   ]

@@ -1,1 +1,1 @@
-def : fun [α <: bool : type, a : box α] -> box (union {bool, int}) := \[α, a] -> a
+def : fun [α ≤ bool : type, a : box α] → box (union {bool, int}) ≔ λ[α, a] → a
