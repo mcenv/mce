@@ -219,10 +219,10 @@ class Elaborate private constructor(
                         val tArgument = checkTerm(argument, context.normalizer.eval(parameter.type))
                         val vArgument = context.normalizer.eval(tArgument)
                         val lower = parameter.lower?.let { context.normalizer.eval(it) }?.also { lower ->
-                            if (!subtype(lower, vArgument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(vArgument)), serializeTerm(context.normalizer.quote(lower)), argument.id))
+                            if (!context.subtype(lower, vArgument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(vArgument)), serializeTerm(context.normalizer.quote(lower)), argument.id))
                         }
                         val upper = parameter.upper?.let { context.normalizer.eval(it) }?.also { upper ->
-                            if (!subtype(vArgument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(upper)), serializeTerm(context.normalizer.quote(vArgument)), argument.id))
+                            if (!context.subtype(vArgument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(upper)), serializeTerm(context.normalizer.quote(vArgument)), argument.id))
                         }
                         val type = context.normalizer.eval(parameter.type)
                         context.bindUnchecked(Entry(parameter.name, lower, upper, type, stage), vArgument) to tArgument
@@ -430,7 +430,7 @@ class Elaborate private constructor(
             }
             else -> {
                 val (context, inferred, inferredType) = inferPattern(pattern)
-                if (!subtype(inferredType, type)) {
+                if (!context.subtype(inferredType, type)) {
                     types[pattern.id] = END
                     diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(type)), serializeTerm(context.normalizer.quote(inferredType)), pattern.id))
                 }
