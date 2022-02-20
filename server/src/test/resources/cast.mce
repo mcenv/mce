@@ -1,4 +1,4 @@
-def : fun [α : type, β : type, p : (α = β), a : box α] → box β ≔
-  λ[α, β, p, a] → match p [
+def [α : type, β : type, p : (α = β), a : box α] : box β ≔
+  match p [
     refl ⇒ a
   ]

@@ -22,7 +22,8 @@ object Surface {
             override val exports: KList<KString>,
             override val modifiers: KList<Modifier>,
             override val name: KString,
-            val type: Term,
+            val parameters: KList<Parameter>,
+            val resultant: Term,
             val body: Term
         ) : Item()
     }
@@ -31,6 +32,8 @@ object Surface {
         BUILTIN,
         META
     }
+
+    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Term {
         abstract val id: Id
@@ -105,8 +108,6 @@ object Surface {
         data class RefOf(val element: Pattern, override val id: Id) : Pattern()
         data class Refl(override val id: Id) : Pattern()
     }
-
-    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Effect {
         data class Name(val name: KString) : Effect()

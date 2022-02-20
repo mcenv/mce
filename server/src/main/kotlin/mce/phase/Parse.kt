@@ -12,20 +12,12 @@ class Parse private constructor(
 
     private fun parseItem(name: String): S.Item {
         var word = readWord()
-        val imports = if (word == "import") {
-            expect('{')
-            parseList('}', ::readWord).also { word = readWord() }
-        } else emptyList()
-        val exports = if (word == "export") {
-            expect('{')
-            parseList('}', ::readWord).also { word = readWord() }
-        } else emptyList()
+        val imports = if (word == "import") parseList('{', '}', ::readWord).also { word = readWord() } else emptyList()
+        val exports = if (word == "export") parseList('{', '}', ::readWord).also { word = readWord() } else emptyList()
         return when (word) {
             "def" -> {
-                val modifiers = if (peekChar() == '{') {
-                    skip()
-                    parseList('}', ::parseModifier)
-                } else emptyList()
+                val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
+                val parameters = if (peekChar() == '[') parseList('[', ']') { parseParameter() } else emptyList()
                 val type = run {
                     expect(':')
                     parseAtomTerm()
@@ -34,7 +26,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                S.Item.Def(imports, exports, modifiers, name, type, body)
+                S.Item.Def(imports, exports, modifiers, name, parameters, type, body)
             }
             else -> error("unexpected item '$word'")
         }
@@ -46,14 +38,30 @@ class Parse private constructor(
         else -> error("unexpected modifier '$word'")
     }
 
+    private fun parseParameter(): S.Parameter {
+        val name = readWord()
+        val lower = if (peekChar() == '≥') {
+            skip()
+            parseAtomTerm()
+        } else null
+        val upper = if (peekChar() == '≤') {
+            skip()
+            parseAtomTerm()
+        } else null
+        val type = run {
+            expect(':')
+            parseAtomTerm()
+        }
+        return S.Parameter(name, lower, upper, type)
+    }
+
     private fun parseTerm(id: Id = freshId()): S.Term {
         var left = parseAtomTerm(id)
         skipWhitespace()
         return if (!canRead()) {
             left
         } else if (peek() == '[') {
-            skip()
-            val arguments = parseList(']', ::parseTerm)
+            val arguments = parseList('[', ']', ::parseTerm)
             S.Term.Apply(left, arguments, id)
         } else if (peek() == ':') {
             skip()
@@ -89,39 +97,29 @@ class Parse private constructor(
             S.Term.Meta(id)
         }
         '"' -> S.Term.StringOf(readString(), id)
-        '[' -> {
-            skip()
-            val char = peek()
-            when {
-                char == 'b' && peek(1) == ';' -> {
-                    skip(2)
-                    S.Term.ByteArrayOf(parseList(']', ::parseTerm), id)
-                }
-                char == 'i' && peek(1) == ';' -> {
-                    skip(2)
-                    S.Term.IntArrayOf(parseList(']', ::parseTerm), id)
-                }
-                char == 'l' && peek(1) == ';' -> {
-                    skip(2)
-                    S.Term.LongArrayOf(parseList(']', ::parseTerm), id)
-                }
-                else -> S.Term.ListOf(parseList(']', ::parseTerm), id)
+        '[' -> when {
+            peek(1) == 'b' && peek(2) == ';' -> {
+                skip(2)
+                S.Term.ByteArrayOf(parseList(';', ']', ::parseTerm), id)
             }
+            peek(1) == 'i' && peek(2) == ';' -> {
+                skip(2)
+                S.Term.IntArrayOf(parseList(';', ']', ::parseTerm), id)
+            }
+            peek(1) == 'l' && peek(2) == ';' -> {
+                skip(2)
+                S.Term.LongArrayOf(parseList(';', ']', ::parseTerm), id)
+            }
+            else -> S.Term.ListOf(parseList('[', ']', ::parseTerm), id)
         }
-        '{' -> {
-            skip()
-            S.Term.CompoundOf(parseList('}', ::parseTerm), id)
-        }
+        '{' -> S.Term.CompoundOf(parseList('{', '}', ::parseTerm), id)
         '&' -> {
             skip()
             S.Term.RefOf(parseAtomTerm(), id)
         }
         'λ' -> {
             skip()
-            val parameters = run {
-                expect('[')
-                parseList(']', ::readWord)
-            }
+            val parameters = parseList('[', ']', ::readWord)
             expectString("→")
             val body = parseTerm()
             S.Term.FunOf(parameters, body, id)
@@ -145,26 +143,19 @@ class Parse private constructor(
             }
             "match" -> {
                 val scrutinee = parseAtomTerm()
-                expect('[')
-                val clauses = parseList(']') { parsePair(::parsePattern, { expectString("⇒") }, ::parseTerm) }
+                val clauses = parseList('[', ']') { parsePair(::parsePattern, { expectString("⇒") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
             }
             "false" -> S.Term.BoolOf(false, id)
             "true" -> S.Term.BoolOf(true, id)
             "refl" -> S.Term.Refl(id)
             "union" -> {
-                val variants = run {
-                    expect('{')
-                    parseList('}', ::parseTerm)
-                }
+                val variants = parseList('{', '}', ::parseTerm)
                 S.Term.Union(variants, id)
             }
             "end" -> S.Term.Union(emptyList(), id)
             "intersection" -> {
-                val variants = run {
-                    expect('{')
-                    parseList('}', ::parseTerm)
-                }
+                val variants = parseList('{', '}', ::parseTerm)
                 S.Term.Intersection(variants, id)
             }
             "any" -> S.Term.Intersection(emptyList(), id)
@@ -181,8 +172,7 @@ class Parse private constructor(
             "long_array" -> S.Term.LongArray(id)
             "list" -> S.Term.List(parseAtomTerm(), id)
             "compound" -> {
-                expect('{')
-                val elements = parseList('}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
+                val elements = parseList('{', '}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
             "box" -> {
@@ -191,25 +181,7 @@ class Parse private constructor(
             }
             "ref" -> S.Term.Ref(parseAtomTerm(), id)
             "fun" -> {
-                val parameters = run {
-                    expect('[')
-                    parseList(']') {
-                        val name = readWord()
-                        val lower = if (peekChar() == '≥') {
-                            skip()
-                            parseAtomTerm()
-                        } else null
-                        val upper = if (peekChar() == '≤') {
-                            skip()
-                            parseAtomTerm()
-                        } else null
-                        val type = run {
-                            expect(':')
-                            parseAtomTerm()
-                        }
-                        S.Parameter(name, lower, upper, type)
-                    }
-                }
+                val parameters = parseList('[', ']') { parseParameter() }
                 expectString("→")
                 val resultant = parseTerm()
                 val effects = if (peekChar() == '!') {
@@ -247,29 +219,22 @@ class Parse private constructor(
     private fun parseAtomPattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
         '(' -> parseParen { parsePattern(it) }
         '"' -> S.Pattern.StringOf(readString(), id)
-        '[' -> {
-            skip()
-            val char = peek()
-            when {
-                char == 'b' && peek(1) == ';' -> {
-                    skip(2)
-                    S.Pattern.ByteArrayOf(parseList(']', ::parsePattern), id)
-                }
-                char == 'i' && peek(1) == ';' -> {
-                    skip(2)
-                    S.Pattern.IntArrayOf(parseList(']', ::parsePattern), id)
-                }
-                char == 'l' && peek(1) == ';' -> {
-                    skip(2)
-                    S.Pattern.LongArrayOf(parseList(']', ::parsePattern), id)
-                }
-                else -> S.Pattern.ListOf(parseList(']', ::parsePattern), id)
+        '[' -> when {
+            peek(1) == 'b' && peek(2) == ';' -> {
+                skip(2)
+                S.Pattern.ByteArrayOf(parseList(';', ']', ::parsePattern), id)
             }
+            peek(1) == 'i' && peek(2) == ';' -> {
+                skip(2)
+                S.Pattern.IntArrayOf(parseList(';', ']', ::parsePattern), id)
+            }
+            peek(1) == 'l' && peek(2) == ';' -> {
+                skip(2)
+                S.Pattern.LongArrayOf(parseList(';', ']', ::parsePattern), id)
+            }
+            else -> S.Pattern.ListOf(parseList('[', ']', ::parsePattern), id)
         }
-        '{' -> {
-            skip()
-            S.Pattern.CompoundOf(parseList('}', ::parsePattern), id)
-        }
+        '{' -> S.Pattern.CompoundOf(parseList('{', '}', ::parsePattern), id)
         '&' -> {
             skip()
             S.Pattern.RefOf(parseAtomPattern(), id)
@@ -290,10 +255,7 @@ class Parse private constructor(
         }
     }
 
-    private fun parseEffects(): List<S.Effect> {
-        expect('{')
-        return parseList('}', ::parseEffect)
-    }
+    private fun parseEffects(): List<S.Effect> = parseList('{', '}', ::parseEffect)
 
     private fun parseEffect(): S.Effect {
         val name = readWord()
@@ -319,7 +281,8 @@ class Parse private constructor(
         return a to b
     }
 
-    private inline fun <A> parseList(end: Char, parseA: () -> A): List<A> = mutableListOf<A>().also {
+    private inline fun <A> parseList(begin: Char, end: Char, parseA: () -> A): List<A> = mutableListOf<A>().also {
+        expect(begin)
         while (peekChar() != end) {
             it += parseA()
             if (peekChar() == ',') skip() else break

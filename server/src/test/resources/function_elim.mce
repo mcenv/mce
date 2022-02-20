@@ -1,3 +1,1 @@
-import {identity}
-
-def : box bool ≔ identity [bool, false]
+def : int ≔ (λ [a] → a) [0]

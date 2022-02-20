@@ -1,4 +1,4 @@
-def : fun [a : box int] → int ≔
-  λ[a] → match a [
+def [a : box int] : int ≔
+  match a [
     a # α ⇒ a
   ]

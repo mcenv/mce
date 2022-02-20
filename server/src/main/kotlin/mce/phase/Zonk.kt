@@ -16,7 +16,7 @@ class Zonk private constructor(
     private fun zonkItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
             val body = zonkTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.type, body)
+            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, body)
         }
     }
 

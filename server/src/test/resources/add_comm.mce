@@ -1,3 +1,3 @@
 import {int/add}
 
-def : fun [a : int, b : int] → (a int/add b) = (b int/add a) ≔ λ[a, b] → refl
+def [a : int, b : int] : ((a int/add b) = (b int/add a)) ≔ refl

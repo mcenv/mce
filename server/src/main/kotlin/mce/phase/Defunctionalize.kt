@@ -11,9 +11,17 @@ class Defunctionalize private constructor() {
 
     private fun defunctionalizeItem(item: C.Item): D.Item = when (item) {
         is C.Item.Def -> {
+            val parameters = item.parameters.map { defunctionalizeParameter(it) }
             val body = defunctionalizeTerm(item.body)
-            D.Item.Def(item.imports, item.exports, item.name, body)
+            D.Item.Def(item.imports, item.exports, item.name, parameters, body)
         }
+    }
+
+    private fun defunctionalizeParameter(parameter: C.Parameter): D.Parameter {
+        val lower = parameter.lower?.let { defunctionalizeTerm(it) }
+        val upper = parameter.upper?.let { defunctionalizeTerm(it) }
+        val type = defunctionalizeTerm(parameter.type)
+        return D.Parameter(parameter.name, lower, upper, type)
     }
 
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {
@@ -123,12 +131,7 @@ class Defunctionalize private constructor() {
             D.Term.Eq(left, right, term.id!!)
         }
         is C.Term.Fun -> {
-            val parameters = term.parameters.map { (name, lower, upper, type) ->
-                val lower = lower?.let { defunctionalizeTerm(it) }
-                val upper = upper?.let { defunctionalizeTerm(it) }
-                val type = defunctionalizeTerm(type)
-                D.Parameter(name, lower, upper, type)
-            }
+            val parameters = term.parameters.map { defunctionalizeParameter(it) }
             val resultant = defunctionalizeTerm(term.resultant)
             val effects = term.effects.map { defunctionalizeEffect(it) }.toSet()
             D.Term.Fun(parameters, resultant, effects, term.id!!)

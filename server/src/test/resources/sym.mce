@@ -1,4 +1,4 @@
-def : fun [a : bool, b : bool, p : (a = b)] → b = a ≔
-  λ[a, b, p] → match p [
+def [a : bool, b : bool, p : (a = b)] : (b = a) ≔
+  match p [
     refl ⇒ refl
   ]

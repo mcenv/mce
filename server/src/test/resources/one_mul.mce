@@ -1,3 +1,3 @@
 import {int/mul}
 
-def : fun [a : int] → (1 int/mul a) = a ≔ λ[a] → refl
+def [a : int] : ((1 int/mul a) = a) ≔ refl

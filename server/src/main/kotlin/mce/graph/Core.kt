@@ -29,7 +29,8 @@ object Core {
             override val exports: KList<KString>,
             override val modifiers: KSet<Modifier>,
             override val name: KString,
-            val type: Value,
+            val parameters: KList<Parameter>,
+            val resultant: Value,
             val body: Term
         ) : Item()
     }
@@ -38,6 +39,8 @@ object Core {
         BUILTIN,
         META
     }
+
+    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     /**
      * A syntactic term.
@@ -172,8 +175,6 @@ object Core {
         data class Code(val element: Lazy<Value>, override val id: Id? = null) : Value()
         data class Type(override val id: Id? = null) : Value()
     }
-
-    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Effect {
         data class Name(val name: KString) : Effect()

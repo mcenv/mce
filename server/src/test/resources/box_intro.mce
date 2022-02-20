@@ -1,1 +1,1 @@
-def : fun [α : type, a : α] → box α ≔ λ[α, a] → a # α
+def [α : type, a : α] : box α ≔ a # α

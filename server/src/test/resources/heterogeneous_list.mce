@@ -1,1 +1,1 @@
-def : fun [α : type, as : list α] → list α ≔ λ[α, as] → as
+def [α : type, as : list α] : list α ≔ as

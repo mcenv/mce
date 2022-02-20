@@ -1,5 +1,5 @@
-def : fun [a : bool, b : bool, c : bool, p : (a = b), q : (b = c)] → a = c ≔
-  λ[a, b, c, p, q] → match p [
+def [a : bool, b : bool, c : bool, p : (a = b), q : (b = c)] : (a = c) ≔
+  match p [
     refl ⇒ match q [
       refl ⇒ refl
     ]

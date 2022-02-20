@@ -20,9 +20,12 @@ object Defunctionalized {
             override val imports: KList<KString>,
             override val exports: KList<KString>,
             override val name: KString,
+            val parameters: KList<Parameter>,
             val body: Term
         ) : Item()
     }
+
+    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Term {
         abstract val id: Id
@@ -92,8 +95,6 @@ object Defunctionalized {
         data class RefOf(val element: Pattern, override val id: Id) : Pattern()
         data class Refl(override val id: Id) : Pattern()
     }
-
-    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Effect {
         data class Name(val name: KString) : Effect()
