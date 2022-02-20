@@ -39,6 +39,10 @@ class Parse private constructor(
     }
 
     private fun parseParameter(): S.Parameter {
+        val erased = if (peekChar() == '0') {
+            skip()
+            false
+        } else true
         val name = readWord()
         val lower = if (peekChar() == '≥') {
             skip()
@@ -52,7 +56,7 @@ class Parse private constructor(
             expect(':')
             parseAtomTerm()
         }
-        return S.Parameter(name, lower, upper, type)
+        return S.Parameter(erased, name, lower, upper, type)
     }
 
     private fun parseTerm(id: Id = freshId()): S.Term {

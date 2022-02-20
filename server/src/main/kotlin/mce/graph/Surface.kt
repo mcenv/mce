@@ -33,7 +33,7 @@ object Surface {
         META
     }
 
-    data class Parameter(val name: KString, val lower: Term?, val upper: Term?, val type: Term)
+    data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
     sealed class Term {
         abstract val id: Id

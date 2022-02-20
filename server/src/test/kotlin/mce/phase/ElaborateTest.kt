@@ -342,4 +342,15 @@ class ElaborateTest {
         val result = elaborate("box_ill_typed_tag")
         assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun irrelevant() {
+        elaborate("irrelevant").success()
+    }
+
+    @Test
+    fun relevanceMismatch() {
+        val result = elaborate("relevance_mismatch")
+        assert(result.diagnostics.contains(Diagnostic.RelevanceMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    }
 }

@@ -182,7 +182,12 @@ class Normalizer(
         is C.Value.Box -> C.Term.Box(quote(value.content.value), value.id)
         is C.Value.Ref -> C.Term.Ref(quote(value.element.value), value.id)
         is C.Value.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value), value.id)
-        is C.Value.Fun -> C.Term.Fun(value.parameters, value.parameters.fold(this) { normalizer, (name, _) -> normalizer.bind(lazyOf(C.Value.Var(name, normalizer.size, freshId()))) }.quote(eval(value.resultant)), value.effects, value.id)
+        is C.Value.Fun -> C.Term.Fun(
+            value.parameters,
+            value.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.Value.Var(parameter.name, normalizer.size, freshId()))) }.quote(eval(value.resultant)),
+            value.effects,
+            value.id
+        )
         is C.Value.Code -> C.Term.Code(quote(value.element.value), value.id)
         is C.Value.Type -> C.Term.Type(value.id)
     }

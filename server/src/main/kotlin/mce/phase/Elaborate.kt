@@ -23,13 +23,13 @@ class Elaborate private constructor(
         is S.Item.Def -> {
             val context1 = run {
                 val meta = item.modifiers.contains(S.Modifier.META)
-                Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), meta, 0)
+                Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), meta, 0, false)
             }
             val (context2, parameters) = context1.elaborateParameters(item.parameters)
             val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
             val type = context2.normalizer.eval(context2.checkTerm(item.resultant, TYPE))
             val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else run {
-                val body = context2.checkTerm(item.body, type)
+                val body = context2.relevant().checkTerm(item.body, type)
                 if (parameters.isEmpty()) body else C.Term.FunOf(parameters.map { it.name }, body, freshId())
             }
             context2.checkPhase(item.body.id, type)
@@ -49,7 +49,7 @@ class Elaborate private constructor(
         val vLower = tLower?.let { context.normalizer.eval(it) }
         val tUpper = parameter.upper?.let { context.checkTerm(it, vType) }
         val vUpper = tUpper?.let { context.normalizer.eval(it) }
-        context.bindUnchecked(Entry(parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.name, tLower, tUpper, tType)
+        context.bindUnchecked(Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, tLower, tUpper, tType)
     }
 
     /**
@@ -62,7 +62,7 @@ class Elaborate private constructor(
             Typing(checkTerm(term, type), type)
         }
         is S.Term.Anno -> {
-            val type = normalizer.eval(checkTerm(term.type, TYPE))
+            val type = normalizer.eval(irrelevant().checkTerm(term.type, TYPE))
             Typing(checkTerm(term.element, type), type)
         }
         is S.Term.Name -> when (val level = lookup(term.name)) {
@@ -74,7 +74,7 @@ class Elaborate private constructor(
                             val lower = parameter.lower?.let { context.normalizer.eval(it) }
                             val upper = parameter.upper?.let { context.normalizer.eval(it) }
                             val type = context.normalizer.eval(parameter.type)
-                            context.bindUnchecked(Entry(parameter.name, lower, upper, type, stage))
+                            context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage))
                         }
                         val resultant = context.normalizer.quote(item.resultant)
                         C.Value.Fun(item.parameters, resultant, emptySet() /* TODO */)
@@ -84,7 +84,9 @@ class Elaborate private constructor(
             }
             else -> {
                 val entry = entries[level]
-                val type = if (stage != entry.stage) diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id)) else entry.type
+                var type = entry.type
+                if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
+                if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
                 checkRepresentation(term.id, type)
                 Typing(C.Term.Var(term.name, level, term.id), type)
             }
@@ -179,7 +181,7 @@ class Elaborate private constructor(
         is S.Term.Compound -> {
             val (_, elements) = term.elements.foldMap(this) { context, (name, element) ->
                 val element = context.checkTerm(element, TYPE)
-                context.bind(term.id, Entry(name, END, ANY, context.normalizer.eval(element), stage)) to (name to element)
+                context.bind(term.id, Entry(true /* TODO */, name, END, ANY, context.normalizer.eval(element), stage)) to (name to element)
             }
             Typing(C.Term.Compound(elements, term.id), TYPE)
         }
@@ -213,7 +215,7 @@ class Elaborate private constructor(
     private fun Context.inferComputation(computation: S.Term): Typing = when (computation) {
         is S.Term.Let -> {
             val init = inferComputation(computation.init)
-            val body = bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage)).inferComputation(computation.body)
+            val body = bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)).inferComputation(computation.body)
             Typing(C.Term.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
         }
         is S.Term.Match -> {
@@ -228,8 +230,8 @@ class Elaborate private constructor(
         }
         is S.Term.FunOf -> {
             val types = computation.parameters.map { normalizer.fresh(computation.id) }
-            val body = (computation.parameters zip types).fold(empty()) { context, (parameter, type) -> context.bind(computation.id, Entry(parameter, END, ANY, type, stage)) }.inferComputation(computation.body)
-            val parameters = (computation.parameters zip types).map { C.Parameter(it.first, normalizer.quote(END), normalizer.quote(ANY), normalizer.quote(it.second)) }
+            val body = (computation.parameters zip types).fold(empty()) { context, (parameter, type) -> context.bind(computation.id, Entry(true /* TODO */, parameter, END, ANY, type, stage)) }.inferComputation(computation.body)
+            val parameters = (computation.parameters zip types).map { C.Parameter(true /* TODO */, it.first, normalizer.quote(END), normalizer.quote(ANY), normalizer.quote(it.second)) }
             Typing(C.Term.FunOf(computation.parameters, body.term, computation.id), C.Value.Fun(parameters, normalizer.quote(body.type), body.effects))
         }
         is S.Term.Apply -> {
@@ -249,7 +251,7 @@ class Elaborate private constructor(
                             if (!context.subtype(vArgument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(upper)), serializeTerm(context.normalizer.quote(vArgument)), argument.id))
                         }
                         val type = context.normalizer.eval(parameter.type)
-                        context.bindUnchecked(Entry(parameter.name, lower, upper, type, stage), vArgument) to tArgument
+                        context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
                     }
                     val resultant = context.normalizer.eval(type.resultant)
                     Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
@@ -283,11 +285,11 @@ class Elaborate private constructor(
                 C.Term.ListOf(elements, term.id)
             }
             term is S.Term.CompoundOf && type is C.Value.Compound -> {
-                val (context, elements) = (term.elements zip type.elements).foldMap(this) { context, (element, type) ->
+                val (_, elements) = (term.elements zip type.elements).foldMap(this) { context, (element, type) ->
                     val vType = context.normalizer.eval(type.second)
                     val element = context.checkTerm(element, vType)
                     val vElement = context.normalizer.eval(element)
-                    context.bindUnchecked(Entry(type.first, END, ANY, vType, context.stage), vElement) to element
+                    context.bindUnchecked(Entry(true /* TODO */, type.first, END, ANY, vType, context.stage), vElement) to element
                 }
                 C.Term.CompoundOf(elements, term.id)
             }
@@ -312,7 +314,7 @@ class Elaborate private constructor(
         return when {
             computation is S.Term.Let -> {
                 val init = inferComputation(computation.init)
-                val body = bind(computation.init.id, Entry(computation.name, END, ANY, init.type, stage)).checkComputation(computation.body, type, effects)
+                val body = bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)).checkComputation(computation.body, type, effects)
                 val effects = init.effects + body.effects
                 Effecting(C.Term.Let(computation.name, init.term, body.term, computation.id), effects)
             }
@@ -334,7 +336,7 @@ class Elaborate private constructor(
                     val lower = parameter.lower?.let { context.normalizer.eval(it) }
                     val upper = parameter.upper?.let { context.normalizer.eval(it) }
                     val type = context.normalizer.eval(parameter.type)
-                    context.bindUnchecked(Entry(name, lower, upper, type, stage))
+                    context.bindUnchecked(Entry(parameter.relevant, name, lower, upper, type, stage))
                 }
                 val resultant = context.checkComputation(computation.body, context.normalizer.eval(type.resultant), effects)
                 Effecting(C.Term.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
@@ -360,7 +362,7 @@ class Elaborate private constructor(
     private fun Context.inferPattern(pattern: S.Pattern): Triple<Context, C.Pattern, C.Value> = when (pattern) {
         is S.Pattern.Variable -> {
             val type = normalizer.fresh(pattern.id)
-            val context = bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
+            val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
             Triple(context, C.Pattern.Var(pattern.name, pattern.id), type)
         }
         is S.Pattern.BoolOf -> Triple(this, C.Pattern.BoolOf(pattern.value, pattern.id), BOOL)
@@ -422,7 +424,7 @@ class Elaborate private constructor(
         types[pattern.id] = type
         return when {
             pattern is S.Pattern.Variable -> {
-                val context = bind(pattern.id, Entry(pattern.name, END, ANY, type, stage))
+                val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
                 context to C.Pattern.Var(pattern.name, pattern.id)
             }
             pattern is S.Pattern.ListOf && type is C.Value.List -> {
@@ -560,13 +562,16 @@ class Elaborate private constructor(
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).foldAll(this) { context, (elements1, elements2) ->
                         val upper1 = context.normalizer.eval(elements1.second)
-                        context.bindUnchecked(Entry("", null, upper1, TYPE, stage)) to context.subtype(upper1, context.normalizer.eval(elements2.second))
+                        context.bindUnchecked(Entry(true /* TODO */, "", null, upper1, TYPE, stage)) to context.subtype(upper1, context.normalizer.eval(elements2.second))
                     }.second
             value1 is C.Value.Box && value2 is C.Value.Box -> subtype(value1.content.value, value2.content.value)
             value1 is C.Value.Ref && value2 is C.Value.Ref -> subtype(value1.element.value, value2.element.value)
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && run {
                 val (context, success) = (value1.parameters zip value2.parameters).foldAll(this) { context, (parameter1, parameter2) ->
-                    context.bindUnchecked(Entry("", null, null /* TODO */, TYPE, stage)) to context.subtype(context.normalizer.eval(parameter2.type), context.normalizer.eval(parameter1.type))
+                    context.bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage)) to (parameter1.relevant == parameter2.relevant && context.subtype(
+                        context.normalizer.eval(parameter2.type),
+                        context.normalizer.eval(parameter1.type)
+                    ))
                 }
                 success && context.subtype(context.normalizer.eval(value1.resultant), context.normalizer.eval(value2.resultant))
             } && value2.effects.containsAll(value1.effects)
@@ -619,6 +624,7 @@ class Elaborate private constructor(
     )
 
     private data class Entry(
+        val relevant: Boolean,
         val name: String,
         val lower: C.Value?,
         val upper: C.Value?,
@@ -630,23 +636,28 @@ class Elaborate private constructor(
         val entries: PersistentList<Entry>,
         val normalizer: Normalizer,
         val meta: Boolean,
-        val stage: Int
+        val stage: Int,
+        val relevant: Boolean
     ) {
         val size: Int get() = entries.size
 
         fun lookup(name: String): Int = entries.indexOfLast { it.name == name }
 
-        fun bind(id: Id, entry: Entry, value: C.Value? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(value ?: C.Value.Var(entry.name, size))), meta, stage).also { checkPhase(id, entry.type) }
+        fun bind(id: Id, entry: Entry, value: C.Value? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(value ?: C.Value.Var(entry.name, size))), meta, stage, relevant).also { checkPhase(id, entry.type) }
 
-        fun bindUnchecked(entry: Entry, value: C.Value? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(value ?: C.Value.Var(entry.name, size))), meta, stage)
+        fun bindUnchecked(entry: Entry, value: C.Value? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(value ?: C.Value.Var(entry.name, size))), meta, stage, relevant)
 
-        fun empty(): Context = Context(persistentListOf(), normalizer.empty(), meta, stage)
+        fun empty(): Context = Context(persistentListOf(), normalizer.empty(), meta, stage, relevant)
 
-        fun withNormalizer(normalizer: Normalizer): Context = Context(entries, normalizer, meta, stage)
+        fun withNormalizer(normalizer: Normalizer): Context = Context(entries, normalizer, meta, stage, relevant)
 
-        fun up(): Context = Context(entries, normalizer, meta, stage + 1)
+        fun up(): Context = Context(entries, normalizer, meta, stage + 1, relevant)
 
-        fun down(): Context = Context(entries, normalizer, meta, stage - 1)
+        fun down(): Context = Context(entries, normalizer, meta, stage - 1, relevant)
+
+        fun relevant(): Context = Context(entries, normalizer, meta, stage, true)
+
+        fun irrelevant(): Context = Context(entries, normalizer, meta, stage, false)
 
         fun checkPhase(id: Id, type: C.Value) {
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))

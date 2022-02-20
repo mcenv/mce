@@ -16,6 +16,7 @@ sealed class Diagnostic {
     data class TypeMismatch(val expected: S.Term, val actual: S.Term, override val id: Id) : Diagnostic()
     data class PhaseMismatch(override val id: Id) : Diagnostic()
     data class StageMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
+    data class RelevanceMismatch(override val id: Id) : Diagnostic()
     data class EffectMismatch(val expected: List<S.Effect>, val actual: List<S.Effect>, override val id: Id) : Diagnostic()
     data class PolymorphicRepresentation(override val id: Id) : Diagnostic()
     data class UnsolvedMeta(override val id: Id) : Diagnostic()
@@ -67,7 +68,7 @@ sealed class Diagnostic {
             is C.Term.Ref -> S.Term.Ref(serializeTerm(term.element), freshId())
             is C.Term.Eq -> S.Term.Eq(serializeTerm(term.left), serializeTerm(term.right), freshId())
             is C.Term.Fun -> S.Term.Fun(
-                term.parameters.map { S.Parameter(it.name, it.lower?.let(::serializeTerm), it.upper?.let(::serializeTerm), serializeTerm(it.type)) },
+                term.parameters.map { S.Parameter(it.relevant, it.name, it.lower?.let(::serializeTerm), it.upper?.let(::serializeTerm), serializeTerm(it.type)) },
                 serializeTerm(term.resultant),
                 term.effects.map(::serializeEffect),
                 freshId()
