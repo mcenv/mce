@@ -1,4 +1,4 @@
 def [a : box int] : int ≔
   match a [
-    a # α ⇒ a
+    (a ∈ α) ⇒ a
   ]

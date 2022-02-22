@@ -20,7 +20,7 @@ class Parse private constructor(
                 val parameters = if (peekChar() == '[') parseList('[', ']') { parseParameter() } else emptyList()
                 val type = run {
                     expect(':')
-                    parseAtomTerm()
+                    parseTerm()
                 }
                 val body = run {
                     expectString("≔")
@@ -29,6 +29,9 @@ class Parse private constructor(
                 S.Item.Def(imports, exports, modifiers, name, parameters, type, body)
             }
             else -> error("unexpected item '$word'")
+        }.also {
+            skipWhitespace()
+            if (canRead()) error("expected end of file")
         }
     }
 
@@ -46,52 +49,56 @@ class Parse private constructor(
         val name = readWord()
         val lower = if (peekChar() == '≥') {
             skip()
-            parseAtomTerm()
+            parseTerm()
         } else null
         val upper = if (peekChar() == '≤') {
             skip()
-            parseAtomTerm()
+            parseTerm()
         } else null
         val type = run {
             expect(':')
-            parseAtomTerm()
+            parseTerm()
         }
         return S.Parameter(erased, name, lower, upper, type)
     }
 
-    private fun parseTerm(id: Id = freshId()): S.Term {
-        var left = parseAtomTerm(id)
-        skipWhitespace()
-        return if (!canRead()) {
-            left
-        } else if (peek() == '[') {
-            val arguments = parseList('[', ']', ::parseTerm)
-            S.Term.Apply(left, arguments, id)
-        } else if (peek() == ':') {
+    private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
+        '(' -> {
             skip()
-            val right = parseAtomTerm()
-            S.Term.Anno(left, right, id)
-        } else if (peek() == '#') {
-            skip()
-            val right = parseAtomTerm()
-            S.Term.BoxOf((left as S.Term.Name).name, right, id)
-        } else if (peek() == '=') {
-            skip()
-            val right = parseAtomTerm()
-            S.Term.Eq(left, right, id)
-        } else {
-            while (canRead() && peek().isWordPart()) {
-                val operator = parseAtomTerm()
-                val right = parseAtomTerm()
-                left = S.Term.Apply(operator, listOf(left, right), id)
-                skipWhitespace()
-            }
-            left
+            if (peekChar() == '#') {
+                skip()
+                parseTerm(UUID.fromString(readWord()))
+            } else {
+                val left = parseTerm()
+                when (peekChar()) {
+                    ')' -> left
+                    '[' -> {
+                        val arguments = parseList('[', ']', ::parseTerm)
+                        S.Term.Apply(left, arguments, id)
+                    }
+                    ':' -> {
+                        skip()
+                        val right = parseTerm()
+                        S.Term.Anno(left, right, id)
+                    }
+                    '∈' -> {
+                        skip()
+                        val right = parseTerm()
+                        S.Term.BoxOf((left as S.Term.Name).name, right, id)
+                    }
+                    '=' -> {
+                        skip()
+                        val right = parseTerm()
+                        S.Term.Eq(left, right, id)
+                    }
+                    else -> {
+                        val operator = parseTerm()
+                        val right = parseTerm()
+                        S.Term.Apply(operator, listOf(left, right), id)
+                    }
+                }
+            }.also { expect(')') }
         }
-    }
-
-    private fun parseAtomTerm(id: Id = freshId()): S.Term = when (peekChar()) {
-        '(' -> parseParen { parseTerm(it) }
         '_' -> {
             skip()
             S.Term.Hole(id)
@@ -119,7 +126,7 @@ class Parse private constructor(
         '{' -> S.Term.CompoundOf(parseList('{', '}', ::parseTerm), id)
         '&' -> {
             skip()
-            S.Term.RefOf(parseAtomTerm(), id)
+            S.Term.RefOf(parseTerm(), id)
         }
         'λ' -> {
             skip()
@@ -130,11 +137,11 @@ class Parse private constructor(
         }
         '`' -> {
             skip()
-            S.Term.CodeOf(parseAtomTerm(), id)
+            S.Term.CodeOf(parseTerm(), id)
         }
         '$' -> {
             skip()
-            S.Term.Splice(parseAtomTerm(), id)
+            S.Term.Splice(parseTerm(), id)
         }
         else -> when (val word = readWord()) {
             "let" -> {
@@ -146,7 +153,7 @@ class Parse private constructor(
                 S.Term.Let(name, init, body, id)
             }
             "match" -> {
-                val scrutinee = parseAtomTerm()
+                val scrutinee = parseTerm()
                 val clauses = parseList('[', ']') { parsePair(::parsePattern, { expectString("⇒") }, ::parseTerm) }
                 S.Term.Match(scrutinee, clauses, id)
             }
@@ -174,16 +181,16 @@ class Parse private constructor(
             "byte_array" -> S.Term.ByteArray(id)
             "int_array" -> S.Term.IntArray(id)
             "long_array" -> S.Term.LongArray(id)
-            "list" -> S.Term.List(parseAtomTerm(), id)
+            "list" -> S.Term.List(parseTerm(), id)
             "compound" -> {
                 val elements = parseList('{', '}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
             "box" -> {
-                val content = parseAtomTerm()
+                val content = parseTerm()
                 S.Term.Box(content, id)
             }
-            "ref" -> S.Term.Ref(parseAtomTerm(), id)
+            "ref" -> S.Term.Ref(parseTerm(), id)
             "fun" -> {
                 val parameters = parseList('[', ']') { parseParameter() }
                 expectString("→")
@@ -194,7 +201,7 @@ class Parse private constructor(
                 } else emptyList()
                 S.Term.Fun(parameters, resultant, effects, id)
             }
-            "code" -> S.Term.Code(parseAtomTerm(), id)
+            "code" -> S.Term.Code(parseTerm(), id)
             "type" -> S.Term.Type(id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> S.Term.ByteOf(word.dropLast(1).toByte(), id)
@@ -208,20 +215,20 @@ class Parse private constructor(
         }
     }
 
-    private fun parsePattern(id: Id = freshId()): S.Pattern {
-        val left = parseAtomPattern(id)
-        skipWhitespace()
-        return if (!canRead() || peek() != '#') {
-            left
-        } else {
+    private fun parsePattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
+        '(' -> {
             skip()
-            val right = parseAtomPattern()
-            S.Pattern.BoxOf(left, right, id)
+            val left = parsePattern()
+            when (val operator = peekChar()) {
+                ')' -> left
+                '∈' -> {
+                    skip()
+                    val right = parsePattern()
+                    S.Pattern.BoxOf(left, right, id)
+                }
+                else -> error("unexpected operator '$operator'")
+            }.also { expect(')') }
         }
-    }
-
-    private fun parseAtomPattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
-        '(' -> parseParen { parsePattern(it) }
         '"' -> S.Pattern.StringOf(readString(), id)
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
@@ -241,7 +248,7 @@ class Parse private constructor(
         '{' -> S.Pattern.CompoundOf(parseList('{', '}', ::parsePattern), id)
         '&' -> {
             skip()
-            S.Pattern.RefOf(parseAtomPattern(), id)
+            S.Pattern.RefOf(parsePattern(), id)
         }
         else -> when (val word = readWord()) {
             "false" -> S.Pattern.BoolOf(false, id)
@@ -264,18 +271,6 @@ class Parse private constructor(
     private fun parseEffect(): S.Effect {
         val name = readWord()
         return S.Effect.Name(name)
-    }
-
-    private inline fun <A> parseParen(parseA: (Id) -> A): A {
-        expect('(')
-        return when (peekChar()) {
-            '#' -> {
-                skip()
-                val explicitId = UUID.fromString(readWord())
-                parseA(explicitId)
-            }
-            else -> parseA(freshId())
-        }.also { expect(')') }
     }
 
     private inline fun <A, B> parsePair(parseA: () -> A, delimit: () -> Unit, parseB: () -> B): Pair<A, B> {

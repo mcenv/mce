@@ -3,7 +3,7 @@ package mce.phase
 import mce.fetch
 import mce.server.Key
 import kotlin.test.Test
-import kotlin.test.assertIs
+import kotlin.test.assertFails
 import mce.graph.Surface as S
 
 class ParseTest {
@@ -15,12 +15,9 @@ class ParseTest {
     }
 
     @Test
-    fun infixLeftAssociative() {
-        val item = parse("infix_left_associative")
-        println(item)
-        assertIs<S.Item.Def>(item)
-        val left = item.body
-        assertIs<S.Term.Apply>(left)
-        assertIs<S.Term.Apply>(left.arguments.first())
+    fun infixNonAssociative() {
+        assertFails {
+            parse("infix_non_associative")
+        }
     }
 }

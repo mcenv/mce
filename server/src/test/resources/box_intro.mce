@@ -1,1 +1,1 @@
-def [α : type, a : α] : box α ≔ a # α
+def [α : type, a : α] : box α ≔ (a ∈ α)
