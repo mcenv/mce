@@ -148,7 +148,7 @@ class Parse private constructor(
                 val name = readWord()
                 expectString("≔")
                 val init = parseTerm()
-                expect(';')
+                expect(',')
                 val body = parseTerm()
                 S.Term.Let(name, init, body, id)
             }
@@ -333,7 +333,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    private fun Char.isWordPart(): Boolean = this.isLetterOrDigit() || this == '_' || this == '-' || this == '.' || this == '/'
+    private fun Char.isWordPart(): Boolean = this != ',' && this != ')' && this != ']' && this != '}' && !this.isWhitespace()
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 
