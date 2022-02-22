@@ -140,7 +140,7 @@ class Normalizer(
     @Suppress("NAME_SHADOWING")
     fun quote(value: C.Value): C.Term = when (val value = force(value)) {
         is C.Value.Hole -> C.Term.Hole(value.id)
-        is C.Value.Meta -> getSolution(value.index)?.let { quote(it) } ?: C.Term.Meta(value.index, value.id)
+        is C.Value.Meta -> C.Term.Meta(value.index, value.id)
         is C.Value.Var -> C.Term.Var(value.name, value.level, value.id)
         is C.Value.Def -> C.Term.Def(value.name, value.id)
         is C.Value.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) }, value.id)
