@@ -62,12 +62,12 @@ object Packed {
         data class Long(val data: KLong) : Nbt()
         data class Float(val data: KFloat) : Nbt()
         data class Double(val data: KDouble) : Nbt()
-        data class ByteArray(val data: KList<KByte>) : Nbt()
+        data class ByteArray(val elements: KList<KByte>) : Nbt()
         data class String(val data: KString) : Nbt()
         data class List(val elements: KList<Nbt>) : Nbt()
         data class Compound(val elements: Map<KString, Nbt>) : Nbt()
-        data class IntArray(val data: KList<KInt>) : Nbt()
-        data class LongArray(val data: KList<KLong>) : Nbt()
+        data class IntArray(val elements: KList<KInt>) : Nbt()
+        data class LongArray(val elements: KList<KLong>) : Nbt()
     }
 
     enum class NbtType {

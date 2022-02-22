@@ -1,14 +1,12 @@
 package mce.interpreter
 
 import kotlin.math.floor
+import mce.graph.Packed as P
 import kotlin.Byte as KByte
-import kotlin.ByteArray as KByteArray
 import kotlin.Double as KDouble
 import kotlin.Float as KFloat
 import kotlin.Int as KInt
-import kotlin.IntArray as KIntArray
 import kotlin.Long as KLong
-import kotlin.LongArray as KLongArray
 import kotlin.Short as KShort
 import kotlin.String as KString
 
@@ -76,26 +74,34 @@ sealed class MutableNbt {
         override fun toDouble(): KDouble = data
     }
 
-    sealed class Collection : MutableNbt()
+    sealed class Collection<T : MutableNbt>(elements: MutableList<T>) : MutableNbt(), MutableList<T> by elements
 
-    data class ByteArray(val data: KByteArray) : Collection() {
-        override fun equals(other: Any?): Boolean = this === other || other is ByteArray && data contentEquals other.data
-        override fun hashCode(): KInt = data.contentHashCode()
-    }
+    data class ByteArray(val elements: MutableList<Byte>) : Collection<Byte>(elements)
 
-    data class IntArray(val data: KIntArray) : Collection() {
-        override fun equals(other: Any?): Boolean = this === other || other is IntArray && data contentEquals other.data
-        override fun hashCode(): KInt = data.contentHashCode()
-    }
+    data class IntArray(val elements: MutableList<Int>) : Collection<Int>(elements)
 
-    data class LongArray(val data: KLongArray) : Collection() {
-        override fun equals(other: Any?): Boolean = this === other || other is LongArray && data contentEquals other.data
-        override fun hashCode(): KInt = data.contentHashCode()
-    }
+    data class LongArray(val elements: MutableList<Long>) : Collection<Long>(elements)
 
-    data class List(val elements: MutableList<MutableNbt>) : Collection()
+    data class List(val elements: MutableList<MutableNbt>) : Collection<MutableNbt>(elements)
 
     data class String(val data: KString) : MutableNbt()
 
-    data class Compound(val elements: MutableMap<KString, MutableNbt>) : MutableNbt()
+    data class Compound(val elements: MutableMap<KString, MutableNbt>) : MutableNbt(), MutableMap<KString, MutableNbt> by elements
+
+    companion object {
+        fun P.Nbt.toMutableNbt(): MutableNbt = when (this) {
+            is P.Nbt.Byte -> Byte(data)
+            is P.Nbt.Short -> Short(data)
+            is P.Nbt.Int -> Int(data)
+            is P.Nbt.Long -> Long(data)
+            is P.Nbt.Float -> Float(data)
+            is P.Nbt.Double -> Double(data)
+            is P.Nbt.ByteArray -> ByteArray(elements.map { Byte(it) }.toMutableList())
+            is P.Nbt.String -> String(data)
+            is P.Nbt.List -> List(elements.map { it.toMutableNbt() }.toMutableList())
+            is P.Nbt.Compound -> Compound(elements.mapValues { it.value.toMutableNbt() }.toMutableMap())
+            is P.Nbt.IntArray -> IntArray(elements.map { Int(it) }.toMutableList())
+            is P.Nbt.LongArray -> LongArray(elements.map { Long(it) }.toMutableList())
+        }
+    }
 }
