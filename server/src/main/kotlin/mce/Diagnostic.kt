@@ -78,7 +78,7 @@ sealed class Diagnostic {
         }
 
         fun serializePattern(pattern: C.Pattern): S.Pattern = when (pattern) {
-            is C.Pattern.Var -> S.Pattern.Variable(pattern.name, freshId())
+            is C.Pattern.Var -> S.Pattern.Var(pattern.name, freshId())
             is C.Pattern.BoolOf -> S.Pattern.BoolOf(pattern.value, freshId())
             is C.Pattern.ByteOf -> S.Pattern.ByteOf(pattern.value, freshId())
             is C.Pattern.ShortOf -> S.Pattern.ShortOf(pattern.value, freshId())

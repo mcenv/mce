@@ -261,7 +261,7 @@ class Parse private constructor(
                 LONG_EXPRESSION.matches(word) -> S.Pattern.LongOf(word.dropLast(1).toLong(), id)
                 FLOAT_EXPRESSION.matches(word) -> S.Pattern.FloatOf(word.dropLast(1).toFloat(), id)
                 DOUBLE_EXPRESSION.matches(word) -> S.Pattern.DoubleOf(word.dropLast(1).toDouble(), id)
-                else -> S.Pattern.Variable(word, id)
+                else -> S.Pattern.Var(word, id)
             }
         }
     }

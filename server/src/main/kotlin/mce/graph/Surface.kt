@@ -90,7 +90,7 @@ object Surface {
     sealed class Pattern {
         abstract val id: Id
 
-        data class Variable(val name: KString, override val id: Id) : Pattern()
+        data class Var(val name: KString, override val id: Id) : Pattern()
         data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
         data class ByteOf(val value: KByte, override val id: Id) : Pattern()
         data class ShortOf(val value: KShort, override val id: Id) : Pattern()

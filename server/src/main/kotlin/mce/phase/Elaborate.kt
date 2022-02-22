@@ -360,7 +360,7 @@ class Elaborate private constructor(
      * Infers the type of the [pattern] under this context.
      */
     private fun Context.inferPattern(pattern: S.Pattern): Triple<Context, C.Pattern, C.Value> = when (pattern) {
-        is S.Pattern.Variable -> {
+        is S.Pattern.Var -> {
             val type = normalizer.fresh(pattern.id)
             val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
             Triple(context, C.Pattern.Var(pattern.name, pattern.id), type)
@@ -423,7 +423,7 @@ class Elaborate private constructor(
         val type = normalizer.force(type)
         types[pattern.id] = type
         return when {
-            pattern is S.Pattern.Variable -> {
+            pattern is S.Pattern.Var -> {
                 val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
                 context to C.Pattern.Var(pattern.name, pattern.id)
             }
