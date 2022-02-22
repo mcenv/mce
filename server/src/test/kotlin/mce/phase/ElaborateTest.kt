@@ -328,18 +328,13 @@ class ElaborateTest {
     }
 
     @Test
-    fun boxIntro() {
-        elaborate("box_intro").success()
+    fun taggedVar() {
+        elaborate("tagged_var").success()
     }
 
     @Test
-    fun boxElim() {
-        elaborate("box_elim").success()
-    }
-
-    @Test
-    fun boxIllTypedTag() {
-        val result = elaborate("box_ill_typed_tag")
+    fun taggedVarIllTyped() {
+        val result = elaborate("tagged_var_ill_typed")
         assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
     }
 

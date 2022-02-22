@@ -1,1 +1,0 @@
-def [a : int] : box int ≔ (a ∈ string)

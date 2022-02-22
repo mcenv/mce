@@ -9,7 +9,7 @@ import mce.graph.freshId
 import mce.graph.Core as C
 
 class Normalizer(
-    val values: PersistentList<Lazy<C.Value>>,
+    private val values: PersistentList<Lazy<C.Value>>,
     private val items: Map<String, C.Item>,
     private val solutions: MutableList<C.Value?>
 ) {
@@ -72,6 +72,7 @@ class Normalizer(
         is C.Term.Hole -> C.Value.Hole(term.id)
         is C.Term.Meta -> getSolution(term.index) ?: C.Value.Meta(term.index, term.id)
         is C.Term.Var -> lookup(term.level)
+        is C.Term.TaggedVar -> C.Value.TaggedVar(term.name, term.level, lazy { eval(term.tag) }, term.id)
         is C.Term.Def -> {
             val item = items[term.name]!! as C.Item.Def
             if (item.modifiers.contains(C.Modifier.BUILTIN)) C.Value.Def(term.name, term.id) else eval(item.body)
@@ -91,7 +92,6 @@ class Normalizer(
         is C.Term.LongArrayOf -> C.Value.LongArrayOf(term.elements.map { lazy { eval(it) } }, term.id)
         is C.Term.ListOf -> C.Value.ListOf(term.elements.map { lazy { eval(it) } }, term.id)
         is C.Term.CompoundOf -> C.Value.CompoundOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.BoxOf -> C.Value.BoxOf(term.content, term.level, lazy { eval(term.tag) }, term.id)
         is C.Term.RefOf -> C.Value.RefOf(lazy { eval(term.element) }, term.id)
         is C.Term.Refl -> C.Value.Refl(term.id)
         is C.Term.FunOf -> C.Value.FunOf(term.parameters, term.body, term.id)
@@ -126,7 +126,6 @@ class Normalizer(
         is C.Term.LongArray -> C.Value.LongArray(term.id)
         is C.Term.List -> C.Value.List(lazy { eval(term.element) }, term.id)
         is C.Term.Compound -> C.Value.Compound(term.elements, term.id)
-        is C.Term.Box -> C.Value.Box(lazy { eval(term.content) }, term.id)
         is C.Term.Ref -> C.Value.Ref(lazy { eval(term.element) }, term.id)
         is C.Term.Eq -> C.Value.Eq(lazy { eval(term.left) }, lazy { eval(term.right) }, term.id)
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant, term.effects, term.id)
@@ -142,6 +141,7 @@ class Normalizer(
         is C.Value.Hole -> C.Term.Hole(value.id)
         is C.Value.Meta -> C.Term.Meta(value.index, value.id)
         is C.Value.Var -> C.Term.Var(value.name, value.level, value.id)
+        is C.Value.TaggedVar -> C.Term.TaggedVar(value.name, value.level, quote(value.tag.value), value.id)
         is C.Value.Def -> C.Term.Def(value.name, value.id)
         is C.Value.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) }, value.id)
         is C.Value.BoolOf -> C.Term.BoolOf(value.value, value.id)
@@ -157,7 +157,6 @@ class Normalizer(
         is C.Value.LongArrayOf -> C.Term.LongArrayOf(value.elements.map { quote(it.value) }, value.id)
         is C.Value.ListOf -> C.Term.ListOf(value.elements.map { quote(it.value) }, value.id)
         is C.Value.CompoundOf -> C.Term.CompoundOf(value.elements.map { quote(it.value) }, value.id)
-        is C.Value.BoxOf -> C.Term.BoxOf(value.content, value.level, quote(value.tag.value), value.id)
         is C.Value.RefOf -> C.Term.RefOf(quote(value.element.value), value.id)
         is C.Value.Refl -> C.Term.Refl(value.id)
         is C.Value.FunOf -> C.Term.FunOf(value.parameters, value.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.Value.Var(parameter, normalizer.size, freshId()))) }.quote(eval(value.body)), value.id)
@@ -179,7 +178,6 @@ class Normalizer(
         is C.Value.LongArray -> C.Term.LongArray(value.id)
         is C.Value.List -> C.Term.List(quote(value.element.value), value.id)
         is C.Value.Compound -> C.Term.Compound(value.elements, value.id)
-        is C.Value.Box -> C.Term.Box(quote(value.content.value), value.id)
         is C.Value.Ref -> C.Term.Ref(quote(value.element.value), value.id)
         is C.Value.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value), value.id)
         is C.Value.Fun -> C.Term.Fun(

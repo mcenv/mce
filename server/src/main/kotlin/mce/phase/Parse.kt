@@ -31,7 +31,7 @@ class Parse private constructor(
             else -> error("unexpected item '$word'")
         }.also {
             skipWhitespace()
-            if (canRead()) error("expected end of file")
+            if (canRead()) error("end of file expected")
         }
     }
 
@@ -84,7 +84,7 @@ class Parse private constructor(
                     '∈' -> {
                         skip()
                         val right = parseTerm()
-                        S.Term.BoxOf((left as S.Term.Name).name, right, id)
+                        S.Term.TaggedVar((left as? S.Term.Name)?.name ?: error("name expected"), right, id)
                     }
                     '=' -> {
                         skip()
@@ -186,10 +186,6 @@ class Parse private constructor(
                 val elements = parseList('{', '}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
-            "box" -> {
-                val content = parseTerm()
-                S.Term.Box(content, id)
-            }
             "ref" -> S.Term.Ref(parseTerm(), id)
             "fun" -> {
                 val parameters = parseList('[', ']') { parseParameter() }
@@ -218,16 +214,7 @@ class Parse private constructor(
     private fun parsePattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
         '(' -> {
             skip()
-            val left = parsePattern()
-            when (val operator = peekChar()) {
-                ')' -> left
-                '∈' -> {
-                    skip()
-                    val right = parsePattern()
-                    S.Pattern.BoxOf(left, right, id)
-                }
-                else -> error("unexpected operator '$operator'")
-            }.also { expect(')') }
+            parsePattern().also { expect(')') }
         }
         '"' -> S.Pattern.StringOf(readString(), id)
         '[' -> when {

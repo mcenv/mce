@@ -1,4 +1,4 @@
-def [α : type, β : type, p : (α = β), a : box α] : box β ≔
+def [α : type, β : type, p : (α = β), a : α] : β ≔
   match p [
-    refl ⇒ a
+    refl ⇒ (a ∈ α)
   ]

@@ -91,6 +91,18 @@ class Elaborate private constructor(
                 Typing(C.Term.Var(term.name, level, term.id), type)
             }
         }
+        is S.Term.TaggedVar -> {
+            val level = lookup(term.name).also {
+                if (it == -1) diagnose(Diagnostic.NameNotFound(term.name, term.id))
+            }
+            val entry = entries[level]
+            val tTag = checkTerm(term.tag, TYPE)
+            val vTag = normalizer.eval(tTag)
+            if (!subtype(vTag, entry.type)) {
+                diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(entry.type)), serializeTerm(normalizer.quote(vTag)), term.tag.id))
+            }
+            Typing(C.Term.TaggedVar(term.name, level, tTag, term.id), vTag)
+        }
         is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value, term.id), BOOL)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value, term.id), BYTE)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value, term.id), SHORT)
@@ -121,19 +133,6 @@ class Elaborate private constructor(
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { "" to inferTerm(it) }
             Typing(C.Term.CompoundOf(elements.map { it.second.term }, term.id), C.Value.Compound(elements.map { it.first to normalizer.quote(it.second.type) }))
-        }
-        is S.Term.BoxOf -> {
-            val level = lookup(term.content)
-            val actual = when (level) {
-                -1 -> diagnose(Diagnostic.NameNotFound(term.content, term.id))
-                else -> entries[level].type
-            }
-            val tag = checkTerm(term.tag, TYPE)
-            val expected = normalizer.eval(tag)
-            if (!subtype(actual, expected)) {
-                diagnose(Diagnostic.TypeMismatch(serializeTerm(normalizer.quote(expected)), serializeTerm(normalizer.quote(actual)), term.id))
-            }
-            Typing(C.Term.BoxOf(term.content, level, tag, term.id), C.Value.Box(lazyOf(actual)))
         }
         is S.Term.RefOf -> {
             val element = inferTerm(term.element)
@@ -184,10 +183,6 @@ class Elaborate private constructor(
                 context.bind(term.id, Entry(true /* TODO */, name, END, ANY, context.normalizer.eval(element), stage)) to (name to element)
             }
             Typing(C.Term.Compound(elements, term.id), TYPE)
-        }
-        is S.Term.Box -> {
-            val content = checkTerm(term.content, TYPE)
-            Typing(C.Term.Box(content, term.id), TYPE)
         }
         is S.Term.Ref -> {
             val element = checkTerm(term.element, TYPE)
@@ -399,11 +394,6 @@ class Elaborate private constructor(
             }
             Triple(context, C.Pattern.CompoundOf(elements.map { it.first }, pattern.id), C.Value.Compound(elements.map { "" to context.normalizer.quote(it.second) }))
         }
-        is S.Pattern.BoxOf -> {
-            val (context1, content, contentType) = inferPattern(pattern.content)
-            val (context2, tag) = context1.checkPattern(pattern.tag, TYPE)
-            Triple(context2, C.Pattern.BoxOf(content, tag, pattern.id), C.Value.Box(lazyOf(contentType)))
-        }
         is S.Pattern.RefOf -> {
             val (context, element, elementType) = inferPattern(pattern.element)
             Triple(context, C.Pattern.RefOf(element, pattern.id), C.Value.Ref(lazyOf(elementType)))
@@ -434,11 +424,6 @@ class Elaborate private constructor(
             pattern is S.Pattern.CompoundOf && type is C.Value.Compound -> {
                 val (context, elements) = (pattern.elements zip type.elements).foldMap(this) { context, element -> context.checkPattern(element.first, context.normalizer.eval(element.second.second)) }
                 context to C.Pattern.CompoundOf(elements, pattern.id)
-            }
-            pattern is S.Pattern.BoxOf && type is C.Value.Box -> {
-                val (context1, content) = checkPattern(pattern.content, type.content.value)
-                val (context2, tag) = context1.checkPattern(pattern.tag, TYPE)
-                context2 to C.Pattern.BoxOf(content, tag, pattern.id)
             }
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
                 val (context, element) = checkPattern(pattern.element, type.element.value)
@@ -502,7 +487,6 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unify(it.first.value, it.second.value) }
-            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> value1.level == value2.level && unify(value1.tag.value, value2.tag.value)
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
@@ -529,7 +513,6 @@ class Elaborate private constructor(
                     (value1.elements zip value2.elements).foldAll(this) { normalizer, (element1, element2) ->
                         normalizer.bind(lazyOf(C.Value.Var("", normalizer.size))) to normalizer.unify(normalizer.eval(element1.second), normalizer.eval(element2.second))
                     }.second
-            value1 is C.Value.Box && value2 is C.Value.Box -> unify(value1.content.value, value2.content.value)
             value1 is C.Value.Ref && value2 is C.Value.Ref -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Eq && value2 is C.Value.Eq -> unify(value1.left.value, value2.left.value) && unify(value1.right.value, value2.right.value)
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && run {
@@ -551,6 +534,7 @@ class Elaborate private constructor(
         val value1 = normalizer.force(value1)
         val value2 = normalizer.force(value2)
         return when {
+            value1 is C.Value.Var && value2 is C.Value.Var && value1.level == value2.level -> true
             value1 is C.Value.Var && entries[value1.level].upper != null -> subtype(entries[value1.level].upper!!, value2)
             value2 is C.Value.Var && entries[value2.level].lower != null -> subtype(value1, entries[value2.level].lower!!)
             value1 is C.Value.Apply && value2 is C.Value.Apply -> subtype(value1.function, value2.function) && (value1.arguments zip value2.arguments).all { normalizer.unify(it.first.value, it.second.value) /* pointwise subtyping */ }
@@ -564,7 +548,6 @@ class Elaborate private constructor(
                         val upper1 = context.normalizer.eval(elements1.second)
                         context.bindUnchecked(Entry(true /* TODO */, "", null, upper1, TYPE, stage)) to context.subtype(upper1, context.normalizer.eval(elements2.second))
                     }.second
-            value1 is C.Value.Box && value2 is C.Value.Box -> subtype(value1.content.value, value2.content.value)
             value1 is C.Value.Ref && value2 is C.Value.Ref -> subtype(value1.element.value, value2.element.value)
             value1 is C.Value.Fun && value2 is C.Value.Fun -> value1.parameters.size == value2.parameters.size && run {
                 val (context, success) = (value1.parameters zip value2.parameters).foldAll(this) { context, (parameter1, parameter2) ->
@@ -594,7 +577,6 @@ class Elaborate private constructor(
             value1 is C.Value.LongArrayOf && value2 is C.Value.LongArrayOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
             value1 is C.Value.ListOf && value2 is C.Value.ListOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
             value1 is C.Value.CompoundOf && value2 is C.Value.CompoundOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
-            value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> match(value1.tag.value, value2.tag.value) // TODO: match contents?
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> match(value1.element.value, value2.element.value)
             else -> this // TODO
         }

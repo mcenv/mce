@@ -28,6 +28,7 @@ class Defunctionalize private constructor() {
         is C.Term.Hole -> throw Error()
         is C.Term.Meta -> throw Error()
         is C.Term.Var -> D.Term.Var(term.name, term.level, term.id!!)
+        is C.Term.TaggedVar -> D.Term.TaggedVar(term.name, term.level, defunctionalizeTerm(term.tag), term.id!!)
         is C.Term.Def -> D.Term.Def(term.name, term.id!!)
         is C.Term.Let -> {
             val init = defunctionalizeTerm(term.init)
@@ -66,10 +67,6 @@ class Defunctionalize private constructor() {
         is C.Term.CompoundOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
             D.Term.CompoundOf(elements, term.id!!)
-        }
-        is C.Term.BoxOf -> {
-            val tag = defunctionalizeTerm(term.tag)
-            D.Term.BoxOf(term.content, term.level, tag, term.id!!)
         }
         is C.Term.RefOf -> {
             val element = defunctionalizeTerm(term.element)
@@ -116,10 +113,6 @@ class Defunctionalize private constructor() {
         is C.Term.Compound -> {
             val elements = term.elements.map { it.first to defunctionalizeTerm(it.second) }
             D.Term.Compound(elements, term.id!!)
-        }
-        is C.Term.Box -> {
-            val content = defunctionalizeTerm(term.content)
-            D.Term.Box(content, term.id!!)
         }
         is C.Term.Ref -> {
             val element = defunctionalizeTerm(term.element)
@@ -169,11 +162,6 @@ class Defunctionalize private constructor() {
         is C.Pattern.CompoundOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
             D.Pattern.CompoundOf(elements, pattern.id)
-        }
-        is C.Pattern.BoxOf -> {
-            val content = defunctionalizePattern(pattern.content)
-            val tag = defunctionalizePattern(pattern.tag)
-            D.Pattern.BoxOf(content, tag, pattern.id)
         }
         is C.Pattern.RefOf -> {
             val element = defunctionalizePattern(pattern.element)

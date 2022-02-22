@@ -32,6 +32,9 @@ class Pack private constructor(
                 val index = getIndex(type, term.name)
                 +P.Command.InsertAtIndex(STACK, path, -1, P.SourceProvider.From(STACK, path[index]))
             }
+            is D.Term.TaggedVar -> {
+                TODO()
+            }
             is D.Term.Def -> +P.Command.RunFunction(P.ResourceLocation(term.name))
             is D.Term.Let -> {
                 val type = getType(term.init.id)
@@ -126,10 +129,6 @@ class Pack private constructor(
                     }
                 }
             }
-            is D.Term.BoxOf -> {
-                +P.Command.InsertAtIndex(STACK, LIST, -1, P.SourceProvider.Value(P.Nbt.List(emptyList())))
-                TODO()
-            }
             is D.Term.RefOf -> TODO()
             is D.Term.Refl -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
             is D.Term.FunOf -> +P.Command.InsertAtIndex(STACK, INT, -1, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
@@ -153,7 +152,6 @@ class Pack private constructor(
             is D.Term.LongArray -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(12)))
             is D.Term.List -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(9)))
             is D.Term.Compound -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(10)))
-            is D.Term.Box -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(9)))
             is D.Term.Ref -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(3)))
             is D.Term.Eq -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(1)))
             is D.Term.Fun -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(3)))
@@ -167,6 +165,7 @@ class Pack private constructor(
         is C.Value.Hole -> throw Error()
         is C.Value.Meta -> throw Error()
         is C.Value.Var -> TODO()
+        is C.Value.TaggedVar -> TODO()
         is C.Value.Def -> TODO()
         is C.Value.Match -> TODO()
         is C.Value.BoolOf -> throw Error()
@@ -182,7 +181,6 @@ class Pack private constructor(
         is C.Value.LongArrayOf -> throw Error()
         is C.Value.ListOf -> throw Error()
         is C.Value.CompoundOf -> throw Error()
-        is C.Value.BoxOf -> throw Error()
         is C.Value.RefOf -> throw Error()
         is C.Value.Refl -> throw Error()
         is C.Value.FunOf -> throw Error()
@@ -204,7 +202,6 @@ class Pack private constructor(
         is C.Value.LongArray -> P.NbtType.LONG_ARRAY
         is C.Value.List -> P.NbtType.LIST
         is C.Value.Compound -> P.NbtType.COMPOUND
-        is C.Value.Box -> P.NbtType.LIST
         is C.Value.Ref -> P.NbtType.INT
         is C.Value.Eq -> P.NbtType.BYTE
         is C.Value.Fun -> P.NbtType.BYTE
