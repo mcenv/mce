@@ -4,35 +4,68 @@ import mce.interpreter.MutableNbt.Companion.toMutableNbt
 import mce.graph.Packed as P
 
 object NbtLens {
-    fun get(path: P.NbtPath, tag: MutableNbt): List<MutableNbt> = path.nodes.fold(mutableListOf(tag)) { tags, node ->
-        tags.onEach { tag -> tag.get(node, tags) }
-    }
+    fun P.NbtPath.get(target: MutableNbt): List<MutableNbt> =
+        fold(mutableListOf(target)) { context, node ->
+            context.onEach {
+                it.get(node, context)
+                if (context.isEmpty()) throw Exception()
+            }
+        }
 
-    private fun MutableNbt.get(node: P.NbtNode, tags: MutableList<MutableNbt>) {
+    fun P.NbtPath.countMatching(target: MutableNbt): Int =
+        fold(mutableListOf(target)) { context, node ->
+            context.onEach {
+                it.get(node, context)
+                if (context.isEmpty()) return 0
+            }
+        }.size
+
+    fun P.NbtPath.getOrCreateParents(target: MutableNbt): List<MutableNbt> =
+        windowed(2).fold(mutableListOf(target)) { context, (left, right) ->
+            context.onEach { it.getOrCreate(left, lazy { right.createPreferredParent() }, context) }
+        }
+
+    fun P.NbtPath.getOrCreate(target: MutableNbt, source: Lazy<MutableNbt>): List<MutableNbt> =
+        mutableListOf<MutableNbt>().also { context ->
+            getOrCreateParents(target).onEach {
+                it.getOrCreate(last(), source, context)
+                if (context.isEmpty()) throw Exception()
+            }
+        }
+
+    fun P.NbtPath.set(target: MutableNbt, source: Lazy<MutableNbt>): Int =
+        getOrCreateParents(target).sumOf { it.set(last(), source) }
+
+    fun P.NbtPath.remove(target: MutableNbt): Int =
+        dropLast(1).fold(mutableListOf(target)) { context, node ->
+            context.onEach { it.get(node, context) }
+        }.sumOf { it.remove(last()) }
+
+    private fun MutableNbt.get(node: P.NbtNode, context: MutableList<MutableNbt>) {
         when (node) {
-            is P.NbtNode.MatchRootObject -> if (this is MutableNbt.Compound && node.pattern match this) tags += this
-            is P.NbtNode.MatchElement -> if (this is MutableNbt.List) tags += filter { node.pattern match it }
-            is P.NbtNode.AllElements -> if (this is MutableNbt.Collection<*>) tags.addAll(this)
-            is P.NbtNode.IndexedElement -> if (this is MutableNbt.Collection<*>) getOrNull(normalize(this, node.index))?.let { tags += it }
-            is P.NbtNode.MatchObject -> if (this is MutableNbt.Compound) this[node.name]?.takeIf { node.pattern match it }?.let { tags += it }
-            is P.NbtNode.CompoundChild -> if (this is MutableNbt.Compound) this[node.name]?.let { tags += it }
+            is P.NbtNode.MatchRootObject -> if (this is MutableNbt.Compound && node.pattern match this) context += this
+            is P.NbtNode.MatchElement -> if (this is MutableNbt.List) context += filter { node.pattern match it }
+            is P.NbtNode.AllElements -> if (this is MutableNbt.Collection<*>) context.addAll(this)
+            is P.NbtNode.IndexedElement -> if (this is MutableNbt.Collection<*>) getOrNull(normalize(this, node.index))?.let { context += it }
+            is P.NbtNode.MatchObject -> if (this is MutableNbt.Compound) this[node.name]?.takeIf { node.pattern match it }?.let { context += it }
+            is P.NbtNode.CompoundChild -> if (this is MutableNbt.Compound) this[node.name]?.let { context += it }
         }
     }
 
-    private fun MutableNbt.getOrCreate(node: P.NbtNode, source: Lazy<MutableNbt>, tags: MutableList<MutableNbt>) {
+    private fun MutableNbt.getOrCreate(node: P.NbtNode, source: Lazy<MutableNbt>, context: MutableList<MutableNbt>) {
         when (node) {
-            is P.NbtNode.MatchRootObject -> get(node, tags)
+            is P.NbtNode.MatchRootObject -> get(node, context)
             is P.NbtNode.MatchElement -> if (this is MutableNbt.List) filter { node.pattern match it }.let {
                 this += node.pattern.toMutableNbt()
-                tags += it
+                context += it
             }
             is P.NbtNode.AllElements -> if (this is MutableNbt.Collection<*>) {
-                if (tags.isEmpty()) (this as MutableNbt.Collection<MutableNbt>) += source.value
-                tags.addAll(this)
+                if (context.isEmpty()) (this as MutableNbt.Collection<MutableNbt>) += source.value
+                context.addAll(this)
             }
-            is P.NbtNode.IndexedElement -> get(node, tags)
-            is P.NbtNode.MatchObject -> if (this is MutableNbt.Compound) tags += this[node.name]?.takeIf { node.pattern match it } ?: node.pattern.toMutableNbt().also { this[node.name] = it }
-            is P.NbtNode.CompoundChild -> if (this is MutableNbt.Compound) tags += this[node.name] ?: source.value.also { this[node.name] = it }
+            is P.NbtNode.IndexedElement -> get(node, context)
+            is P.NbtNode.MatchObject -> if (this is MutableNbt.Compound) context += this[node.name]?.takeIf { node.pattern match it } ?: node.pattern.toMutableNbt().also { this[node.name] = it }
+            is P.NbtNode.CompoundChild -> if (this is MutableNbt.Compound) context += this[node.name] ?: source.value.also { this[node.name] = it }
         }
     }
 
@@ -54,7 +87,7 @@ object NbtLens {
         is P.NbtNode.CompoundChild -> TODO()
     }
 
-    private fun MutableNbt.remove(node: P.NbtNode, source: Lazy<MutableNbt>): Int = when (node) {
+    private fun MutableNbt.remove(node: P.NbtNode): Int = when (node) {
         is P.NbtNode.MatchRootObject -> 0
         is P.NbtNode.MatchElement -> if (this is MutableNbt.List) {
             val size = size
