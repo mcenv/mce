@@ -1,6 +1,13 @@
 package mce.phase
 
 import mce.graph.Id
+import mce.graph.Packed.Command.*
+import mce.graph.Packed.Consumer.*
+import mce.graph.Packed.Execute
+import mce.graph.Packed.Execute.*
+import mce.graph.Packed.NbtType
+import mce.graph.Packed.SourceComparator.*
+import mce.graph.Packed.SourceProvider.*
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
@@ -30,12 +37,27 @@ class Pack private constructor(
                 val type = getType(term.id)
                 val path = type.toPath()
                 val index = getIndex(type, term.name)
-                +P.Command.InsertAtIndex(STACK, path, -1, P.SourceProvider.From(STACK, path[index]))
+                +Append(STACKS, path, From(STACKS, path[index]))
             }
             is D.Term.TaggedVar -> {
-                TODO()
+                packTerm(term.tag)
+                +Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, BYTE[-1]))))
+                +RemoveData(STACKS, BYTE[-1])
+                // TODO: fix index
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.BYTE.ordinal), Run(Append(STACKS, BYTE, From(STACKS, BYTE[getIndex(NbtType.BYTE, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.SHORT.ordinal), Run(Append(STACKS, SHORT, From(STACKS, SHORT[getIndex(NbtType.SHORT, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.INT.ordinal), Run(Append(STACKS, INT, From(STACKS, INT[getIndex(NbtType.INT, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LONG.ordinal), Run(Append(STACKS, LONG, From(STACKS, LONG[getIndex(NbtType.LONG, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.FLOAT.ordinal), Run(Append(STACKS, FLOAT, From(STACKS, FLOAT[getIndex(NbtType.FLOAT, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.DOUBLE.ordinal), Run(Append(STACKS, DOUBLE, From(STACKS, DOUBLE[getIndex(NbtType.DOUBLE, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.BYTE_ARRAY.ordinal), Run(Append(STACKS, BYTE_ARRAY, From(STACKS, BYTE_ARRAY[getIndex(NbtType.BYTE_ARRAY, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.STRING.ordinal), Run(Append(STACKS, STRING, From(STACKS, STRING[getIndex(NbtType.STRING, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LIST.ordinal), Run(Append(STACKS, LIST, From(STACKS, LIST[getIndex(NbtType.LIST, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.COMPOUND.ordinal), Run(Append(STACKS, COMPOUND, From(STACKS, COMPOUND[getIndex(NbtType.COMPOUND, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.INT_ARRAY.ordinal), Run(Append(STACKS, INT_ARRAY, From(STACKS, INT_ARRAY[getIndex(NbtType.INT_ARRAY, term.name)])))))
+                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LONG_ARRAY.ordinal), Run(Append(STACKS, LONG_ARRAY, From(STACKS, LONG_ARRAY[getIndex(NbtType.LONG_ARRAY, term.name)])))))
             }
-            is D.Term.Def -> +P.Command.RunFunction(P.ResourceLocation(term.name))
+            is D.Term.Def -> +RunFunction(P.ResourceLocation(term.name))
             is D.Term.Let -> {
                 val type = getType(term.init.id)
                 packTerm(term.init)
@@ -47,14 +69,14 @@ class Pack private constructor(
                 packTerm(term.scrutinee)
                 TODO()
             }
-            is D.Term.BoolOf -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(if (term.value) 1 else 0)))
-            is D.Term.ByteOf -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(term.value)))
-            is D.Term.ShortOf -> +P.Command.InsertAtIndex(STACK, SHORT, -1, P.SourceProvider.Value(P.Nbt.Short(term.value)))
-            is D.Term.IntOf -> +P.Command.InsertAtIndex(STACK, INT, -1, P.SourceProvider.Value(P.Nbt.Int(term.value)))
-            is D.Term.LongOf -> +P.Command.InsertAtIndex(STACK, LONG, -1, P.SourceProvider.Value(P.Nbt.Long(term.value)))
-            is D.Term.FloatOf -> +P.Command.InsertAtIndex(STACK, FLOAT, -1, P.SourceProvider.Value(P.Nbt.Float(term.value)))
-            is D.Term.DoubleOf -> +P.Command.InsertAtIndex(STACK, DOUBLE, -1, P.SourceProvider.Value(P.Nbt.Double(term.value)))
-            is D.Term.StringOf -> +P.Command.InsertAtIndex(STACK, STRING, -1, P.SourceProvider.Value(P.Nbt.String(term.value)))
+            is D.Term.BoolOf -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(if (term.value) 1 else 0)))
+            is D.Term.ByteOf -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(term.value)))
+            is D.Term.ShortOf -> +Append(STACKS, SHORT, Value(P.Nbt.Short(term.value)))
+            is D.Term.IntOf -> +Append(STACKS, INT, Value(P.Nbt.Int(term.value)))
+            is D.Term.LongOf -> +Append(STACKS, LONG, Value(P.Nbt.Long(term.value)))
+            is D.Term.FloatOf -> +Append(STACKS, FLOAT, Value(P.Nbt.Float(term.value)))
+            is D.Term.DoubleOf -> +Append(STACKS, DOUBLE, Value(P.Nbt.Double(term.value)))
+            is D.Term.StringOf -> +Append(STACKS, STRING, Value(P.Nbt.String(term.value)))
             is D.Term.ByteArrayOf -> {
                 val elements = term.elements.map {
                     when (it) {
@@ -62,12 +84,12 @@ class Pack private constructor(
                         else -> 0
                     }
                 }
-                +P.Command.InsertAtIndex(STACK, BYTE_ARRAY, -1, P.SourceProvider.Value(P.Nbt.ByteArray(elements)))
+                +Append(STACKS, BYTE_ARRAY, Value(P.Nbt.ByteArray(elements)))
                 term.elements.mapIndexed { index, element ->
                     if (element !is D.Term.ByteOf) {
                         packTerm(element)
-                        +P.Command.SetData(STACK, BYTE_ARRAY[-1][index], P.SourceProvider.From(STACK, BYTE[-1]))
-                        +P.Command.RemoveData(STACK, BYTE[-1])
+                        +SetData(STACKS, BYTE_ARRAY[-1][index], From(STACKS, BYTE[-1]))
+                        +RemoveData(STACKS, BYTE[-1])
                     }
                 }
             }
@@ -78,12 +100,12 @@ class Pack private constructor(
                         else -> 0
                     }
                 }
-                +P.Command.InsertAtIndex(STACK, INT_ARRAY, -1, P.SourceProvider.Value(P.Nbt.IntArray(elements)))
+                +Append(STACKS, INT_ARRAY, Value(P.Nbt.IntArray(elements)))
                 term.elements.mapIndexed { index, element ->
                     if (element !is D.Term.IntOf) {
                         packTerm(element)
-                        +P.Command.SetData(STACK, INT_ARRAY[-1][index], P.SourceProvider.From(STACK, INT[-1]))
-                        +P.Command.RemoveData(STACK, INT[-1])
+                        +SetData(STACKS, INT_ARRAY[-1][index], From(STACKS, INT[-1]))
+                        +RemoveData(STACKS, INT[-1])
                     }
                 }
             }
@@ -94,68 +116,68 @@ class Pack private constructor(
                         else -> 0
                     }
                 }
-                +P.Command.InsertAtIndex(STACK, LONG_ARRAY, -1, P.SourceProvider.Value(P.Nbt.LongArray(elements)))
+                +Append(STACKS, LONG_ARRAY, Value(P.Nbt.LongArray(elements)))
                 term.elements.mapIndexed { index, element ->
                     if (element !is D.Term.LongOf) {
                         packTerm(element)
-                        +P.Command.SetData(STACK, LONG_ARRAY[-1][index], P.SourceProvider.From(STACK, LONG[-1]))
-                        +P.Command.RemoveData(STACK, LONG[-1])
+                        +SetData(STACKS, LONG_ARRAY[-1][index], From(STACKS, LONG[-1]))
+                        +RemoveData(STACKS, LONG[-1])
                     }
                 }
             }
             is D.Term.ListOf -> {
-                +P.Command.InsertAtIndex(STACK, LIST, -1, P.SourceProvider.Value(P.Nbt.List(emptyList())))
+                +Append(STACKS, LIST, Value(P.Nbt.List(emptyList())))
                 if (term.elements.isNotEmpty()) {
                     val type = getType(term.elements.first().id)
                     val targetPath = LIST[if (type == P.NbtType.LIST) -2 else -1]
                     val sourcePath = type.toPath()[-1]
                     term.elements.forEach { element ->
                         packTerm(element)
-                        +P.Command.InsertAtIndex(STACK, targetPath, -1, P.SourceProvider.From(STACK, sourcePath))
-                        +P.Command.RemoveData(STACK, sourcePath)
+                        +Append(STACKS, targetPath, From(STACKS, sourcePath))
+                        +RemoveData(STACKS, sourcePath)
                     }
                 }
             }
             is D.Term.CompoundOf -> {
-                +P.Command.InsertAtIndex(STACK, COMPOUND, -1, P.SourceProvider.Value(P.Nbt.Compound(emptyMap())))
+                +Append(STACKS, COMPOUND, Value(P.Nbt.Compound(emptyMap())))
                 if (term.elements.isNotEmpty()) {
                     term.elements.forEachIndexed { index, element ->
                         val type = getType(element.id)
                         val targetPath = COMPOUND[if (type == P.NbtType.COMPOUND) -2 else -1]["$index"]
                         val sourcePath = type.toPath()[-1]
                         packTerm(element)
-                        +P.Command.SetData(STACK, targetPath, P.SourceProvider.From(STACK, sourcePath))
-                        +P.Command.RemoveData(STACK, sourcePath)
+                        +SetData(STACKS, targetPath, From(STACKS, sourcePath))
+                        +RemoveData(STACKS, sourcePath)
                     }
                 }
             }
             is D.Term.RefOf -> TODO()
-            is D.Term.Refl -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.FunOf -> +P.Command.InsertAtIndex(STACK, INT, -1, P.SourceProvider.Value(P.Nbt.Int(term.tag)))
+            is D.Term.Refl -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(0)))
+            is D.Term.FunOf -> +Append(STACKS, INT, Value(P.Nbt.Int(term.tag)))
             is D.Term.Apply -> {
                 term.arguments.forEach { packTerm(it) }
                 packTerm(term.function)
                 TODO()
             }
-            is D.Term.Union -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.Intersection -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0)))
-            is D.Term.Bool -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(1)))
-            is D.Term.Byte -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(1)))
-            is D.Term.Short -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(2)))
-            is D.Term.Int -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(3)))
-            is D.Term.Long -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(4)))
-            is D.Term.Float -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(5)))
-            is D.Term.Double -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(6)))
-            is D.Term.String -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(8)))
-            is D.Term.ByteArray -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(7)))
-            is D.Term.IntArray -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(11)))
-            is D.Term.LongArray -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(12)))
-            is D.Term.List -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(9)))
-            is D.Term.Compound -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(10)))
-            is D.Term.Ref -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(3)))
-            is D.Term.Eq -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(1)))
-            is D.Term.Fun -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(3)))
-            is D.Term.Type -> +P.Command.InsertAtIndex(STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(1)))
+            is D.Term.Union -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Intersection -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Bool -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Byte -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Short -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.SHORT.ordinal.toByte())))
+            is D.Term.Int -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.INT.ordinal.toByte())))
+            is D.Term.Long -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.LONG.ordinal.toByte())))
+            is D.Term.Float -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.FLOAT.ordinal.toByte())))
+            is D.Term.Double -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.DOUBLE.ordinal.toByte())))
+            is D.Term.String -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.STRING.ordinal.toByte())))
+            is D.Term.ByteArray -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE_ARRAY.ordinal.toByte())))
+            is D.Term.IntArray -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.INT_ARRAY.ordinal.toByte())))
+            is D.Term.LongArray -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.LONG_ARRAY.ordinal.toByte())))
+            is D.Term.List -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.LIST.ordinal.toByte())))
+            is D.Term.Compound -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
+            is D.Term.Ref -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.INT.ordinal.toByte())))
+            is D.Term.Eq -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Fun -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.INT.ordinal.toByte())))
+            is D.Term.Type -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
         }
     }
 
@@ -211,7 +233,7 @@ class Pack private constructor(
 
     private class Context(
         private val _commands: MutableList<P.Command> = mutableListOf(),
-        private val entries: Map<P.NbtType, MutableList<String>> = P.NbtType.values().associateWith { mutableListOf() }
+        private val entries: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() }
     ) {
         val commands: List<P.Command> get() = _commands
 
@@ -219,16 +241,16 @@ class Pack private constructor(
             _commands.add(this)
         }
 
-        fun getIndex(type: P.NbtType, name: String): Int {
+        fun getIndex(type: NbtType, name: String): Int {
             val entry = entries[type]!!
             return entry.lastIndexOf(name) - entry.size
         }
 
-        fun bind(type: P.NbtType, name: String) {
+        fun bind(type: NbtType, name: String) {
             entries[type]!! += name
         }
 
-        fun pop(type: P.NbtType) {
+        fun pop(type: NbtType) {
             entries[type]!!.removeLast()
         }
     }
@@ -239,7 +261,7 @@ class Pack private constructor(
          * @see [net.minecraft.resources.ResourceLocation.isAllowedInResourceLocation]
          */
         @Suppress("KDocUnresolvedReference")
-        val STACK = P.ResourceLocation("0")
+        val STACKS = P.ResourceLocation("0")
 
         val BYTE = P.NbtPath()["a"]
         val SHORT = P.NbtPath()["b"]
@@ -253,6 +275,9 @@ class Pack private constructor(
         val COMPOUND = P.NbtPath()["j"]
         val INT_ARRAY = P.NbtPath()["k"]
         val LONG_ARRAY = P.NbtPath()["l"]
+
+        val REGISTERS = P.Objective("0")
+        val REGISTER_0 = P.ScoreHolder("0")
 
         private fun P.NbtType.toPath(): P.NbtPath = when (this) {
             P.NbtType.BYTE -> BYTE
@@ -282,6 +307,10 @@ class Pack private constructor(
         fun nbtListOf(vararg elements: P.Nbt): P.Nbt.List = P.Nbt.List(elements.toList())
 
         fun nbtCompoundOf(vararg elements: Pair<String, P.Nbt>): P.Nbt.Compound = P.Nbt.Compound(elements.toMap())
+
+        private fun Append(target: P.ResourceLocation, path: P.NbtPath, source: P.SourceProvider): P.Command = InsertAtIndex(target, path, -1, source)
+
+        private fun Prepend(target: P.ResourceLocation, path: P.NbtPath, source: P.SourceProvider): P.Command = InsertAtIndex(target, path, 0, source)
 
         operator fun invoke(input: Defunctionalize.Result): P.Datapack = Pack(input.types).pack(input.functions, input.item)
     }

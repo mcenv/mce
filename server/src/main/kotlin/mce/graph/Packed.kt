@@ -11,16 +11,18 @@ import kotlin.collections.List as KList
 
 object Packed {
     data class Datapack(
-        val functions: KList<Function>
+        val functions: KList<Function>,
     )
 
     data class Function(
         val name: ResourceLocation,
-        val commands: KList<Command>
+        val commands: KList<Command>,
     )
 
     sealed class Command {
-        data class StoreData(val target: ResourceLocation, val path: NbtPath, val type: StoreType, val scale: KDouble, val command: Command) : Command()
+        data class Execute(val execute: Packed.Execute) : Command()
+        data class CheckScore(val success: Boolean, val target: ScoreHolder, val targetObjective: Objective, val source: SourceComparator) : Command()
+        data class CheckMatchingData(val success: Boolean, val source: ResourceLocation, val path: NbtPath) : Command()
         data class GetData(val target: ResourceLocation, val path: NbtPath? = null) : Command()
         data class GetNumeric(val target: ResourceLocation, val path: NbtPath, val scale: KDouble) : Command()
         data class RemoveData(val target: ResourceLocation, val path: NbtPath) : Command()
@@ -30,13 +32,21 @@ object Packed {
         data class RunFunction(val name: ResourceLocation) : Command()
     }
 
+    sealed class Execute {
+        data class Run(val command: Command) : Execute()
+        data class CheckScore(val success: Boolean, val target: ScoreHolder, val targetObjective: Objective, val source: SourceComparator, val command: Execute) : Execute()
+        data class CheckMatchingData(val success: Boolean, val source: ResourceLocation, val path: NbtPath, val command: Execute) : Execute()
+        data class StoreValue(val consumer: Consumer, val targets: ScoreHolder, val objective: Objective, val command: Execute) : Execute()
+        data class StoreData(val consumer: Consumer, val target: ResourceLocation, val path: NbtPath, val type: StoreType, val scale: KDouble, val command: Execute) : Execute()
+    }
+
     enum class StoreType {
         INT,
         FLOAT,
         SHORT,
         LONG,
         DOUBLE,
-        BYTE
+        BYTE,
     }
 
     sealed class SourceProvider {
@@ -82,12 +92,44 @@ object Packed {
         LIST,
         COMPOUND,
         INT_ARRAY,
-        LONG_ARRAY
+        LONG_ARRAY,
+    }
+
+    data class Objective(val name: KString)
+
+    data class ScoreHolder(val name: KString)
+
+    enum class Operation {
+        ASSIGN,
+        PLUS_ASSIGN,
+        MINUS_ASSIGN,
+        TIMES_ASSIGN,
+        DIV_ASSIGN,
+        MOD_ASSIGN,
+        MIN_ASSIGN,
+        MAX_ASSIGN,
+        SWAP,
+    }
+
+    sealed class SourceComparator {
+        data class Eq(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+        data class Lt(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+        data class Le(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+        data class Gt(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+        data class Ge(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+        data class Matches(val range: IntRange) : SourceComparator() {
+            constructor(value: KInt) : this(value..value)
+        }
+    }
+
+    enum class Consumer {
+        RESULT,
+        SUCCESS,
     }
 
     data class ResourceLocation(
         val namespace: KString,
-        val path: KString
+        val path: KString,
     ) {
         constructor(path: KString) : this("minecraft", path)
     }

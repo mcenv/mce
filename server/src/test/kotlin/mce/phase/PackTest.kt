@@ -2,7 +2,7 @@ package mce.phase
 
 import mce.fetch
 import mce.phase.Pack.Companion.BYTE
-import mce.phase.Pack.Companion.STACK
+import mce.phase.Pack.Companion.STACKS
 import mce.server.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +20,7 @@ class PackTest {
                         P.ResourceLocation("const"),
                         listOf(
                             P.Command.InsertAtIndex(
-                                STACK, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0))
+                                STACKS, BYTE, -1, P.SourceProvider.Value(P.Nbt.Byte(0))
                             )
                         )
                     )
