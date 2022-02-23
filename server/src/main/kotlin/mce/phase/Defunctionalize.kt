@@ -181,6 +181,17 @@ class Defunctionalize private constructor() {
             D.Pattern.RefOf(element, pattern.id)
         }
         is C.Pattern.Refl -> D.Pattern.Refl(pattern.id)
+        is C.Pattern.Bool -> D.Pattern.Bool(pattern.id)
+        is C.Pattern.Byte -> D.Pattern.Byte(pattern.id)
+        is C.Pattern.Short -> D.Pattern.Short(pattern.id)
+        is C.Pattern.Int -> D.Pattern.Int(pattern.id)
+        is C.Pattern.Long -> D.Pattern.Long(pattern.id)
+        is C.Pattern.Float -> D.Pattern.Float(pattern.id)
+        is C.Pattern.Double -> D.Pattern.Double(pattern.id)
+        is C.Pattern.String -> D.Pattern.String(pattern.id)
+        is C.Pattern.ByteArray -> D.Pattern.ByteArray(pattern.id)
+        is C.Pattern.IntArray -> D.Pattern.IntArray(pattern.id)
+        is C.Pattern.LongArray -> D.Pattern.LongArray(pattern.id)
     }
 
     private fun defunctionalizeEffect(effect: C.Effect): D.Effect = when (effect) {

@@ -422,6 +422,17 @@ class Elaborate private constructor(
             val left = lazy { normalizer.fresh(pattern.id) }
             Triple(this, C.Pattern.Refl(pattern.id), C.Value.Eq(left, left))
         }
+        is S.Pattern.Bool -> Triple(this, C.Pattern.Bool(pattern.id), TYPE)
+        is S.Pattern.Byte -> Triple(this, C.Pattern.Byte(pattern.id), TYPE)
+        is S.Pattern.Short -> Triple(this, C.Pattern.Short(pattern.id), TYPE)
+        is S.Pattern.Int -> Triple(this, C.Pattern.Int(pattern.id), TYPE)
+        is S.Pattern.Long -> Triple(this, C.Pattern.Long(pattern.id), TYPE)
+        is S.Pattern.Float -> Triple(this, C.Pattern.Float(pattern.id), TYPE)
+        is S.Pattern.Double -> Triple(this, C.Pattern.Double(pattern.id), TYPE)
+        is S.Pattern.String -> Triple(this, C.Pattern.String(pattern.id), TYPE)
+        is S.Pattern.ByteArray -> Triple(this, C.Pattern.ByteArray(pattern.id), BYTE_ARRAY)
+        is S.Pattern.IntArray -> Triple(this, C.Pattern.IntArray(pattern.id), INT_ARRAY)
+        is S.Pattern.LongArray -> Triple(this, C.Pattern.LongArray(pattern.id), LONG_ARRAY)
     }.also { (_, _, type) ->
         types[pattern.id] = type
     }

@@ -94,6 +94,17 @@ object Defunctionalized {
         data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
         data class RefOf(val element: Pattern, override val id: Id) : Pattern()
         data class Refl(override val id: Id) : Pattern()
+        data class Bool(override val id: Id) : Pattern()
+        data class Byte(override val id: Id) : Pattern()
+        data class Short(override val id: Id) : Pattern()
+        data class Int(override val id: Id) : Pattern()
+        data class Long(override val id: Id) : Pattern()
+        data class Float(override val id: Id) : Pattern()
+        data class Double(override val id: Id) : Pattern()
+        data class String(override val id: Id) : Pattern()
+        data class ByteArray(override val id: Id) : Pattern()
+        data class IntArray(override val id: Id) : Pattern()
+        data class LongArray(override val id: Id) : Pattern()
     }
 
     sealed class Effect {

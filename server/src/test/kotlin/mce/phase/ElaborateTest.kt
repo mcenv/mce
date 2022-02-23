@@ -364,4 +364,9 @@ class ElaborateTest {
     fun wildcardImport() {
         elaborate("wildcard_import").success()
     }
+
+    @Test
+    fun typecase() {
+        elaborate("typecase").success()
+    }
 }

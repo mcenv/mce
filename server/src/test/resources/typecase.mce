@@ -1,0 +1,6 @@
+def [α : type] : string ≔
+  match α [
+    bool ⇒ "bool",
+    byte ⇒ "byte",
+    else ⇒ "else",
+  ]
