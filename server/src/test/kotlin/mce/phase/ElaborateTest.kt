@@ -369,4 +369,9 @@ class ElaborateTest {
     fun typecase() {
         elaborate("typecase").success()
     }
+
+    @Test
+    fun polyDiscard() {
+        elaborate("poly_discard").success()
+    }
 }
