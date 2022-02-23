@@ -44,7 +44,7 @@ object Packed {
         data class From(val source: ResourceLocation, val path: NbtPath? = null) : SourceProvider()
     }
 
-    data class NbtPath(val nodes: KList<NbtNode> = emptyList()) : KList<NbtNode> by nodes
+    data class NbtPath(val nodes: KList<NbtNode> = emptyList())
 
     sealed class NbtNode {
         data class MatchRootObject(val pattern: Nbt.Compound) : NbtNode()

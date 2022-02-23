@@ -5,7 +5,7 @@ import mce.graph.Packed as P
 
 object NbtLens {
     fun P.NbtPath.get(target: MutableNbt): List<MutableNbt> =
-        fold(mutableListOf(target)) { context, node ->
+        nodes.fold(mutableListOf(target)) { context, node ->
             context.onEach {
                 it.get(node, context)
                 if (context.isEmpty()) throw Exception()
@@ -13,7 +13,7 @@ object NbtLens {
         }
 
     fun P.NbtPath.countMatching(target: MutableNbt): Int =
-        fold(mutableListOf(target)) { context, node ->
+        nodes.fold(mutableListOf(target)) { context, node ->
             context.onEach {
                 it.get(node, context)
                 if (context.isEmpty()) return 0
@@ -21,25 +21,25 @@ object NbtLens {
         }.size
 
     fun P.NbtPath.getOrCreateParents(target: MutableNbt): List<MutableNbt> =
-        windowed(2).fold(mutableListOf(target)) { context, (left, right) ->
+        nodes.windowed(2).fold(mutableListOf(target)) { context, (left, right) ->
             context.onEach { it.getOrCreate(left, lazy { right.createPreferredParent() }, context) }
         }
 
     fun P.NbtPath.getOrCreate(target: MutableNbt, source: Lazy<MutableNbt>): List<MutableNbt> =
         mutableListOf<MutableNbt>().also { context ->
             getOrCreateParents(target).onEach {
-                it.getOrCreate(last(), source, context)
+                it.getOrCreate(nodes.last(), source, context)
                 if (context.isEmpty()) throw Exception()
             }
         }
 
     fun P.NbtPath.set(target: MutableNbt, source: Lazy<MutableNbt>): Int =
-        getOrCreateParents(target).sumOf { it.set(last(), source) }
+        getOrCreateParents(target).sumOf { it.set(nodes.last(), source) }
 
     fun P.NbtPath.remove(target: MutableNbt): Int =
-        dropLast(1).fold(mutableListOf(target)) { context, node ->
+        nodes.dropLast(1).fold(mutableListOf(target)) { context, node ->
             context.onEach { it.get(node, context) }
-        }.sumOf { it.remove(last()) }
+        }.sumOf { it.remove(nodes.last()) }
 
     private fun MutableNbt.get(node: P.NbtNode, context: MutableList<MutableNbt>) {
         when (node) {
