@@ -75,7 +75,10 @@ class Normalizer(
         is C.Term.TaggedVar -> C.Value.TaggedVar(term.name, term.level, lazy { eval(term.tag) }, term.id)
         is C.Term.Def -> {
             val item = items[term.name]!! as C.Item.Def
-            if (item.modifiers.contains(C.Modifier.BUILTIN)) C.Value.Def(term.name, term.id) else eval(item.body)
+            if (item.modifiers.contains(C.Modifier.BUILTIN)) {
+                val normalizer = term.arguments.fold(this) { normalizer, argument -> normalizer.bind(lazy { normalizer.eval(argument) }) }
+                BUILTINS[term.name]!!(normalizer)
+            } else eval(item.body)
         }
         is C.Term.Let -> bind(lazy { eval(term.init) }).eval(term.body)
         is C.Term.Match -> C.Value.Match(eval(term.scrutinee), term.clauses.map { it.first to lazy { eval(it.second) /* TODO: collect variables */ } }, term.id)
@@ -98,10 +101,6 @@ class Normalizer(
         is C.Term.Apply -> {
             val arguments = term.arguments.map { lazy { eval(it) } }
             when (val function = eval(term.function)) {
-                is C.Value.Def -> {
-                    val normalizer = arguments.fold(this) { normalizer, argument -> normalizer.bind(argument) }
-                    BUILTINS[function.name]!!(normalizer)
-                }
                 is C.Value.FunOf -> arguments.fold(this) { normalizer, argument -> normalizer.bind(argument) }.eval(function.body)
                 else -> C.Value.Apply(function, arguments, term.id)
             }
@@ -142,7 +141,7 @@ class Normalizer(
         is C.Value.Meta -> C.Term.Meta(value.index, value.id)
         is C.Value.Var -> C.Term.Var(value.name, value.level, value.id)
         is C.Value.TaggedVar -> C.Term.TaggedVar(value.name, value.level, quote(value.tag.value), value.id)
-        is C.Value.Def -> C.Term.Def(value.name, value.id)
+        is C.Value.Def -> C.Term.Def(value.name, value.arguments.map { quote(it.value) }, value.id)
         is C.Value.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) }, value.id)
         is C.Value.BoolOf -> C.Term.BoolOf(value.value, value.id)
         is C.Value.ByteOf -> C.Term.ByteOf(value.value, value.id)

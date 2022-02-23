@@ -29,7 +29,7 @@ class Defunctionalize private constructor() {
         is C.Term.Meta -> throw Error()
         is C.Term.Var -> D.Term.Var(term.name, term.level, term.id!!)
         is C.Term.TaggedVar -> D.Term.TaggedVar(term.name, term.level, defunctionalizeTerm(term.tag), term.id!!)
-        is C.Term.Def -> D.Term.Def(term.name, term.id!!)
+        is C.Term.Def -> D.Term.Def(term.name, term.arguments.map { defunctionalizeTerm(it) }, term.id!!)
         is C.Term.Let -> {
             val init = defunctionalizeTerm(term.init)
             val body = defunctionalizeTerm(term.body)

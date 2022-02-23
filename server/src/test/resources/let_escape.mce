@@ -1,4 +1,4 @@
-def : bool ≔
+def [] : bool ≔
   let a ≔ (
     let b ≔ false,
     b

@@ -9,7 +9,8 @@ sealed class Diagnostic {
     abstract val id: Id
 
     data class TermExpected(val type: S.Term, override val id: Id) : Diagnostic()
-    data class NameNotFound(val name: String, override val id: Id) : Diagnostic()
+    data class VarNotFound(val name: String, override val id: Id) : Diagnostic()
+    data class DefNotFound(val name: String, override val id: Id) : Diagnostic()
     data class FunctionExpected(override val id: Id) : Diagnostic()
     data class CodeExpected(override val id: Id) : Diagnostic()
     data class ArityMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
@@ -25,9 +26,9 @@ sealed class Diagnostic {
         fun serializeTerm(term: C.Term): S.Term = when (term) {
             is C.Term.Hole -> S.Term.Hole(freshId())
             is C.Term.Meta -> S.Term.Meta(freshId())
-            is C.Term.Var -> S.Term.Name(term.name, freshId())
+            is C.Term.Var -> S.Term.Var(term.name, freshId())
             is C.Term.TaggedVar -> S.Term.TaggedVar(term.name, serializeTerm(term.tag), freshId())
-            is C.Term.Def -> S.Term.Name(term.name, freshId())
+            is C.Term.Def -> S.Term.Def(term.name, term.arguments.map { serializeTerm(it) }, freshId())
             is C.Term.Let -> S.Term.Let(term.name, serializeTerm(term.init), serializeTerm(term.body), freshId())
             is C.Term.Match -> S.Term.Match(serializeTerm(term.scrutinee), term.clauses.map { serializePattern(it.first) to serializeTerm(it.second) }, freshId())
             is C.Term.BoolOf -> S.Term.BoolOf(term.value, freshId())

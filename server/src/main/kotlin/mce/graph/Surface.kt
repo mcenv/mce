@@ -24,7 +24,8 @@ object Surface {
             override val name: KString,
             val parameters: KList<Parameter>,
             val resultant: Term,
-            val body: Term
+            val effects: KList<Effect>,
+            val body: Term,
         ) : Item()
     }
 
@@ -41,8 +42,9 @@ object Surface {
         data class Hole(override val id: Id) : Term()
         data class Meta(override val id: Id) : Term()
         data class Anno(val element: Term, val type: Term, override val id: Id) : Term()
-        data class Name(val name: KString, override val id: Id) : Term()
+        data class Var(val name: KString, override val id: Id) : Term()
         data class TaggedVar(val name: KString, val tag: Term, override val id: Id) : Term()
+        data class Def(val name: KString, val arguments: KList<Term>, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
         data class BoolOf(val value: KBoolean, override val id: Id) : Term()

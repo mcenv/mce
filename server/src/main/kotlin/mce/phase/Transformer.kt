@@ -7,7 +7,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.Meta -> C.Term.Meta(index, id)
     is C.Term.Var -> C.Term.Var(name, level, id)
     is C.Term.TaggedVar -> C.Term.TaggedVar(name, level, transform(tag), id)
-    is C.Term.Def -> C.Term.Def(name, id)
+    is C.Term.Def -> C.Term.Def(name, arguments.map(transform), id)
     is C.Term.Let -> C.Term.Let(name, transform(init), transform(body), id)
     is C.Term.Match -> C.Term.Match(transform(scrutinee), clauses.map { it.first to transform(it.second) }, id)
     is C.Term.BoolOf -> C.Term.BoolOf(value, id)

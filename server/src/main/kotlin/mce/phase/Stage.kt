@@ -13,7 +13,7 @@ class Stage private constructor(
     private fun stageItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
             val body = stageTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, body)
+            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, item.effects, body)
         }
     }
 

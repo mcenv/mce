@@ -22,7 +22,7 @@ class ElaborateTest {
         val result = elaborate("elaborate").success()
         assertIs<C.Value.Type>(result.types[UUID(0, 0)])
         assertIs<C.Value.Bool>(result.types[UUID(0, 1)])
-        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.Value.Bool(UUID(0, 0)), C.Term.BoolOf(false, UUID(0, 1))), result.item)
+        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.Value.Bool(UUID(0, 0)), emptySet(), C.Term.BoolOf(false, UUID(0, 1))), result.item)
     }
 
     @Test
@@ -48,7 +48,7 @@ class ElaborateTest {
     @Test
     fun functionClosed() {
         val result = elaborate("function_closed")
-        assert(result.diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.contains(Diagnostic.VarNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -59,13 +59,13 @@ class ElaborateTest {
     @Test
     fun letEscape() {
         val result = elaborate("let_escape")
-        assert(result.diagnostics.contains(Diagnostic.NameNotFound("b", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.contains(Diagnostic.VarNotFound("b", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
-    fun nameNotFound() {
-        val result = elaborate("name_not_found")
-        assert(result.diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    fun varNotFound() {
+        val result = elaborate("var_not_found")
+        assert(result.diagnostics.contains(Diagnostic.VarNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -114,7 +114,7 @@ class ElaborateTest {
     @Test
     fun matchEscape() {
         val result = elaborate("match_escape")
-        assert(result.diagnostics.contains(Diagnostic.NameNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.contains(Diagnostic.VarNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -179,7 +179,7 @@ class ElaborateTest {
     @Test
     fun invalidImport() {
         val result = elaborate("invalid_import")
-        assert(result.diagnostics.any { it is Diagnostic.NameNotFound }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.DefNotFound }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test

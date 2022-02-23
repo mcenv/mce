@@ -15,7 +15,7 @@ import mce.graph.Packed as P
 class Pack private constructor(
     types: Map<Id, C.Value>
 ) {
-    private val types: Map<Id, P.NbtType> = types.mapValues { erase(it.value) }
+    private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
 
     private fun pack(functions: Map<Int, D.Term>, item: D.Item): P.Datapack = P.Datapack(functions.map { (tag, term) ->
         Context().run {
@@ -57,7 +57,10 @@ class Pack private constructor(
                 +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.INT_ARRAY.ordinal), Run(Append(STACKS, INT_ARRAY, From(STACKS, INT_ARRAY[getIndex(NbtType.INT_ARRAY, term.name)])))))
                 +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LONG_ARRAY.ordinal), Run(Append(STACKS, LONG_ARRAY, From(STACKS, LONG_ARRAY[getIndex(NbtType.LONG_ARRAY, term.name)])))))
             }
-            is D.Term.Def -> +RunFunction(P.ResourceLocation(term.name))
+            is D.Term.Def -> {
+                term.arguments.forEach { packTerm(it) }
+                +RunFunction(P.ResourceLocation(term.name))
+            }
             is D.Term.Let -> {
                 val type = getType(term.init.id)
                 packTerm(term.init)
@@ -211,24 +214,24 @@ class Pack private constructor(
         is C.Value.Splice -> throw Error()
         is C.Value.Union -> TODO()
         is C.Value.Intersection -> TODO()
-        is C.Value.Bool -> P.NbtType.BYTE
-        is C.Value.Byte -> P.NbtType.BYTE
-        is C.Value.Short -> P.NbtType.SHORT
-        is C.Value.Int -> P.NbtType.INT
-        is C.Value.Long -> P.NbtType.LONG
-        is C.Value.Float -> P.NbtType.FLOAT
-        is C.Value.Double -> P.NbtType.DOUBLE
-        is C.Value.String -> P.NbtType.STRING
-        is C.Value.ByteArray -> P.NbtType.BYTE_ARRAY
-        is C.Value.IntArray -> P.NbtType.INT_ARRAY
-        is C.Value.LongArray -> P.NbtType.LONG_ARRAY
-        is C.Value.List -> P.NbtType.LIST
-        is C.Value.Compound -> P.NbtType.COMPOUND
-        is C.Value.Ref -> P.NbtType.INT
-        is C.Value.Eq -> P.NbtType.BYTE
-        is C.Value.Fun -> P.NbtType.BYTE
+        is C.Value.Bool -> NbtType.BYTE
+        is C.Value.Byte -> NbtType.BYTE
+        is C.Value.Short -> NbtType.SHORT
+        is C.Value.Int -> NbtType.INT
+        is C.Value.Long -> NbtType.LONG
+        is C.Value.Float -> NbtType.FLOAT
+        is C.Value.Double -> NbtType.DOUBLE
+        is C.Value.String -> NbtType.STRING
+        is C.Value.ByteArray -> NbtType.BYTE_ARRAY
+        is C.Value.IntArray -> NbtType.INT_ARRAY
+        is C.Value.LongArray -> NbtType.LONG_ARRAY
+        is C.Value.List -> NbtType.LIST
+        is C.Value.Compound -> NbtType.COMPOUND
+        is C.Value.Ref -> NbtType.INT
+        is C.Value.Eq -> NbtType.BYTE
+        is C.Value.Fun -> NbtType.BYTE
         is C.Value.Code -> throw Error()
-        is C.Value.Type -> P.NbtType.BYTE
+        is C.Value.Type -> NbtType.BYTE
     }
 
     private class Context(
@@ -279,19 +282,19 @@ class Pack private constructor(
         val REGISTERS = P.Objective("0")
         val REGISTER_0 = P.ScoreHolder("0")
 
-        private fun P.NbtType.toPath(): P.NbtPath = when (this) {
-            P.NbtType.BYTE -> BYTE
-            P.NbtType.SHORT -> SHORT
-            P.NbtType.INT -> INT
-            P.NbtType.LONG -> LONG
-            P.NbtType.FLOAT -> FLOAT
-            P.NbtType.DOUBLE -> DOUBLE
-            P.NbtType.BYTE_ARRAY -> BYTE_ARRAY
-            P.NbtType.STRING -> STRING
-            P.NbtType.LIST -> LIST
-            P.NbtType.COMPOUND -> COMPOUND
-            P.NbtType.INT_ARRAY -> INT_ARRAY
-            P.NbtType.LONG_ARRAY -> LONG_ARRAY
+        private fun NbtType.toPath(): P.NbtPath = when (this) {
+            NbtType.BYTE -> BYTE
+            NbtType.SHORT -> SHORT
+            NbtType.INT -> INT
+            NbtType.LONG -> LONG
+            NbtType.FLOAT -> FLOAT
+            NbtType.DOUBLE -> DOUBLE
+            NbtType.BYTE_ARRAY -> BYTE_ARRAY
+            NbtType.STRING -> STRING
+            NbtType.LIST -> LIST
+            NbtType.COMPOUND -> COMPOUND
+            NbtType.INT_ARRAY -> INT_ARRAY
+            NbtType.LONG_ARRAY -> LONG_ARRAY
         }
 
         operator fun P.NbtPath.get(pattern: P.Nbt.Compound): P.NbtPath = P.NbtPath(nodes + P.NbtNode.MatchElement(pattern))

@@ -1,1 +1,1 @@
-def : int ≔ (0 : int)
+def [] : int ≔ (0 : int)

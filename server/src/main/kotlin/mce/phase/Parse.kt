@@ -17,16 +17,20 @@ class Parse private constructor(
         return when (word) {
             "def" -> {
                 val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
-                val parameters = if (peekChar() == '[') parseList('[', ']') { parseParameter() } else emptyList()
-                val type = run {
+                val parameters = parseList('[', ']') { parseParameter() }
+                val resultant = run {
                     expect(':')
                     parseTerm()
                 }
+                val effects = if (peekChar() == '!') {
+                    skip()
+                    parseEffects()
+                } else emptyList()
                 val body = run {
                     expectString("≔")
                     parseTerm()
                 }
-                S.Item.Def(imports, exports, modifiers, name, parameters, type, body)
+                S.Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body)
             }
             else -> error("unexpected item '$word'")
         }.also {
@@ -62,7 +66,7 @@ class Parse private constructor(
                 expect(':')
                 parseTerm()
             }
-            S.Parameter(erased, (name as S.Term.Name).name, lower, upper, type)
+            S.Parameter(erased, (name as S.Term.Var).name, lower, upper, type)
         }
     }
 
@@ -78,6 +82,11 @@ class Parse private constructor(
                     ')' -> left
                     '[' -> {
                         val arguments = parseList('[', ']', ::parseTerm)
+                        S.Term.Def((left as? S.Term.Var)?.name ?: error("name expected"), arguments, id)
+                    }
+                    '@' -> {
+                        skip()
+                        val arguments = parseList('[', ']', ::parseTerm)
                         S.Term.Apply(left, arguments, id)
                     }
                     ':' -> {
@@ -88,7 +97,7 @@ class Parse private constructor(
                     '∈' -> {
                         skip()
                         val right = parseTerm()
-                        S.Term.TaggedVar((left as? S.Term.Name)?.name ?: error("name expected"), right, id)
+                        S.Term.TaggedVar((left as? S.Term.Var)?.name ?: error("name expected"), right, id)
                     }
                     '=' -> {
                         skip()
@@ -98,7 +107,7 @@ class Parse private constructor(
                     else -> {
                         val operator = parseTerm()
                         val right = parseTerm()
-                        S.Term.Apply(operator, listOf(left, right), id)
+                        S.Term.Def((operator as? S.Term.Var)?.name ?: error("name expected"), listOf(left, right), id)
                     }
                 }
             }.also { expect(')') }
@@ -210,7 +219,7 @@ class Parse private constructor(
                 LONG_EXPRESSION.matches(word) -> S.Term.LongOf(word.dropLast(1).toLong(), id)
                 FLOAT_EXPRESSION.matches(word) -> S.Term.FloatOf(word.dropLast(1).toFloat(), id)
                 DOUBLE_EXPRESSION.matches(word) -> S.Term.DoubleOf(word.dropLast(1).toDouble(), id)
-                else -> S.Term.Name(word, id)
+                else -> S.Term.Var(word, id)
             }
         }
     }

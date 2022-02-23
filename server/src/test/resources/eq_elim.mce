@@ -1,4 +1,4 @@
-def : bool ≔
+def [] : bool ≔
   match refl [
     refl ⇒ false
   ]

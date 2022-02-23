@@ -32,7 +32,7 @@ object Defunctionalized {
 
         data class Var(val name: KString, val level: KInt, override val id: Id) : Term()
         data class TaggedVar(val name: KString, val level: KInt, val tag: Term, override val id: Id) : Term()
-        data class Def(val name: KString, override val id: Id) : Term()
+        data class Def(val name: KString, val arguments: KList<Term>, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
         data class BoolOf(val value: KBoolean, override val id: Id) : Term()

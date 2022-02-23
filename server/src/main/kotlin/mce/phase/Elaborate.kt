@@ -27,13 +27,14 @@ class Elaborate private constructor(
             }
             val (context2, parameters) = context1.elaborateParameters(item.parameters)
             val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
-            val type = context2.normalizer.eval(context2.checkTerm(item.resultant, TYPE))
+            val resultant = context2.normalizer.eval(context2.checkTerm(item.resultant, TYPE))
+            val effects = item.effects.map { elaborateEffect(it) }.toSet()
             val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else run {
-                val body = context2.relevant().checkTerm(item.body, type)
+                val body = context2.relevant().checkTerm(item.body, resultant)
                 if (parameters.isEmpty()) body else C.Term.FunOf(parameters.map { it.name }, body, freshId())
             }
-            context2.checkPhase(item.body.id, type)
-            context2.normalizer to C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, type, body)
+            context2.checkPhase(item.body.id, resultant)
+            context2.normalizer to C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body)
         }
     }
 
@@ -65,35 +66,24 @@ class Elaborate private constructor(
             val type = normalizer.eval(irrelevant().checkTerm(term.type, TYPE))
             Typing(checkTerm(term.element, type), type)
         }
-        is S.Term.Name -> when (val level = lookup(term.name)) {
-            -1 -> {
-                val type = when (val item = items[term.name]) {
-                    null -> diagnose(Diagnostic.NameNotFound(term.name, term.id))
-                    is C.Item.Def -> if (item.parameters.isEmpty()) item.resultant else {
-                        val context = item.parameters.fold(this) { context, parameter ->
-                            val lower = parameter.lower?.let { context.normalizer.eval(it) }
-                            val upper = parameter.upper?.let { context.normalizer.eval(it) }
-                            val type = context.normalizer.eval(parameter.type)
-                            context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage))
-                        }
-                        val resultant = context.normalizer.quote(item.resultant)
-                        C.Value.Fun(item.parameters, resultant, emptySet() /* TODO */)
-                    }
+        is S.Term.Var -> {
+            val level = lookup(term.name)
+            val type = when (level) {
+                -1 -> diagnose(Diagnostic.VarNotFound(term.name, term.id))
+                else -> {
+                    val entry = entries[level]
+                    var type = entry.type
+                    if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
+                    if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
+                    checkRepresentation(term.id, type)
+                    type
                 }
-                Typing(C.Term.Def(term.name, term.id), type)
             }
-            else -> {
-                val entry = entries[level]
-                var type = entry.type
-                if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
-                if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
-                checkRepresentation(term.id, type)
-                Typing(C.Term.Var(term.name, level, term.id), type)
-            }
+            Typing(C.Term.Var(term.name, level, term.id), type)
         }
         is S.Term.TaggedVar -> {
             val level = lookup(term.name).also {
-                if (it == -1) diagnose(Diagnostic.NameNotFound(term.name, term.id))
+                if (it == -1) diagnose(Diagnostic.VarNotFound(term.name, term.id))
             }
             val entry = entries[level]
             val tTag = checkTerm(term.tag, TYPE)
@@ -208,6 +198,33 @@ class Elaborate private constructor(
      * Infers the type of the [computation] under this context.
      */
     private fun Context.inferComputation(computation: S.Term): Typing = when (computation) {
+        is S.Term.Def -> when (val item = items[computation.name]) {
+            null -> Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
+            is C.Item.Def -> {
+                if (item.parameters.size != computation.arguments.size) {
+                    diagnose(Diagnostic.ArityMismatch(item.parameters.size, computation.arguments.size, computation.id))
+                }
+                val (_, arguments) = (computation.arguments zip item.parameters).foldMap(this) { context, (argument, parameter) ->
+                    val tArgument = checkTerm(argument, context.normalizer.eval(parameter.type))
+                    val vArgument = context.normalizer.eval(tArgument)
+                    val lower = parameter.lower?.let { context.normalizer.eval(it) }?.also { lower ->
+                        if (!context.subtype(lower, vArgument)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(vArgument)), serializeTerm(context.normalizer.quote(lower)), argument.id))
+                    }
+                    val upper = parameter.upper?.let { context.normalizer.eval(it) }?.also { upper ->
+                        if (!context.subtype(vArgument, upper)) diagnose(Diagnostic.TypeMismatch(serializeTerm(context.normalizer.quote(upper)), serializeTerm(context.normalizer.quote(vArgument)), argument.id))
+                    }
+                    val type = context.normalizer.eval(parameter.type)
+                    context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
+                }
+                item.parameters.fold(this) { context, parameter ->
+                    val lower = parameter.lower?.let { context.normalizer.eval(it) }
+                    val upper = parameter.upper?.let { context.normalizer.eval(it) }
+                    val type = context.normalizer.eval(parameter.type)
+                    context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage))
+                }
+                Typing(C.Term.Def(computation.name, arguments, computation.id), item.resultant, item.effects)
+            }
+        }
         is S.Term.Let -> {
             val init = inferComputation(computation.init)
             val body = bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)).inferComputation(computation.body)

@@ -1,1 +1,1 @@
-def : bool ≔ $`(#0-0-0-0-0 false)
+def [] : bool ≔ $`(#0-0-0-0-0 false)

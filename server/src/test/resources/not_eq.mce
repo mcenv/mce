@@ -1,1 +1,1 @@
-def : (false = true) ≔ refl
+def [] : (false = true) ≔ refl

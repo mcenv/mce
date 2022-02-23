@@ -23,7 +23,7 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             a is C.Value.IntOf && a.value == 0 -> b
             // a + 0 = a
             b is C.Value.IntOf && b.value == 0 -> a
-            else -> C.Value.Apply(C.Value.Def("int/add"), mutableListOf(a, b).sortedWith(COMM).map(::lazyOf))
+            else -> C.Value.Def("int/add", mutableListOf(a, b).sortedWith(COMM).map(::lazyOf))
         }
     },
     "int/sub" to {
@@ -35,7 +35,7 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             b is C.Value.IntOf && b.value == 0 -> a
             // a - a = 0
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
-            else -> C.Value.Apply(C.Value.Def("int/sub"), mutableListOf(a, b).map(::lazyOf))
+            else -> C.Value.Def("int/sub", mutableListOf(a, b).map(::lazyOf))
         }
     },
     "int/mul" to {
@@ -51,7 +51,7 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             a is C.Value.IntOf && a.value == 1 -> b
             // a * 1 = a
             b is C.Value.IntOf && b.value == 1 -> a
-            else -> C.Value.Apply(C.Value.Def("int/mul"), mutableListOf(a, b).sortedWith(COMM).map(::lazyOf))
+            else -> C.Value.Def("int/mul", mutableListOf(a, b).sortedWith(COMM).map(::lazyOf))
         }
     },
     "int/div" to {
@@ -63,7 +63,7 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             b is C.Value.IntOf && b.value == 1 -> a
             // a / a = 1
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(1)
-            else -> C.Value.Apply(C.Value.Def("int/div"), mutableListOf(a, b).map(::lazyOf))
+            else -> C.Value.Def("int/div", mutableListOf(a, b).map(::lazyOf))
         }
     },
     "int/mod" to {
@@ -75,7 +75,7 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             b is C.Value.IntOf && b.value == 1 -> a
             // a % a = 0
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
-            else -> C.Value.Apply(C.Value.Def("int/mod"), mutableListOf(a, b).map(::lazyOf))
+            else -> C.Value.Def("int/mod", mutableListOf(a, b).map(::lazyOf))
         }
     }
 )
