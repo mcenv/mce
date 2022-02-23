@@ -31,7 +31,6 @@ object Defunctionalized {
         abstract val id: Id
 
         data class Var(val name: KString, val level: KInt, override val id: Id) : Term()
-        data class TaggedVar(val name: KString, val level: KInt, val tag: Term, override val id: Id) : Term()
         data class Def(val name: KString, val arguments: KList<Term>, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
@@ -48,6 +47,7 @@ object Defunctionalized {
         data class LongArrayOf(val elements: KList<Term>, override val id: Id) : Term()
         data class ListOf(val elements: KList<Term>, override val id: Id) : Term()
         data class CompoundOf(val elements: KList<Term>, override val id: Id) : Term()
+        data class BoxOf(val content: Term, val tag: Term, override val id: Id) : Term()
         data class RefOf(val element: Term, override val id: Id) : Term()
         data class Refl(override val id: Id) : Term()
         data class FunOf(val tag: KInt, override val id: Id) : Term()
@@ -67,6 +67,7 @@ object Defunctionalized {
         data class LongArray(override val id: Id) : Term()
         data class List(val element: Term, override val id: Id) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
+        data class Box(val content: Term, override val id: Id) : Term()
         data class Ref(val element: Term, override val id: Id) : Term()
         data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
         data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: Set<Effect>, override val id: Id) : Term()
@@ -90,6 +91,7 @@ object Defunctionalized {
         data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
         data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
         data class RefOf(val element: Pattern, override val id: Id) : Pattern()
         data class Refl(override val id: Id) : Pattern()
     }

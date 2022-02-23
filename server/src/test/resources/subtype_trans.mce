@@ -1,1 +1,1 @@
-def [α ≤ bool : type, a : α] : (union {bool, int}) ≔ (a ∈ α)
+def [α ≤ bool : type, a : box α] : box (union {bool, int}) ≔ a

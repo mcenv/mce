@@ -3,7 +3,6 @@ package mce.phase
 import mce.graph.Id
 import mce.graph.Packed.Command.*
 import mce.graph.Packed.Consumer.*
-import mce.graph.Packed.Execute
 import mce.graph.Packed.Execute.*
 import mce.graph.Packed.NbtType
 import mce.graph.Packed.SourceComparator.*
@@ -38,24 +37,6 @@ class Pack private constructor(
                 val path = type.toPath()
                 val index = getIndex(type, term.name)
                 +Append(STACKS, path, From(STACKS, path[index]))
-            }
-            is D.Term.TaggedVar -> {
-                packTerm(term.tag)
-                +Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, BYTE[-1]))))
-                +RemoveData(STACKS, BYTE[-1])
-                // TODO: fix index
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.BYTE.ordinal), Run(Append(STACKS, BYTE, From(STACKS, BYTE[getIndex(NbtType.BYTE, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.SHORT.ordinal), Run(Append(STACKS, SHORT, From(STACKS, SHORT[getIndex(NbtType.SHORT, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.INT.ordinal), Run(Append(STACKS, INT, From(STACKS, INT[getIndex(NbtType.INT, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LONG.ordinal), Run(Append(STACKS, LONG, From(STACKS, LONG[getIndex(NbtType.LONG, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.FLOAT.ordinal), Run(Append(STACKS, FLOAT, From(STACKS, FLOAT[getIndex(NbtType.FLOAT, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.DOUBLE.ordinal), Run(Append(STACKS, DOUBLE, From(STACKS, DOUBLE[getIndex(NbtType.DOUBLE, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.BYTE_ARRAY.ordinal), Run(Append(STACKS, BYTE_ARRAY, From(STACKS, BYTE_ARRAY[getIndex(NbtType.BYTE_ARRAY, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.STRING.ordinal), Run(Append(STACKS, STRING, From(STACKS, STRING[getIndex(NbtType.STRING, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LIST.ordinal), Run(Append(STACKS, LIST, From(STACKS, LIST[getIndex(NbtType.LIST, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.COMPOUND.ordinal), Run(Append(STACKS, COMPOUND, From(STACKS, COMPOUND[getIndex(NbtType.COMPOUND, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.INT_ARRAY.ordinal), Run(Append(STACKS, INT_ARRAY, From(STACKS, INT_ARRAY[getIndex(NbtType.INT_ARRAY, term.name)])))))
-                +Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(NbtType.LONG_ARRAY.ordinal), Run(Append(STACKS, LONG_ARRAY, From(STACKS, LONG_ARRAY[getIndex(NbtType.LONG_ARRAY, term.name)])))))
             }
             is D.Term.Def -> {
                 term.arguments.forEach { packTerm(it) }
@@ -132,7 +113,7 @@ class Pack private constructor(
                 +Append(STACKS, LIST, Value(P.Nbt.List(emptyList())))
                 if (term.elements.isNotEmpty()) {
                     val type = getType(term.elements.first().id)
-                    val targetPath = LIST[if (type == P.NbtType.LIST) -2 else -1]
+                    val targetPath = LIST[if (type == NbtType.LIST) -2 else -1]
                     val sourcePath = type.toPath()[-1]
                     term.elements.forEach { element ->
                         packTerm(element)
@@ -146,13 +127,27 @@ class Pack private constructor(
                 if (term.elements.isNotEmpty()) {
                     term.elements.forEachIndexed { index, element ->
                         val type = getType(element.id)
-                        val targetPath = COMPOUND[if (type == P.NbtType.COMPOUND) -2 else -1]["$index"]
+                        val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1]["$index"]
                         val sourcePath = type.toPath()[-1]
                         packTerm(element)
                         +SetData(STACKS, targetPath, From(STACKS, sourcePath))
                         +RemoveData(STACKS, sourcePath)
                     }
                 }
+            }
+            is D.Term.BoxOf -> {
+                +Append(STACKS, COMPOUND, Value(P.Nbt.Compound(emptyMap())))
+
+                packTerm(term.content)
+                val contentType = getType(term.content.id)
+                val contentPath = contentType.toPath()[-1]
+                +SetData(STACKS, COMPOUND[if (contentType == NbtType.COMPOUND) -2 else -1]["0"], From(STACKS, contentPath))
+                +RemoveData(STACKS, contentPath)
+
+                packTerm(term.tag)
+                val tagPath = BYTE[-1]
+                +SetData(STACKS, COMPOUND[-1]["1"], From(STACKS, tagPath))
+                +RemoveData(STACKS, tagPath)
             }
             is D.Term.RefOf -> TODO()
             is D.Term.Refl -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(0)))
@@ -177,6 +172,7 @@ class Pack private constructor(
             is D.Term.LongArray -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.LONG_ARRAY.ordinal.toByte())))
             is D.Term.List -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.LIST.ordinal.toByte())))
             is D.Term.Compound -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
+            is D.Term.Box -> +Append(STACKS, COMPOUND, Value(P.Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
             is D.Term.Ref -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.INT.ordinal.toByte())))
             is D.Term.Eq -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Fun -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.INT.ordinal.toByte())))
@@ -190,7 +186,6 @@ class Pack private constructor(
         is C.Value.Hole -> throw Error()
         is C.Value.Meta -> throw Error()
         is C.Value.Var -> TODO()
-        is C.Value.TaggedVar -> TODO()
         is C.Value.Def -> TODO()
         is C.Value.Match -> TODO()
         is C.Value.BoolOf -> throw Error()
@@ -206,6 +201,7 @@ class Pack private constructor(
         is C.Value.LongArrayOf -> throw Error()
         is C.Value.ListOf -> throw Error()
         is C.Value.CompoundOf -> throw Error()
+        is C.Value.BoxOf -> throw Error()
         is C.Value.RefOf -> throw Error()
         is C.Value.Refl -> throw Error()
         is C.Value.FunOf -> throw Error()
@@ -227,6 +223,7 @@ class Pack private constructor(
         is C.Value.LongArray -> NbtType.LONG_ARRAY
         is C.Value.List -> NbtType.LIST
         is C.Value.Compound -> NbtType.COMPOUND
+        is C.Value.Box -> NbtType.COMPOUND
         is C.Value.Ref -> NbtType.INT
         is C.Value.Eq -> NbtType.BYTE
         is C.Value.Fun -> NbtType.BYTE
@@ -278,9 +275,6 @@ class Pack private constructor(
         val COMPOUND = P.NbtPath()["j"]
         val INT_ARRAY = P.NbtPath()["k"]
         val LONG_ARRAY = P.NbtPath()["l"]
-
-        val REGISTERS = P.Objective("0")
-        val REGISTER_0 = P.ScoreHolder("0")
 
         private fun NbtType.toPath(): P.NbtPath = when (this) {
             NbtType.BYTE -> BYTE

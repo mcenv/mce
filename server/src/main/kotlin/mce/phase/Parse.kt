@@ -97,7 +97,7 @@ class Parse private constructor(
                     '∈' -> {
                         skip()
                         val right = parseTerm()
-                        S.Term.TaggedVar((left as? S.Term.Var)?.name ?: error("name expected"), right, id)
+                        S.Term.BoxOf(left, right, id)
                     }
                     '=' -> {
                         skip()
@@ -199,6 +199,10 @@ class Parse private constructor(
                 val elements = parseList('{', '}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)
             }
+            "box" -> {
+                val content = parseTerm()
+                S.Term.Box(content, id)
+            }
             "ref" -> S.Term.Ref(parseTerm(), id)
             "fun" -> {
                 val parameters = parseList('[', ']') { parseParameter() }
@@ -227,7 +231,16 @@ class Parse private constructor(
     private fun parsePattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
         '(' -> {
             skip()
-            parsePattern().also { expect(')') }
+            val left = parsePattern()
+            when (val char = peekChar()) {
+                ')' -> left
+                '∈' -> {
+                    skip()
+                    val right = parsePattern()
+                    S.Pattern.BoxOf(left, right, id)
+                }
+                else -> error("unexpected operator '$char'")
+            }.also { expect(')') }
         }
         '"' -> S.Pattern.StringOf(readString(), id)
         '[' -> when {

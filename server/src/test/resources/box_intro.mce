@@ -1,0 +1,1 @@
+def [] : box int ≔ (0 ∈ int)
