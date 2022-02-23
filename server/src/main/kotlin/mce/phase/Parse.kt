@@ -46,20 +46,24 @@ class Parse private constructor(
             skip()
             false
         } else true
-        val name = readWord()
-        val lower = if (peekChar() == '≥') {
-            skip()
-            parseTerm()
-        } else null
-        val upper = if (peekChar() == '≤') {
-            skip()
-            parseTerm()
-        } else null
-        val type = run {
-            expect(':')
-            parseTerm()
+        val name = parseTerm()
+        return if (peekChar() == ',' || peekChar() == ']') {
+            S.Parameter(erased, "", null, null, name)
+        } else {
+            val lower = if (peekChar() == '≥') {
+                skip()
+                parseTerm()
+            } else null
+            val upper = if (peekChar() == '≤') {
+                skip()
+                parseTerm()
+            } else null
+            val type = run {
+                expect(':')
+                parseTerm()
+            }
+            S.Parameter(erased, (name as S.Term.Name).name, lower, upper, type)
         }
-        return S.Parameter(erased, name, lower, upper, type)
     }
 
     private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {

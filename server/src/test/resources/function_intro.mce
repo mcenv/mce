@@ -1,1 +1,1 @@
-def : fun [α : type, a : α] → α ≔ λ [α, a] → (a ∈ α)
+def : fun [α : type, a : α, int] → int ≔ λ [α, a, i] → i
