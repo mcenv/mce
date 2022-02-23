@@ -1,0 +1,3 @@
+import {wildcard_export}
+
+def [] : int ≔ (wildcard_export [])

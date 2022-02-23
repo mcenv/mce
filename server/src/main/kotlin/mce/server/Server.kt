@@ -25,7 +25,7 @@ class Server(
                 is Key.ElaborateResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
                     val items = surfaceItem.imports
-                        .filter { fetch(Key.SurfaceItem(it)).let { item -> item.modifiers.contains(S.Modifier.BUILTIN) || item.exports.contains(surfaceItem.name) } }
+                        .filter { visible(fetch(Key.SurfaceItem(it)), surfaceItem.name) }
                         .map { async { fetch(Key.ElaborateResult(it)).item } }
                         .awaitAll()
                         .associateBy { it.name }
@@ -44,6 +44,8 @@ class Server(
     private fun read(name: String): String = Server::class.java.getResourceAsStream(name)!!.use {
         it.readAllBytes().toString(Charsets.UTF_8)
     }
+
+    private fun visible(item: S.Item, name: String): Boolean = item.modifiers.contains(S.Modifier.BUILTIN) || item.exports.contains("*") || item.exports.contains(name)
 
     fun edit(name: String): Nothing = TODO()
 

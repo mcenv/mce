@@ -348,4 +348,9 @@ class ElaborateTest {
         val result = elaborate("relevance_mismatch")
         assert(result.diagnostics.contains(Diagnostic.RelevanceMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun wildcardImport() {
+        elaborate("wildcard_import").success()
+    }
 }
