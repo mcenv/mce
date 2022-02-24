@@ -317,9 +317,26 @@ class ElaborateTest {
     }
 
     @Test
-    fun usePolymorphicVar() {
-        val result = elaborate("use_polymorphic_var")
+    fun polyVar() {
+        val result = elaborate("poly_var")
         assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun anyVar() {
+        val result = elaborate("any_var")
+        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun unionInvalidJoinVar() {
+        val result = elaborate("union_invalid_join_var")
+        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+    }
+
+    @Test
+    fun unionJoinVar() {
+        elaborate("union_join_var").success()
     }
 
     @Test

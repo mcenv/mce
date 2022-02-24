@@ -75,7 +75,7 @@ class Elaborate private constructor(
                     var type = entry.type
                     if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
                     if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
-                    checkRepresentation(term.id, type)
+                    normalizer.checkRepresentation(term.id, type)
                     type
                 }
             }
@@ -578,8 +578,8 @@ class Elaborate private constructor(
             value1 is C.Value.Apply && value2 is C.Value.Apply -> subtype(value1.function, value2.function) && (value1.arguments zip value2.arguments).all { normalizer.unify(it.first.value, it.second.value) /* pointwise subtyping */ }
             value1 is C.Value.Union -> value1.variants.all { subtype(it.value, value2) }
             value2 is C.Value.Union -> value2.variants.any { subtype(value1, it.value) }
-            value1 is C.Value.Intersection -> value1.variants.any { subtype(it.value, value2) }
             value2 is C.Value.Intersection -> value2.variants.all { subtype(value1, it.value) }
+            value1 is C.Value.Intersection -> value1.variants.any { subtype(it.value, value2) }
             value1 is C.Value.List && value2 is C.Value.List -> subtype(value1.element.value, value2.element.value)
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).foldAll(this) { context, (elements1, elements2) ->
@@ -619,6 +619,49 @@ class Elaborate private constructor(
             value1 is C.Value.BoxOf && value2 is C.Value.BoxOf -> match(value1.content.value, value2.content.value).match(value1.tag.value, value2.tag.value)
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> match(value1.element.value, value2.element.value)
             else -> this // TODO
+        }
+    }
+
+    private fun Normalizer.checkRepresentation(id: Id, type: C.Value) {
+        fun join(left: C.Value, right: C.Value): Boolean = when (val left = force(left)) {
+            is C.Value.Union -> left.variants.all { join(it.value, right) }
+            is C.Value.Intersection -> left.variants.any { join(it.value, right) }
+            is C.Value.Bool, is C.Value.Byte, is C.Value.Eq, is C.Value.Fun, is C.Value.Type -> when (force(right)) {
+                is C.Value.Bool, is C.Value.Byte, is C.Value.Eq, is C.Value.Fun, is C.Value.Type -> true
+                else -> false
+            }
+            is C.Value.Short -> right is C.Value.Short
+            is C.Value.Int, is C.Value.Ref -> when (force(right)) {
+                is C.Value.Int, is C.Value.Ref -> true
+                else -> false
+            }
+            is C.Value.Long -> right is C.Value.Long
+            is C.Value.Float -> right is C.Value.Float
+            is C.Value.Double -> right is C.Value.Double
+            is C.Value.String -> right is C.Value.String
+            is C.Value.ByteArray -> right is C.Value.ByteArray
+            is C.Value.IntArray -> right is C.Value.IntArray
+            is C.Value.LongArray -> right is C.Value.LongArray
+            is C.Value.List -> right is C.Value.List
+            is C.Value.Compound, is C.Value.Box -> when (force(right)) {
+                is C.Value.Compound, is C.Value.Box -> true
+                else -> false
+            }
+            else -> false
+        }
+
+        when (type) {
+            is C.Value.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
+            is C.Value.Union -> if (type.variants.size >= 2) {
+                val first = type.variants.first().value
+                if (!type.variants.drop(1).all { join(first, it.value) }) {
+                    diagnose(Diagnostic.PolymorphicRepresentation(id))
+                }
+            }
+            is C.Value.Intersection -> if (type.variants.isEmpty()) {
+                diagnose(Diagnostic.PolymorphicRepresentation(id))
+            }
+            else -> {}
         }
     }
 
@@ -683,13 +726,6 @@ class Elaborate private constructor(
 
         fun checkPhase(id: Id, type: C.Value) {
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
-        }
-    }
-
-    private fun checkRepresentation(id: Id, value: C.Value) {
-        when (value) {
-            is C.Value.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
-            else -> {}
         }
     }
 
