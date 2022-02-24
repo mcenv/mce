@@ -1,0 +1,8 @@
+def [] : (
+  true
+  =
+  match true [
+    false ⇒ true,
+    a     ⇒ a,
+  ]
+) ≔ refl

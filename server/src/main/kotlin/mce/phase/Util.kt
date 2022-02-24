@@ -20,3 +20,12 @@ inline fun <T, R> Iterable<T>.foldAll(initial: R, operation: (R, T) -> Pair<R, B
     }
     return accumulator to true
 }
+
+inline fun <T, R> Iterable<T>.firstMapOrNull(predicate: (T) -> Pair<R, Boolean>): R? {
+    firstOrNull {
+        val (element, success) = predicate(it)
+        if (success) return element
+        false
+    }
+    return null
+}

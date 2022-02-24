@@ -503,8 +503,7 @@ class Elaborate private constructor(
             value2 is C.Value.Meta -> unify(value2, value1)
             value1 is C.Value.Var && value2 is C.Value.Var -> value1.level == value2.level
             value1 is C.Value.Def && value2 is C.Value.Def && value1.name == value2.name -> true
-            value1 is C.Value.Match && value2 is C.Value.Match -> unify(value1.scrutinee, value2.scrutinee) &&
-                    (value1.clauses zip value2.clauses).all { (clause1, clause2) -> clause1.first == clause2.first && unify(clause1.second.value, clause2.second.value) }
+            value1 is C.Value.Match && value2 is C.Value.Match -> false // TODO
             value1 is C.Value.BoolOf && value2 is C.Value.BoolOf -> value1.value == value2.value
             value1 is C.Value.ByteOf && value2 is C.Value.ByteOf -> value1.value == value2.value
             value1 is C.Value.ShortOf && value2 is C.Value.ShortOf -> value1.value == value2.value

@@ -80,7 +80,17 @@ class Normalizer(
             } else eval(item.body)
         }
         is C.Term.Let -> bind(lazy { eval(term.init) }).eval(term.body)
-        is C.Term.Match -> C.Value.Match(eval(term.scrutinee), term.clauses.map { it.first to lazy { eval(it.second) /* TODO: collect variables */ } }, term.id)
+        is C.Term.Match -> {
+            val scrutinee = eval(term.scrutinee)
+            val clause = term.clauses.firstMapOrNull { (clause, body) ->
+                val (normalizer, matched) = match(clause, scrutinee)
+                (normalizer to body) to matched
+            }
+            when (clause) {
+                null -> C.Value.Match(scrutinee, term.clauses.map { (clause, body) -> clause to lazy { match(clause, scrutinee).first.eval(body) } }, term.id)
+                else -> clause.first.eval(clause.second)
+            }
+        }
         is C.Term.BoolOf -> C.Value.BoolOf(term.value, term.id)
         is C.Term.ByteOf -> C.Value.ByteOf(term.value, term.id)
         is C.Term.ShortOf -> C.Value.ShortOf(term.value, term.id)
@@ -131,6 +141,51 @@ class Normalizer(
         is C.Term.Fun -> C.Value.Fun(term.parameters, term.resultant, term.effects, term.id)
         is C.Term.Code -> C.Value.Code(lazy { eval(term.element) }, term.id)
         is C.Term.Type -> C.Value.Type(term.id)
+    }
+
+    private fun match(pattern: C.Pattern, value: C.Value): Pair<Normalizer, Boolean> = when {
+        pattern is C.Pattern.Var -> bind(lazyOf(value)) to true
+        pattern is C.Pattern.BoolOf && value is C.Value.BoolOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.ByteOf && value is C.Value.ByteOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.ShortOf && value is C.Value.ShortOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.IntOf && value is C.Value.IntOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.LongOf && value is C.Value.LongOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.FloatOf && value is C.Value.FloatOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.DoubleOf && value is C.Value.DoubleOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.StringOf && value is C.Value.StringOf -> this to (value.value == pattern.value)
+        pattern is C.Pattern.ByteArrayOf && value is C.Value.ByteArrayOf -> if (pattern.elements.size == value.elements.size) {
+            (pattern.elements zip value.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
+        } else this to false
+        pattern is C.Pattern.IntArrayOf && value is C.Value.IntArrayOf -> if (pattern.elements.size == value.elements.size) {
+            (pattern.elements zip value.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
+        } else this to false
+        pattern is C.Pattern.LongArrayOf && value is C.Value.LongArrayOf -> if (pattern.elements.size == value.elements.size) {
+            (pattern.elements zip value.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
+        } else this to false
+        pattern is C.Pattern.ListOf && value is C.Value.ListOf -> if (pattern.elements.size == value.elements.size) {
+            (pattern.elements zip value.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
+        } else this to false
+        pattern is C.Pattern.CompoundOf && value is C.Value.CompoundOf -> if (pattern.elements.size == value.elements.size) {
+            (pattern.elements zip value.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
+        } else this to false
+        pattern is C.Pattern.BoxOf && value is C.Value.BoxOf -> {
+            val (normalizer, matched) = match(pattern.content, value.content.value)
+            if (matched) normalizer.match(pattern.tag, value.tag.value) else normalizer to false
+        }
+        pattern is C.Pattern.RefOf && value is C.Value.RefOf -> match(pattern.element, value.element.value)
+        pattern is C.Pattern.Refl && value is C.Value.Refl -> this to true
+        pattern is C.Pattern.Bool && value is C.Value.Bool -> this to true
+        pattern is C.Pattern.Byte && value is C.Value.Byte -> this to true
+        pattern is C.Pattern.Short && value is C.Value.Short -> this to true
+        pattern is C.Pattern.Int && value is C.Value.Int -> this to true
+        pattern is C.Pattern.Long && value is C.Value.Long -> this to true
+        pattern is C.Pattern.Float && value is C.Value.Float -> this to true
+        pattern is C.Pattern.Double && value is C.Value.Double -> this to true
+        pattern is C.Pattern.String && value is C.Value.String -> this to true
+        pattern is C.Pattern.ByteArray && value is C.Value.ByteArray -> this to true
+        pattern is C.Pattern.IntArray && value is C.Value.IntArray -> this to true
+        pattern is C.Pattern.LongArray && value is C.Value.LongArray -> this to true
+        else -> this to false
     }
 
     /**

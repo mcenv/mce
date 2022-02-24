@@ -396,4 +396,9 @@ class ElaborateTest {
     fun functionEval() {
         elaborate("function_eval").success()
     }
+
+    @Test
+    fun matchEval() {
+        elaborate("match_eval").success()
+    }
 }
