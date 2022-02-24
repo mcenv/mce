@@ -527,7 +527,7 @@ class Elaborate private constructor(
             value1 is C.Value.RefOf && value2 is C.Value.RefOf -> unify(value1.element.value, value2.element.value)
             value1 is C.Value.Refl && value2 is C.Value.Refl -> true
             value1 is C.Value.FunOf && value2 is C.Value.FunOf -> value1.parameters.size == value2.parameters.size &&
-                    value1.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.Value.Var(parameter, normalizer.size))) }.unify(eval(value1.body), eval(value2.body))
+                    value1.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.Value.Var(parameter, normalizer.size))) }.run { unify(eval(value1.body), eval(value2.body)) }
             value1 is C.Value.Apply && value2 is C.Value.Apply -> unify(value1.function, value2.function) &&
                     (value1.arguments zip value2.arguments).all { unify(it.first.value, it.second.value) }
             value1 is C.Value.CodeOf && value2 is C.Value.CodeOf -> unify(value1.element.value, value2.element.value)

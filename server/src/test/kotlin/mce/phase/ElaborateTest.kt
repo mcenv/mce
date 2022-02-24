@@ -374,4 +374,9 @@ class ElaborateTest {
     fun polyDiscard() {
         elaborate("poly_discard").success()
     }
+
+    @Test
+    fun functionEval() {
+        elaborate("function_eval").success()
+    }
 }
