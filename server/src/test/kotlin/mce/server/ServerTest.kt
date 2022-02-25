@@ -1,33 +1,48 @@
 package mce.server
 
 import kotlinx.coroutines.runBlocking
-import mce.graph.Surface
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import mce.graph.Surface as S
 
 class ServerTest {
+    private fun runServer(action: suspend Server.() -> Unit) {
+        runBlocking {
+            Server().action()
+        }
+    }
+
     @Test
     fun hover() {
-        runBlocking {
-            Server().run {
-                val name = "server"
-                assertIs<Surface.Term.Bool>(hover(name, UUID(0, 0)).type)
-            }
+        runServer {
+            val name = "server"
+            val id = UUID(0, 0)
+            assertIs<S.Term.Bool>(hover(name, id).type)
         }
     }
 
     @Test
     fun counter() {
-        runBlocking {
-            Server().run {
-                val name = "server"
-                hover(name, UUID(0, 0))
-                assertEquals(1, getCount(Key.ElaborateResult(name)))
-                hover(name, UUID(0, 0))
-                assertEquals(1, getCount(Key.ElaborateResult(name)))
-            }
+        runServer {
+            val name = "server"
+            val id = UUID(0, 0)
+            hover(name, id)
+            assertEquals(1, getCount(Key.ElaborateResult(name)))
+            hover(name, id)
+            assertEquals(1, getCount(Key.ElaborateResult(name)))
+        }
+    }
+
+    @Test
+    fun completion() {
+        runServer {
+            val name = "completion"
+            val id = UUID(0, 0)
+            val item = completion(name, id).first()
+            assertEquals("a", item.name)
+            assertIs<S.Term.Int>(item.type)
         }
     }
 }

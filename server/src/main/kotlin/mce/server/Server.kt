@@ -50,6 +50,13 @@ class Server {
         return HoverItem(type)
     }
 
+    suspend fun completion(name: String, id: Id): List<CompletionItem> {
+        val output = fetch(Key.ElaborateResult(name))
+        return output.completions[id]?.let { completions ->
+            completions.map { (name, type) -> CompletionItem(name, serializeTerm(output.normalizer.quote(type))) }
+        } ?: emptyList()
+    }
+
     fun getCount(key: Key<*>): Int = counter[key] ?: 0
 
     private fun incrementCount(key: Key<*>) {

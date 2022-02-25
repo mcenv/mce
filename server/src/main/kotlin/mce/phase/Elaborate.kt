@@ -16,6 +16,7 @@ class Elaborate private constructor(
     private val items: Map<String, C.Item>
 ) {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
+    private val completions: MutableMap<Id, List<Pair<String, C.Value>>> = mutableMapOf()
     private val types: MutableMap<Id, C.Value> = mutableMapOf()
     private val solutions: MutableList<C.Value?> = mutableListOf()
 
@@ -57,7 +58,10 @@ class Elaborate private constructor(
      * Infers the type of the [term] under this context.
      */
     private fun Context.inferTerm(term: S.Term): Typing = when (term) {
-        is S.Term.Hole -> Typing(C.Term.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(END)), term.id)))
+        is S.Term.Hole -> {
+            completions[term.id] = entries.map { it.name to it.type }
+            Typing(C.Term.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(END)), term.id)))
+        }
         is S.Term.Meta -> {
             val type = normalizer.fresh(term.id)
             Typing(checkTerm(term, type), type)
@@ -290,6 +294,7 @@ class Elaborate private constructor(
         types[term.id] = type
         return when {
             term is S.Term.Hole -> {
+                completions[term.id] = entries.map { it.name to it.type }
                 diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quote(type)), term.id))
                 C.Term.Hole(term.id)
             }
@@ -703,18 +708,19 @@ class Elaborate private constructor(
         val item: C.Item,
         val types: Map<Id, C.Value>,
         val normalizer: Normalizer,
-        val diagnostics: List<Diagnostic>
+        val diagnostics: List<Diagnostic>,
+        val completions: Map<Id, List<Pair<String, C.Value>>>,
     )
 
     private data class Typing(
         val term: C.Term,
         val type: C.Value,
-        val effects: Set<C.Effect> = emptySet()
+        val effects: Set<C.Effect> = emptySet(),
     )
 
     private data class Effecting(
         val term: C.Term,
-        val effects: Set<C.Effect>
+        val effects: Set<C.Effect>,
     )
 
     private data class Entry(
@@ -723,7 +729,7 @@ class Elaborate private constructor(
         val lower: C.Value?,
         val upper: C.Value?,
         val type: C.Value,
-        val stage: Int
+        val stage: Int,
     )
 
     private inner class Context(
@@ -731,7 +737,7 @@ class Elaborate private constructor(
         val normalizer: Normalizer,
         val meta: Boolean,
         val stage: Int,
-        val relevant: Boolean
+        val relevant: Boolean,
     ) {
         val size: Int get() = entries.size
 
@@ -776,7 +782,7 @@ class Elaborate private constructor(
 
         operator fun invoke(item: S.Item, items: Map<String, C.Item>): Result = Elaborate(items).run {
             val (normalizer, item) = elaborateItem(item)
-            Result(item, types, normalizer, diagnostics)
+            Result(item, types, normalizer, diagnostics, completions)
         }
     }
 }
