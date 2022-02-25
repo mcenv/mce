@@ -406,4 +406,9 @@ class ElaborateTest {
     fun varSizedList() {
         elaborate("var_sized_list").success()
     }
+
+    @Test
+    fun listLength() {
+        elaborate("list_length").success()
+    }
 }

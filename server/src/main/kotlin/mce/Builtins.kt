@@ -77,5 +77,11 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.IntOf(0)
             else -> C.Value.Def("int/mod", mutableListOf(a, b).map(::lazyOf))
         }
+    },
+    "list/length" to {
+        when (val `as` = lookup(size - 1)) {
+            is C.Value.ListOf -> C.Value.IntOf(`as`.elements.size)
+            else -> C.Value.Def("list/length", listOf())
+        }
     }
 )

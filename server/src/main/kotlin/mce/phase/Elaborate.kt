@@ -296,6 +296,10 @@ class Elaborate private constructor(
             term is S.Term.Meta -> normalizer.quote(normalizer.fresh(term.id))
             term is S.Term.ListOf && type is C.Value.List -> {
                 val elements = term.elements.map { checkTerm(it, type.element.value) }
+                when (val size = normalizer.force(type.size.value)) {
+                    is C.Value.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
+                    else -> {}
+                }
                 C.Term.ListOf(elements, term.id)
             }
             term is S.Term.CompoundOf && type is C.Value.Compound -> {
@@ -455,7 +459,7 @@ class Elaborate private constructor(
             }
             pattern is S.Pattern.ListOf && type is C.Value.List -> {
                 val (context, elements) = pattern.elements.foldMap(this) { context, element -> context.checkPattern(element, type.element.value) }
-                when (val size = normalizer.force(type.size.value)) {
+                when (val size = context.normalizer.force(type.size.value)) {
                     is C.Value.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
                     else -> {}
                 }
