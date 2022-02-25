@@ -200,7 +200,16 @@ class Parse private constructor(
                 S.Term.List(element, size, id)
             }
             "compound" -> {
-                val elements = parseList('{', '}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
+                val elements = parseList('{', '}') {
+                    val left = parseTerm()
+                    if (peekChar() == ',' || peekChar() == '}') {
+                        "" to left
+                    } else {
+                        expect(':')
+                        val right = parseTerm()
+                        ((left as? S.Term.Var)?.name ?: error("name expected")) to right
+                    }
+                }
                 S.Term.Compound(elements, id)
             }
             "box" -> {

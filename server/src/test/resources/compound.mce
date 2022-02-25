@@ -1,1 +1,1 @@
-def [] : compound {α : type, a : α} ≔ {bool, false}
+def [] : compound {α : type, α} ≔ {bool, false}
