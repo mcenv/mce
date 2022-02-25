@@ -411,4 +411,9 @@ class ElaborateTest {
     fun listSize() {
         elaborate("list_size").success()
     }
+
+    @Test
+    fun boxInst() {
+        elaborate("box_inst").success()
+    }
 }

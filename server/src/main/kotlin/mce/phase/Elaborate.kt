@@ -419,9 +419,10 @@ class Elaborate private constructor(
             Triple(context, C.Pattern.CompoundOf(elements.map { it.first }, pattern.id), C.Value.Compound(elements.map { "" to context.normalizer.quote(it.second) }))
         }
         is S.Pattern.BoxOf -> {
-            val (context1, content, contentType) = inferPattern(pattern.content)
-            val (context2, tag) = context1.checkPattern(pattern.tag, TYPE)
-            Triple(context2, C.Pattern.BoxOf(content, tag, pattern.id), C.Value.Box(lazyOf(contentType)))
+            val (context1, tag) = checkPattern(pattern.tag, TYPE)
+            val vTag = tag.toType() ?: context1.normalizer.fresh(pattern.id)
+            val (context2, content) = context1.checkPattern(pattern.content, vTag)
+            Triple(context2, C.Pattern.BoxOf(content, tag, pattern.id), C.Value.Box(lazyOf(vTag)))
         }
         is S.Pattern.RefOf -> {
             val (context, element, elementType) = inferPattern(pattern.element)
@@ -439,9 +440,9 @@ class Elaborate private constructor(
         is S.Pattern.Float -> Triple(this, C.Pattern.Float(pattern.id), TYPE)
         is S.Pattern.Double -> Triple(this, C.Pattern.Double(pattern.id), TYPE)
         is S.Pattern.String -> Triple(this, C.Pattern.String(pattern.id), TYPE)
-        is S.Pattern.ByteArray -> Triple(this, C.Pattern.ByteArray(pattern.id), BYTE_ARRAY)
-        is S.Pattern.IntArray -> Triple(this, C.Pattern.IntArray(pattern.id), INT_ARRAY)
-        is S.Pattern.LongArray -> Triple(this, C.Pattern.LongArray(pattern.id), LONG_ARRAY)
+        is S.Pattern.ByteArray -> Triple(this, C.Pattern.ByteArray(pattern.id), TYPE)
+        is S.Pattern.IntArray -> Triple(this, C.Pattern.IntArray(pattern.id), TYPE)
+        is S.Pattern.LongArray -> Triple(this, C.Pattern.LongArray(pattern.id), TYPE)
     }.also { (_, _, type) ->
         types[pattern.id] = type
     }
@@ -470,8 +471,9 @@ class Elaborate private constructor(
                 context to C.Pattern.CompoundOf(elements, pattern.id)
             }
             pattern is S.Pattern.BoxOf && type is C.Value.Box -> {
-                val (context1, content) = checkPattern(pattern.content, type.content.value)
-                val (context2, tag) = context1.checkPattern(pattern.tag, TYPE)
+                val (context1, tag) = checkPattern(pattern.tag, TYPE)
+                val vTag = tag.toType() ?: type.content.value
+                val (context2, content) = context1.checkPattern(pattern.content, vTag)
                 context2 to C.Pattern.BoxOf(content, tag, pattern.id)
             }
             pattern is S.Pattern.RefOf && type is C.Value.Ref -> {
@@ -491,6 +493,21 @@ class Elaborate private constructor(
                 context to inferred
             }
         }
+    }
+
+    private fun C.Pattern.toType(): C.Value? = when (this) {
+        is C.Pattern.Bool -> BOOL
+        is C.Pattern.Byte -> BYTE
+        is C.Pattern.Short -> SHORT
+        is C.Pattern.Int -> INT
+        is C.Pattern.Long -> LONG
+        is C.Pattern.Float -> FLOAT
+        is C.Pattern.Double -> DOUBLE
+        is C.Pattern.String -> STRING
+        is C.Pattern.ByteArray -> BYTE_ARRAY
+        is C.Pattern.IntArray -> INT_ARRAY
+        is C.Pattern.LongArray -> LONG_ARRAY
+        else -> null
     }
 
     private fun elaborateEffect(effect: S.Effect): C.Effect = when (effect) {

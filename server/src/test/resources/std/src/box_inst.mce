@@ -1,0 +1,5 @@
+def [0 α : type, a : box α] : int ≔
+  match a [
+    (a ∈ int) ⇒ a,
+    a         ⇒ -1,
+  ]
