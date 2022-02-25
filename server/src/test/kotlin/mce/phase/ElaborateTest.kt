@@ -297,7 +297,7 @@ class ElaborateTest {
     @Test
     fun arityMismatch() {
         val result = elaborate("arity_mismatch")
-        assert(result.diagnostics.contains(Diagnostic.ArityMismatch(2, 1, UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.contains(Diagnostic.SizeMismatch(2, 1, UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -400,5 +400,10 @@ class ElaborateTest {
     @Test
     fun matchEval() {
         elaborate("match_eval").success()
+    }
+
+    @Test
+    fun varSizedList() {
+        elaborate("var_sized_list").success()
     }
 }

@@ -79,7 +79,7 @@ object Surface {
         data class ByteArray(override val id: Id) : Term()
         data class IntArray(override val id: Id) : Term()
         data class LongArray(override val id: Id) : Term()
-        data class List(val element: Term, override val id: Id) : Term()
+        data class List(val element: Term, val size: Term, override val id: Id) : Term()
         data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
         data class Box(val content: Term, override val id: Id) : Term()
         data class Ref(val element: Term, override val id: Id) : Term()

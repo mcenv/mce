@@ -194,7 +194,11 @@ class Parse private constructor(
             "byte_array" -> S.Term.ByteArray(id)
             "int_array" -> S.Term.IntArray(id)
             "long_array" -> S.Term.LongArray(id)
-            "list" -> S.Term.List(parseTerm(), id)
+            "list" -> {
+                val element = parseTerm()
+                val size = parseTerm()
+                S.Term.List(element, size, id)
+            }
             "compound" -> {
                 val elements = parseList('{', '}') { parsePair(::readWord, { expect(':') }, ::parseTerm) }
                 S.Term.Compound(elements, id)

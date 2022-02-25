@@ -102,11 +102,12 @@ class Elaborate private constructor(
             Typing(C.Term.LongArrayOf(elements, term.id), LONG_ARRAY)
         }
         is S.Term.ListOf -> if (term.elements.isEmpty()) {
-            Typing(C.Term.ListOf(emptyList(), term.id), C.Value.List(lazyOf(END)))
+            Typing(C.Term.ListOf(emptyList(), term.id), C.Value.List(lazyOf(END), lazyOf(C.Value.IntOf(0))))
         } else { // TODO: use union of element types
             val first = inferTerm(term.elements.first())
             val elements = listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }
-            Typing(C.Term.ListOf(elements, term.id), C.Value.List(lazyOf(first.type)))
+            val size = C.Value.IntOf(elements.size)
+            Typing(C.Term.ListOf(elements, term.id), C.Value.List(lazyOf(first.type), lazyOf(size)))
         }
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { "" to inferTerm(it) }
@@ -134,6 +135,7 @@ class Elaborate private constructor(
             val element = down().inferTerm(term.element)
             val type = when (val type = normalizer.force(element.type)) {
                 is C.Value.Code -> type.element.value
+                // TODO: unify flex elim
                 else -> diagnose(Diagnostic.CodeExpected(term.id))
             }
             Typing(C.Term.Splice(element.term, term.id), type)
@@ -159,7 +161,8 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray(term.id), TYPE)
         is S.Term.List -> {
             val element = checkTerm(term.element, TYPE)
-            Typing(C.Term.List(element, term.id), TYPE)
+            val size = checkTerm(term.size, INT)
+            Typing(C.Term.List(element, size, term.id), TYPE)
         }
         is S.Term.Compound -> {
             val (_, elements) = term.elements.foldMap(this) { context, (name, element) ->
@@ -200,7 +203,7 @@ class Elaborate private constructor(
             null -> Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
             is C.Item.Def -> {
                 if (item.parameters.size != computation.arguments.size) {
-                    diagnose(Diagnostic.ArityMismatch(item.parameters.size, computation.arguments.size, computation.id))
+                    diagnose(Diagnostic.SizeMismatch(item.parameters.size, computation.arguments.size, computation.id))
                 }
                 val (_, arguments) = (computation.arguments zip item.parameters).foldMap(this) { context, (argument, parameter) ->
                     val tArgument = checkTerm(argument, context.normalizer.eval(parameter.type))
@@ -249,7 +252,7 @@ class Elaborate private constructor(
             when (val type = normalizer.force(function.type)) {
                 is C.Value.Fun -> {
                     if (type.parameters.size != computation.arguments.size) {
-                        diagnose(Diagnostic.ArityMismatch(type.parameters.size, computation.arguments.size, computation.id))
+                        diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.arguments.size, computation.id))
                     }
                     val (context, arguments) = (computation.arguments zip type.parameters).foldMap(this) { context, (argument, parameter) ->
                         val tArgument = checkTerm(argument, context.normalizer.eval(parameter.type))
@@ -266,6 +269,7 @@ class Elaborate private constructor(
                     val resultant = context.normalizer.eval(type.resultant)
                     Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
                 }
+                // TODO: unify flex elim
                 else -> Typing(C.Term.Apply(function.term, computation.arguments.map { checkTerm(it, ANY) }, computation.id), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
             }
         }
@@ -340,7 +344,7 @@ class Elaborate private constructor(
             }
             computation is S.Term.FunOf && type is C.Value.Fun -> {
                 if (type.parameters.size != computation.parameters.size) {
-                    diagnose(Diagnostic.ArityMismatch(type.parameters.size, computation.parameters.size, computation.id))
+                    diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.parameters.size, computation.id))
                 }
                 val context = (computation.parameters zip type.parameters).fold(empty()) { context, (name, parameter) ->
                     val lower = parameter.lower?.let { context.normalizer.eval(it) }
@@ -400,7 +404,8 @@ class Elaborate private constructor(
         } else { // TODO: use union of element types
             val (context1, head, headType) = inferPattern(pattern.elements.first())
             val (context2, elements) = pattern.elements.drop(1).foldMap(context1) { context, element -> context.checkPattern(element, headType) }
-            Triple(context2, C.Pattern.ListOf(listOf(head) + elements, pattern.id), C.Value.List(lazyOf(headType)))
+            val size = C.Value.IntOf(elements.size)
+            Triple(context2, C.Pattern.ListOf(listOf(head) + elements, pattern.id), C.Value.List(lazyOf(headType), lazyOf(size)))
         }
         is S.Pattern.CompoundOf -> {
             val (context, elements) = pattern.elements.foldMap(this) { context, element ->
@@ -450,6 +455,10 @@ class Elaborate private constructor(
             }
             pattern is S.Pattern.ListOf && type is C.Value.List -> {
                 val (context, elements) = pattern.elements.foldMap(this) { context, element -> context.checkPattern(element, type.element.value) }
+                when (val size = normalizer.force(type.size.value)) {
+                    is C.Value.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
+                    else -> {}
+                }
                 context to C.Pattern.ListOf(elements, pattern.id)
             }
             pattern is S.Pattern.CompoundOf && type is C.Value.Compound -> {
@@ -544,7 +553,7 @@ class Elaborate private constructor(
             value1 is C.Value.ByteArray && value2 is C.Value.ByteArray -> true
             value1 is C.Value.IntArray && value2 is C.Value.IntArray -> true
             value1 is C.Value.LongArray && value2 is C.Value.LongArray -> true
-            value1 is C.Value.List && value2 is C.Value.List -> unify(value1.element.value, value2.element.value)
+            value1 is C.Value.List && value2 is C.Value.List -> unify(value1.element.value, value2.element.value) && unify(value1.size.value, value2.size.value)
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).foldAll(this) { normalizer, (element1, element2) ->
                         normalizer.bind(lazyOf(C.Value.Var("", normalizer.size))) to normalizer.unify(normalizer.eval(element1.second), normalizer.eval(element2.second))
@@ -579,7 +588,7 @@ class Elaborate private constructor(
             value2 is C.Value.Union -> value2.variants.any { subtype(value1, it.value) }
             value2 is C.Value.Intersection -> value2.variants.all { subtype(value1, it.value) }
             value1 is C.Value.Intersection -> value1.variants.any { subtype(it.value, value2) }
-            value1 is C.Value.List && value2 is C.Value.List -> subtype(value1.element.value, value2.element.value)
+            value1 is C.Value.List && value2 is C.Value.List -> subtype(value1.element.value, value2.element.value) && normalizer.unify(value1.size.value, value2.size.value)
             value1 is C.Value.Compound && value2 is C.Value.Compound -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).foldAll(this) { context, (elements1, elements2) ->
                         val upper1 = context.normalizer.eval(elements1.second)

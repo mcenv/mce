@@ -42,7 +42,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.ByteArray -> C.Term.ByteArray(id)
     is C.Term.IntArray -> C.Term.IntArray(id)
     is C.Term.LongArray -> C.Term.LongArray(id)
-    is C.Term.List -> C.Term.List(transform(element), id)
+    is C.Term.List -> C.Term.List(transform(element), transform(size), id)
     is C.Term.Compound -> C.Term.Compound(elements.map { it.first to transform(it.second) }, id)
     is C.Term.Box -> C.Term.Box(transform(content), id)
     is C.Term.Ref -> C.Term.Ref(transform(element), id)

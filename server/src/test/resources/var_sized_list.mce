@@ -1,0 +1,1 @@
+def [n : int, as : list int n] : list int n ≔ as

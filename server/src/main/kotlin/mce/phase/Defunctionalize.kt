@@ -112,7 +112,8 @@ class Defunctionalize private constructor() {
         is C.Term.LongArray -> D.Term.LongArray(term.id!!)
         is C.Term.List -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.List(element, term.id!!)
+            val size = defunctionalizeTerm(term.size)
+            D.Term.List(element, size, term.id!!)
         }
         is C.Term.Compound -> {
             val elements = term.elements.map { it.first to defunctionalizeTerm(it.second) }
