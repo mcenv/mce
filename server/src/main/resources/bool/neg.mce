@@ -1,0 +1,5 @@
+def [a : bool] : bool ≔
+  match a [
+    false ⇒ true,
+    true  ⇒ false,
+  ]

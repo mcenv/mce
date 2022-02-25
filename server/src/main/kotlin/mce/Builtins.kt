@@ -14,6 +14,24 @@ private val COMM: Comparator<C.Value> = Comparator { value1, value2 ->
 }
 
 val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
+    "int/eq" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
+        when {
+            a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.BoolOf(a.value == b.value)
+            // a == a = true
+            a is C.Value.Var && b is C.Value.Var && a.level == b.level -> C.Value.BoolOf(true)
+            else -> C.Value.Def("int/eq", listOf(a, b).sortedWith(COMM).map(::lazyOf))
+        }
+    },
+    "int/ne" to {
+        val a = lookup(size - 2)
+        val b = lookup(size - 1)
+        when {
+            a is C.Value.IntOf && b is C.Value.IntOf -> C.Value.BoolOf(a.value != b.value)
+            else -> C.Value.Def("int/ne", listOf(a, b).sortedWith(COMM).map(::lazyOf))
+        }
+    },
     "int/add" to {
         val a = lookup(size - 2)
         val b = lookup(size - 1)

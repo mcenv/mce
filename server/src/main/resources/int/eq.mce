@@ -1,0 +1,1 @@
+def {builtin} [a : int, b : int] : bool ≔ _
