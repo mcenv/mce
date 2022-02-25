@@ -2,7 +2,6 @@ package mce.server
 
 import kotlinx.coroutines.runBlocking
 import mce.graph.Surface
-import mce.read
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,7 +11,7 @@ class ServerTest {
     @Test
     fun hover() {
         runBlocking {
-            Server { read("/$it.mce") }.run {
+            Server().run {
                 val name = "server"
                 assertIs<Surface.Term.Bool>(hover(name, UUID(0, 0)).type)
             }
@@ -22,7 +21,7 @@ class ServerTest {
     @Test
     fun counter() {
         runBlocking {
-            Server { read("/$it.mce") }.run {
+            Server().run {
                 val name = "server"
                 hover(name, UUID(0, 0))
                 assertEquals(1, getCount(Key.ElaborateResult(name)))

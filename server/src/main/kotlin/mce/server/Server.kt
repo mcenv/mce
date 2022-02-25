@@ -3,15 +3,12 @@ package mce.server
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import mce.BUILTINS
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.phase.*
 import mce.graph.Surface as S
 
-class Server(
-    private val sources: (String) -> String
-) {
+class Server {
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
     private val counter: MutableMap<Key<*>, Int> = mutableMapOf()
 
@@ -20,7 +17,7 @@ class Server(
         getValue(key) ?: run {
             incrementCount(key)
             when (key) {
-                is Key.Source -> (if (BUILTINS.containsKey(key.name)) read("/${key.name}.mce") else sources(key.name)) as V
+                is Key.Source -> read(key.name) as V
                 is Key.SurfaceItem -> Parse(key.name, fetch(Key.Source(key.name))) as V
                 is Key.ElaborateResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
@@ -41,23 +38,17 @@ class Server(
         }
     }
 
-    private fun read(name: String): String = Server::class.java.getResourceAsStream(name)!!.use {
+    private fun read(name: String): String = Server::class.java.getResourceAsStream("/std/src/$name.mce")!!.use { // TODO: pack registration
         it.readAllBytes().toString(Charsets.UTF_8)
     }
 
     private fun visible(item: S.Item, name: String): Boolean = item.modifiers.contains(S.Modifier.BUILTIN) || item.exports.contains("*") || item.exports.contains(name)
-
-    fun edit(name: String): Nothing = TODO()
 
     suspend fun hover(name: String, id: Id): HoverItem {
         val output = fetch(Key.ElaborateResult(name))
         val type = serializeTerm(output.normalizer.quote(output.types[id]!!))
         return HoverItem(type)
     }
-
-    suspend fun build(): Nothing = TODO()
-
-    fun exit(): Nothing = TODO()
 
     fun getCount(key: Key<*>): Int = counter[key] ?: 0
 
