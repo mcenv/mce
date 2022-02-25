@@ -1,0 +1,1 @@
+def {builtin} [ls : long_array] : int ≔ _

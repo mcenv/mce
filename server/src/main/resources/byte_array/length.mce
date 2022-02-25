@@ -1,0 +1,1 @@
+def {builtin} [bs : byte_array] : int ≔ _

@@ -1,0 +1,1 @@
+def {builtin} [is : int_array] : int ≔ _
