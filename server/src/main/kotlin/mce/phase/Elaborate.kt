@@ -161,7 +161,7 @@ class Elaborate private constructor(
         is S.Term.LongArray -> Typing(C.Term.LongArray(term.id), TYPE)
         is S.Term.List -> {
             val element = checkTerm(term.element, TYPE)
-            val size = checkTerm(term.size, INT)
+            val size = irrelevant().checkTerm(term.size, INT)
             Typing(C.Term.List(element, size, term.id), TYPE)
         }
         is S.Term.Compound -> {
@@ -728,9 +728,9 @@ class Elaborate private constructor(
 
         fun down(): Context = Context(entries, normalizer, meta, stage - 1, relevant)
 
-        fun relevant(): Context = Context(entries, normalizer, meta, stage, true)
+        fun relevant(): Context = if (relevant) this else Context(entries, normalizer, meta, stage, true)
 
-        fun irrelevant(): Context = Context(entries, normalizer, meta, stage, false)
+        fun irrelevant(): Context = if (!relevant) this else Context(entries, normalizer, meta, stage, false)
 
         fun checkPhase(id: Id, type: C.Value) {
             if (!meta && type is C.Value.Code) diagnose(Diagnostic.PhaseMismatch(id))
