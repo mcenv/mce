@@ -96,31 +96,31 @@ val BUILTINS: Map<String, Normalizer.() -> C.Value> = mapOf(
             else -> C.Value.Def("int/mod", listOf(a, b).map(::lazyOf))
         }
     },
-    "byte_array/length" to {
+    "byte_array/size" to {
         when (val bs = lookup(size - 1)) {
             is C.Value.ListOf -> C.Value.IntOf(bs.elements.size)
-            else -> C.Value.Def("byte_array/length", listOf(bs).map(::lazyOf))
+            else -> C.Value.Def("byte_array/size", listOf(bs).map(::lazyOf))
         }
     },
-    "int_array/length" to {
+    "int_array/size" to {
         when (val `is` = lookup(size - 1)) {
             is C.Value.ListOf -> C.Value.IntOf(`is`.elements.size)
-            else -> C.Value.Def("int_array/length", listOf(`is`).map(::lazyOf))
+            else -> C.Value.Def("int_array/size", listOf(`is`).map(::lazyOf))
         }
     },
-    "long_array/length" to {
+    "long_array/size" to {
         when (val ls = lookup(size - 1)) {
             is C.Value.ListOf -> C.Value.IntOf(ls.elements.size)
-            else -> C.Value.Def("long_array/length", listOf(ls).map(::lazyOf))
+            else -> C.Value.Def("long_array/size", listOf(ls).map(::lazyOf))
         }
     },
-    "list/length" to {
+    "list/size" to {
         when (val `as` = lookup(size - 1)) {
             is C.Value.ListOf -> C.Value.IntOf(`as`.elements.size)
             else -> {
                 val α = lookup(size - 3)
                 val n = lookup(size - 2)
-                C.Value.Def("list/length", listOf(α, n, `as`).map(::lazyOf))
+                C.Value.Def("list/size", listOf(α, n, `as`).map(::lazyOf))
             }
         }
     }

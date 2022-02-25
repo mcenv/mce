@@ -1,3 +1,0 @@
-import {list/length}
-
-def [] : (3 = (list/length [?, ?, [0, 1, 2]])) ≔ refl

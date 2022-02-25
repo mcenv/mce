@@ -1,0 +1,3 @@
+import {list/size}
+
+def [] : (3 = (list/size [?, ?, [0, 1, 2]])) ≔ refl

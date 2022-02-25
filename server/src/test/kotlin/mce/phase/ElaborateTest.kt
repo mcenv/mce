@@ -408,7 +408,7 @@ class ElaborateTest {
     }
 
     @Test
-    fun listLength() {
-        elaborate("list_length").success()
+    fun listSize() {
+        elaborate("list_size").success()
     }
 }
