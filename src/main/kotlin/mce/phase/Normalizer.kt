@@ -15,7 +15,7 @@ class Normalizer(
 ) {
     val size: Int get() = values.size
 
-    fun lookup(level: Int): C.Value = values[level].value
+    fun lookup(level: Int): C.Value = values.getOrNull(level)?.value ?: C.Value.Var("", level)
 
     fun subst(level: Int, value: Lazy<C.Value>): Normalizer = Normalizer(values.set(level, value), items, solutions)
 

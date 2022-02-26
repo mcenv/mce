@@ -5,6 +5,7 @@ import mce.fetch
 import mce.server.Key
 import java.util.*
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import mce.graph.Core as C
@@ -48,7 +49,7 @@ class ElaborateTest {
     @Test
     fun functionClosed() {
         val result = elaborate("function_closed")
-        assert(result.diagnostics.contains(Diagnostic.VarNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
     }
 
     @Test
@@ -59,13 +60,13 @@ class ElaborateTest {
     @Test
     fun letEscape() {
         val result = elaborate("let_escape")
-        assert(result.diagnostics.contains(Diagnostic.VarNotFound("b", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("b", UUID(0, 0)))
     }
 
     @Test
     fun varNotFound() {
         val result = elaborate("var_not_found")
-        assert(result.diagnostics.contains(Diagnostic.VarNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
     }
 
     @Test
@@ -86,19 +87,19 @@ class ElaborateTest {
     @Test
     fun stageMismatch() {
         val result = elaborate("stage_mismatch")
-        assert(result.diagnostics.contains(Diagnostic.StageMismatch(1, 0, UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.StageMismatch(1, 0, UUID(0, 0)))
     }
 
     @Test
     fun phaseMismatch() {
         val result = elaborate("phase_mismatch")
-        assert(result.diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(UUID(0, 0)))
     }
 
     @Test
     fun phaseMismatchLocal() {
         val result = elaborate("phase_mismatch_local")
-        assert(result.diagnostics.contains(Diagnostic.PhaseMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(UUID(0, 0)))
     }
 
     @Test
@@ -114,7 +115,7 @@ class ElaborateTest {
     @Test
     fun matchEscape() {
         val result = elaborate("match_escape")
-        assert(result.diagnostics.contains(Diagnostic.VarNotFound("a", UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
     }
 
     @Test
@@ -297,13 +298,13 @@ class ElaborateTest {
     @Test
     fun arityMismatch() {
         val result = elaborate("arity_mismatch")
-        assert(result.diagnostics.contains(Diagnostic.SizeMismatch(2, 1, UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.SizeMismatch(2, 1, UUID(0, 0)))
     }
 
     @Test
     fun impureDef() {
         val result = elaborate("impure_def")
-        assert(result.diagnostics.contains(Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))
     }
 
     @Test
@@ -319,19 +320,19 @@ class ElaborateTest {
     @Test
     fun polyVar() {
         val result = elaborate("poly_var")
-        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
     }
 
     @Test
     fun anyVar() {
         val result = elaborate("any_var")
-        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
     }
 
     @Test
     fun unionInvalidJoinVar() {
         val result = elaborate("union_invalid_join_var")
-        assert(result.diagnostics.contains(Diagnostic.PolymorphicRepresentation(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
     }
 
     @Test
@@ -374,7 +375,7 @@ class ElaborateTest {
     @Test
     fun relevanceMismatch() {
         val result = elaborate("relevance_mismatch")
-        assert(result.diagnostics.contains(Diagnostic.RelevanceMismatch(UUID(0, 0)))) { result.diagnostics.joinToString("\n") }
+        assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(UUID(0, 0)))
     }
 
     @Test
@@ -415,5 +416,11 @@ class ElaborateTest {
     @Test
     fun boxInst() {
         elaborate("box_inst").success()
+    }
+
+    @Test
+    fun evalError() {
+        val result = elaborate("eval_error")
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
     }
 }
