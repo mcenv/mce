@@ -20,11 +20,11 @@ class Elaborate private constructor(
     private val types: MutableMap<Id, C.Value> = mutableMapOf()
     private val solutions: MutableList<C.Value?> = mutableListOf()
 
-    private fun elaborateItem(item: S.Item): Pair<Normalizer, C.Item> = when (item) {
+    private fun Normalizer.elaborateItem(item: S.Item): Pair<Normalizer, C.Item> = when (item) {
         is S.Item.Def -> {
             val context1 = run {
                 val meta = item.modifiers.contains(S.Modifier.META)
-                Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), meta, 0, false)
+                Context(persistentListOf(), this, meta, 0, false)
             }
             val (context2, parameters) = context1.elaborateParameters(item.parameters)
             val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
@@ -36,6 +36,11 @@ class Elaborate private constructor(
             }
             context2.checkPhase(item.body.id, resultant)
             context2.normalizer to C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body)
+        }
+        is S.Item.Module -> {
+            val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
+            val (normalizer, items) = item.items.foldMap(this) { normalizer, item -> normalizer.elaborateItem(item) }
+            normalizer to C.Item.Module(item.imports, item.exports, modifiers, item.name, items)
         }
     }
 
@@ -204,7 +209,6 @@ class Elaborate private constructor(
      */
     private fun Context.inferComputation(computation: S.Term): Typing = when (computation) {
         is S.Term.Def -> when (val item = items[computation.name]) {
-            null -> Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
             is C.Item.Def -> {
                 if (item.parameters.size != computation.arguments.size) {
                     diagnose(Diagnostic.SizeMismatch(item.parameters.size, computation.arguments.size, computation.id))
@@ -229,6 +233,7 @@ class Elaborate private constructor(
                 }
                 Typing(C.Term.Def(computation.name, arguments, computation.id), item.resultant, item.effects)
             }
+            else -> Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
         }
         is S.Term.Let -> {
             val init = inferComputation(computation.init)
@@ -781,7 +786,7 @@ class Elaborate private constructor(
         private val TYPE = C.Value.Type()
 
         operator fun invoke(item: S.Item, items: Map<String, C.Item>): Result = Elaborate(items).run {
-            val (normalizer, item) = elaborateItem(item)
+            val (normalizer, item) = Normalizer(persistentListOf(), this.items, solutions).elaborateItem(item)
             Result(item, types, normalizer, diagnostics, completions)
         }
     }

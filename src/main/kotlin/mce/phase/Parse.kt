@@ -10,12 +10,13 @@ class Parse private constructor(
 ) {
     private var cursor: Int = 0
 
-    private fun parseItem(name: String): S.Item {
+    private fun parseItem(): S.Item {
         var word = readWord()
         val imports = if (word == "import") parseList('{', '}', ::readWord).also { word = readWord() } else emptyList()
         val exports = if (word == "export") parseList('{', '}', ::readWord).also { word = readWord() } else emptyList()
         return when (word) {
             "def" -> {
+                val name = readWord()
                 val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
                 val parameters = parseList('[', ']') { parseParameter() }
                 val resultant = run {
@@ -32,10 +33,14 @@ class Parse private constructor(
                 }
                 S.Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body)
             }
+            "module" -> {
+                val name = readWord()
+                val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
+                expectString("≔")
+                val items = parseList('[', ']') { parseItem() }
+                S.Item.Module(imports, exports, modifiers, name, items)
+            }
             else -> error("unexpected item '$word'")
-        }.also {
-            skipWhitespace()
-            if (canRead()) error("end of file expected")
         }
     }
 
@@ -382,6 +387,12 @@ class Parse private constructor(
         private val FLOAT_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?f")
         private val DOUBLE_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?d")
 
-        operator fun invoke(name: String, input: String): S.Item = Parse(input).parseItem(name)
+        operator fun invoke(name: String, input: String): S.Item = Parse(input).run {
+            parseItem().also {
+                if (it.name != name) error("")
+                skipWhitespace()
+                if (canRead()) error("end of file expected")
+            }
+        }
     }
 }

@@ -1,1 +1,1 @@
-def [] : box string ≔ (0 ∈ string)
+def box_ill_typed_content [] : box string ≔ (0 ∈ string)

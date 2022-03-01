@@ -1,4 +1,4 @@
-def [] : list int 3 ≔
+def nested_patterns [] : list int 3 ≔
   match {{0}, {1, 2}} [
     {{a}, {b, c}} ⇒ [a, b, c],
     else          ⇒ [0, 0, 0]

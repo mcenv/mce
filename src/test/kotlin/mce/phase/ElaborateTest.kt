@@ -423,4 +423,19 @@ class ElaborateTest {
         val result = elaborate("eval_error")
         assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
     }
+
+    @Test
+    fun emptyModule() {
+        elaborate("empty_module").success()
+    }
+
+    @Test
+    fun nonEmptyModule() {
+        elaborate("non_empty_module").success()
+    }
+
+    @Test
+    fun nestedModules() {
+        elaborate("nested_modules").success()
+    }
 }

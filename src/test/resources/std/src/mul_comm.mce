@@ -1,3 +1,3 @@
 import {int/mul}
 
-def [a : int, b : int] : ((a int/mul b) = (b int/mul a)) ≔ refl
+def mul_comm [a : int, b : int] : ((a int/mul b) = (b int/mul a)) ≔ refl

@@ -1,1 +1,1 @@
-def [] : bool ≔ ((λ [x] → x) @ [false])
+def apply [] : bool ≔ ((λ [x] → x) @ [false])

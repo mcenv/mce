@@ -1,1 +1,1 @@
-def [] : int ≔ ((λ [a] → a) @ [0])
+def function_elim [] : int ≔ ((λ [a] → a) @ [0])

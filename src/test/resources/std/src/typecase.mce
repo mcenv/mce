@@ -1,4 +1,4 @@
-def [α : type] : string ≔
+def typecase [α : type] : string ≔
   match α [
     bool ⇒ "bool",
     byte ⇒ "byte",

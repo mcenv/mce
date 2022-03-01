@@ -1,1 +1,1 @@
-def [] : ((#0-0-0-0-0 a) = 0) ≔ refl
+def eval_error [] : ((#0-0-0-0-0 a) = 0) ≔ refl

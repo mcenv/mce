@@ -1,4 +1,4 @@
-def [] : bool ≔
+def match_escape [] : bool ≔
   match false [
     a ⇒ a,
     b ⇒ (#0-0-0-0-0 a)

@@ -1,1 +1,1 @@
-def [α : type, a : box α] : box α ≔ a
+def identity [α : type, a : box α] : box α ≔ a

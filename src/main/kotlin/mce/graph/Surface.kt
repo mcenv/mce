@@ -27,6 +27,14 @@ object Surface {
             val effects: KList<Effect>,
             val body: Term,
         ) : Item()
+
+        data class Module(
+            override val imports: KList<KString>,
+            override val exports: KList<KString>,
+            override val modifiers: KList<Modifier>,
+            override val name: KString,
+            val items: KList<Item>,
+        ) : Item()
     }
 
     enum class Modifier {

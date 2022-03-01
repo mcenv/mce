@@ -23,6 +23,13 @@ object Defunctionalized {
             val parameters: KList<Parameter>,
             val body: Term
         ) : Item()
+
+        data class Module(
+            override val imports: KList<KString>,
+            override val exports: KList<KString>,
+            override val name: KString,
+            val items: KList<Item>
+        ) : Item()
     }
 
     data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)

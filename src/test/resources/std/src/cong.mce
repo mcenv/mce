@@ -1,4 +1,4 @@
-def [a : bool, b : bool, p : (a = b)] : ([a] = [b]) ≔
+def cong [a : bool, b : bool, p : (a = b)] : ([a] = [b]) ≔
   match p [
     refl ⇒ refl
   ]

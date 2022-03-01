@@ -1,0 +1,4 @@
+module non_empty_module ≔ [
+  def a [] : int ≔ 0,
+  def b [] : int ≔ 1,
+]

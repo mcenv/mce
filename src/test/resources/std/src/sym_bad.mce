@@ -1,4 +1,4 @@
-def [a : bool, b : bool, p : (a = b)] : (b = false) ≔
+def sym_bad [a : bool, b : bool, p : (a = b)] : (b = false) ≔
   match p [
     refl ⇒ refl
   ]

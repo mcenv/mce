@@ -1,1 +1,1 @@
-def {builtin} [a : int, b : int] : bool ≔ _
+def int/ne {builtin} [a : int, b : int] : bool ≔ _

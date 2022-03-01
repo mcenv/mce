@@ -1,1 +1,1 @@
-def [] : ((λ [x] → x) = (λ [x] → x)) ≔ refl
+def function_eval [] : ((λ [x] → x) = (λ [x] → x)) ≔ refl

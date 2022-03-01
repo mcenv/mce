@@ -1,1 +1,1 @@
-def [] : (false = true) ≔ refl
+def not_eq [] : (false = true) ≔ refl

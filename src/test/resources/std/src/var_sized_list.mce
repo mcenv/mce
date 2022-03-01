@@ -1,1 +1,1 @@
-def [0 n : int, as : list int n] : list int n ≔ as
+def var_sized_list [0 n : int, as : list int n] : list int n ≔ as

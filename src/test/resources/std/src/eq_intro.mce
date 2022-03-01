@@ -1,1 +1,1 @@
-def [] : (false = false) ≔ refl
+def eq_intro [] : (false = false) ≔ refl

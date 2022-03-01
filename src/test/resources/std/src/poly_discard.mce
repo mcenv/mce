@@ -1,1 +1,1 @@
-def [α : type, a : α] : int ≔ 0
+def poly_discard [α : type, a : α] : int ≔ 0

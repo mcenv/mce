@@ -1,4 +1,4 @@
-def [a : bool] : bool ≔
+def bool/neg [a : bool] : bool ≔
   match a [
     false ⇒ true,
     true  ⇒ false,

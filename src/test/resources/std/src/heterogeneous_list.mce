@@ -1,1 +1,1 @@
-def [α : type, as : list α 1] : list α 1 ≔ as
+def heterogeneous_list [α : type, as : list α 1] : list α 1 ≔ as

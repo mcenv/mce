@@ -1,1 +1,1 @@
-def {builtin} [bs : byte_array] : int ≔ _
+def byte_array/size {builtin} [bs : byte_array] : int ≔ _

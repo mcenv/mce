@@ -15,6 +15,10 @@ class Defunctionalize private constructor() {
             val body = defunctionalizeTerm(item.body)
             D.Item.Def(item.imports, item.exports, item.name, parameters, body)
         }
+        is C.Item.Module -> {
+            val items = item.items.map { defunctionalizeItem(it) }
+            D.Item.Module(item.imports, item.exports, item.name, items)
+        }
     }
 
     private fun defunctionalizeParameter(parameter: C.Parameter): D.Parameter {

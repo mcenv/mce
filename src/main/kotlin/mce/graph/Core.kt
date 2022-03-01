@@ -34,6 +34,14 @@ object Core {
             val effects: KSet<Effect>,
             val body: Term,
         ) : Item()
+
+        data class Module(
+            override val imports: KList<KString>,
+            override val exports: KList<KString>,
+            override val modifiers: KSet<Modifier>,
+            override val name: KString,
+            val items: KList<Item>,
+        ) : Item()
     }
 
     enum class Modifier {

@@ -1,1 +1,1 @@
-def [] : int ≔ (0 : int)
+def anno [] : int ≔ (0 : int)

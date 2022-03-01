@@ -1,1 +1,1 @@
-def [α ≤ bool : type, a : box α] : box (union {bool, int}) ≔ a
+def subtype_trans [α ≤ bool : type, a : box α] : box (union {bool, int}) ≔ a

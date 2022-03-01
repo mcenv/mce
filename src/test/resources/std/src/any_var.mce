@@ -1,1 +1,1 @@
-def [a : any] : any ≔ (#0-0-0-0-0 a)
+def any_var [a : any] : any ≔ (#0-0-0-0-0 a)

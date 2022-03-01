@@ -1,4 +1,4 @@
-def [a : bool, b : bool, c : bool, p : (a = b), q : (b = c)] : (a = c) ≔
+def trans [a : bool, b : bool, c : bool, p : (a = b), q : (b = c)] : (a = c) ≔
   match p [
     refl ⇒ match q [
       refl ⇒ refl

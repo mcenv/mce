@@ -1,2 +1,2 @@
-def [] : list (union {byte, short, int, long, float, double, string, byte_array, list end 0, compound {}, int_array, long_array,}) 12 ≔
+def parse [] : list (union {byte, short, int, long, float, double, string, byte_array, list end 0, compound {}, int_array, long_array,}) 12 ≔
   [0b, 1s, 2, 3l, 4.0f, 5.0d, "6", [b;], [], {}, [i;], [l;]]

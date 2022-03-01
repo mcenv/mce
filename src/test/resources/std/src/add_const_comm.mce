@@ -1,3 +1,3 @@
 import {int/add}
 
-def [a : int] : ((a int/add 1) = (1 int/add a)) ≔ refl
+def add_const_comm [a : int] : ((a int/add 1) = (1 int/add a)) ≔ refl

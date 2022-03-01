@@ -1,1 +1,1 @@
-def [as : list int 1] : list int 1 ≔ as
+def homogeneous_list [as : list int 1] : list int 1 ≔ as

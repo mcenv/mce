@@ -1,4 +1,4 @@
-def [α : type, β : type, p : (α = β), a : box α] : box β ≔
+def cast [α : type, β : type, p : (α = β), a : box α] : box β ≔
   match p [
     refl ⇒ a
   ]

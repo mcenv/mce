@@ -1,1 +1,1 @@
-def [a : union {bool, byte}] : union {bool, byte} ≔ a
+def union_join_var [a : union {bool, byte}] : union {bool, byte} ≔ a
