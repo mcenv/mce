@@ -18,10 +18,24 @@ class Zonk private constructor(
             val body = zonkTerm(item.body)
             C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, item.effects, body)
         }
-        is C.Item.Module -> {
-            val items = item.items.map { zonkItem(it) }
-            C.Item.Module(item.imports, item.exports, item.modifiers, item.name, items)
+        is C.Item.Mod -> {
+            val type = zonkModule(item.type)
+            val body = zonkModule(item.body)
+            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, type, body)
         }
+    }
+
+    private fun zonkModule(module: C.Module): C.Module = when (module) {
+        is C.Module.Var -> module
+        is C.Module.Str -> {
+            val items = module.items.map { zonkItem(it) }
+            C.Module.Str(items, module.id!!)
+        }
+        is C.Module.Sig -> {
+            val types = module.types.map { (name, type) -> name to zonkTerm(type) }
+            C.Module.Sig(types, module.id!!)
+        }
+        is C.Module.Type -> module
     }
 
     private fun zonkTerm(term: C.Term): C.Term = when (term) {

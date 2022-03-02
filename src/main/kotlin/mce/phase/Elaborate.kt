@@ -13,20 +13,17 @@ import mce.graph.Surface as S
 
 @Suppress("NAME_SHADOWING")
 class Elaborate private constructor(
-    private val items: Map<String, C.Item>
+    private val items: Map<String, C.Item>,
 ) {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val completions: MutableMap<Id, List<Pair<String, C.Value>>> = mutableMapOf()
     private val types: MutableMap<Id, C.Value> = mutableMapOf()
     private val solutions: MutableList<C.Value?> = mutableListOf()
 
-    private fun Normalizer.elaborateItem(item: S.Item): Pair<Normalizer, C.Item> = when (item) {
+    private fun Context.elaborateItem(item: S.Item): Pair<Context, C.Item> = when (item) {
         is S.Item.Def -> {
-            val context1 = run {
-                val meta = item.modifiers.contains(S.Modifier.META)
-                Context(persistentListOf(), this, meta, 0, false)
-            }
-            val (context2, parameters) = context1.elaborateParameters(item.parameters)
+            val context1 = meta(item.modifiers.contains(S.Modifier.META))
+            val (context2, parameters) = context1.irrelevant().elaborateParameters(item.parameters)
             val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
             val resultant = context2.normalizer.eval(context2.checkTerm(item.resultant, TYPE))
             val effects = item.effects.map { elaborateEffect(it) }.toSet()
@@ -35,12 +32,13 @@ class Elaborate private constructor(
                 if (parameters.isEmpty()) body else C.Term.FunOf(parameters.map { it.name }, body, freshId())
             }
             context2.checkPhase(item.body.id, resultant)
-            context2.normalizer to C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body)
+            context2 to C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body)
         }
-        is S.Item.Module -> {
+        is S.Item.Mod -> {
             val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
-            val (normalizer, items) = item.items.foldMap(this) { normalizer, item -> normalizer.elaborateItem(item) }
-            normalizer to C.Item.Module(item.imports, item.exports, modifiers, item.name, items)
+            val (context1, type) = checkModule(item.type, C.Module.Type(null))
+            val (context2, body) = context1.checkModule(item.body, type)
+            context2 to C.Item.Mod(item.imports, item.exports, modifiers, item.name, type, body)
         }
     }
 
@@ -57,6 +55,38 @@ class Elaborate private constructor(
         val tUpper = parameter.upper?.let { context.checkTerm(it, vType) }
         val vUpper = tUpper?.let { context.normalizer.eval(it) }
         context.bindUnchecked(Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, tLower, tUpper, tType)
+    }
+
+    /**
+     * Infers the type of the [module] under this context.
+     */
+    private fun Context.inferModule(module: S.Module): Pair<Context, C.Module> = when (module) {
+        is S.Module.Var -> {
+            if (items[module.name] !is C.Item.Mod) {
+                diagnose(Diagnostic.ModNotFound(module.name, module.id))
+            }
+            this to C.Module.Var(module.name, module.id)
+        }
+        is S.Module.Str -> {
+            val (context, items) = module.items.foldMap(this) { context, item -> context.elaborateItem(item) }
+            context to C.Module.Str(items, module.id)
+        }
+        is S.Module.Sig -> {
+            val types = module.types.map { (name, type) -> name to checkTerm(type, TYPE) }
+            this to C.Module.Sig(types, module.id)
+        }
+        is S.Module.Type -> this to C.Module.Type(module.id)
+    }
+
+    /**
+     * Checks the [module] against the [type] under this context.
+     */
+    private fun Context.checkModule(module: S.Module, type: C.Module): Pair<Context, C.Module> = when {
+        else -> {
+            val inferred = inferModule(module)
+            // TODO
+            inferred
+        }
     }
 
     /**
@@ -756,6 +786,8 @@ class Elaborate private constructor(
 
         fun withNormalizer(normalizer: Normalizer): Context = Context(entries, normalizer, meta, stage, relevant)
 
+        fun meta(meta: Boolean): Context = Context(entries, normalizer, meta, stage, relevant)
+
         fun up(): Context = Context(entries, normalizer, meta, stage + 1, relevant)
 
         fun down(): Context = Context(entries, normalizer, meta, stage - 1, relevant)
@@ -786,8 +818,8 @@ class Elaborate private constructor(
         private val TYPE = C.Value.Type()
 
         operator fun invoke(item: S.Item, items: Map<String, C.Item>): Result = Elaborate(items).run {
-            val (normalizer, item) = Normalizer(persistentListOf(), this.items, solutions).elaborateItem(item)
-            Result(item, types, normalizer, diagnostics, completions)
+            val (context, item) = Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), false, 0, true).elaborateItem(item)
+            Result(item, types, context.normalizer, diagnostics, completions)
         }
     }
 }

@@ -15,9 +15,9 @@ class Defunctionalize private constructor() {
             val body = defunctionalizeTerm(item.body)
             D.Item.Def(item.imports, item.exports, item.name, parameters, body)
         }
-        is C.Item.Module -> {
-            val items = item.items.map { defunctionalizeItem(it) }
-            D.Item.Module(item.imports, item.exports, item.name, items)
+        is C.Item.Mod -> {
+            val body = defunctionalizeModule(item.body)
+            D.Item.Mod(item.imports, item.exports, item.name, body)
         }
     }
 
@@ -26,6 +26,19 @@ class Defunctionalize private constructor() {
         val upper = parameter.upper?.let { defunctionalizeTerm(it) }
         val type = defunctionalizeTerm(parameter.type)
         return D.Parameter(parameter.relevant, parameter.name, lower, upper, type)
+    }
+
+    private fun defunctionalizeModule(module: C.Module): D.Module = when (module) {
+        is C.Module.Var -> D.Module.Var(module.name, module.id)
+        is C.Module.Str -> {
+            val items = module.items.map { defunctionalizeItem(it) }
+            D.Module.Str(items, module.id!!)
+        }
+        is C.Module.Sig -> {
+            val types = module.types.map { (name, type) -> name to defunctionalizeTerm(type) }
+            D.Module.Sig(types, module.id!!)
+        }
+        is C.Module.Type -> D.Module.Type(module.id)
     }
 
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {

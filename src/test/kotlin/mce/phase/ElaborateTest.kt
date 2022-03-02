@@ -433,9 +433,4 @@ class ElaborateTest {
     fun nonEmptyModule() {
         elaborate("non_empty_module").success()
     }
-
-    @Test
-    fun nestedModules() {
-        elaborate("nested_modules").success()
-    }
 }

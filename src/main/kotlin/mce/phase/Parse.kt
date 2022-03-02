@@ -33,12 +33,14 @@ class Parse private constructor(
                 }
                 S.Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body)
             }
-            "module" -> {
+            "mod" -> {
                 val name = readWord()
                 val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
+                expect(':')
+                val type = parseModule()
                 expectString("≔")
-                val items = parseList('[', ']') { parseItem() }
-                S.Item.Module(imports, exports, modifiers, name, items)
+                val body = parseModule()
+                S.Item.Mod(imports, exports, modifiers, name, type, body)
             }
             else -> error("unexpected item '$word'")
         }
@@ -72,6 +74,21 @@ class Parse private constructor(
                 parseTerm()
             }
             S.Parameter(erased, (name as S.Term.Var).name, lower, upper, type)
+        }
+    }
+
+    private fun parseModule(id: Id = freshId()): S.Module = when (peekChar()) {
+        '[' -> {
+            val items = parseList('[', ']') { parseItem() }
+            S.Module.Str(items, id)
+        }
+        else -> when (val word = readWord()) {
+            "sig" -> {
+                val types = parseList('[', ']') { parsePair({ readWord() }, { expect(':') }, { parseTerm() }) }
+                S.Module.Sig(types, id)
+            }
+            "type" -> S.Module.Type(id)
+            else -> S.Module.Var(word, id)
         }
     }
 

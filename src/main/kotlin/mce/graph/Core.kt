@@ -35,21 +35,31 @@ object Core {
             val body: Term,
         ) : Item()
 
-        data class Module(
+        data class Mod(
             override val imports: KList<KString>,
             override val exports: KList<KString>,
             override val modifiers: KSet<Modifier>,
             override val name: KString,
-            val items: KList<Item>,
+            val type: Module,
+            val body: Module,
         ) : Item()
     }
 
     enum class Modifier {
         BUILTIN,
-        META
+        META,
     }
 
     data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)
+
+    sealed class Module {
+        abstract val id: Id?
+
+        data class Var(val name: KString, override val id: Id?) : Module()
+        data class Str(val items: KList<Item>, override val id: Id?) : Module()
+        data class Sig(val types: KList<Pair<KString, Term>>, override val id: Id?) : Module()
+        data class Type(override val id: Id?) : Module()
+    }
 
     /**
      * A syntactic term.

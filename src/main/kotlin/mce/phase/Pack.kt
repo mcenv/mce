@@ -28,7 +28,7 @@ class Pack private constructor(
             packTerm(item.body)
             P.Function(P.ResourceLocation(item.name), commands)
         }
-        is D.Item.Module -> TODO()
+        is D.Item.Mod -> TODO()
     }
 
     private fun Context.packTerm(term: D.Term) {

@@ -1,3 +1,0 @@
-module nested_modules ≔ [
-  module child ≔ []
-]

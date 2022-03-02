@@ -1,4 +1,7 @@
-module non_empty_module ≔ [
+mod non_empty_module : sig [
+  a : int,
+  b : int,
+] ≔ [
   def a [] : int ≔ 0,
   def b [] : int ≔ 1,
 ]

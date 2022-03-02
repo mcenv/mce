@@ -21,18 +21,27 @@ object Defunctionalized {
             override val exports: KList<KString>,
             override val name: KString,
             val parameters: KList<Parameter>,
-            val body: Term
+            val body: Term,
         ) : Item()
 
-        data class Module(
+        data class Mod(
             override val imports: KList<KString>,
             override val exports: KList<KString>,
             override val name: KString,
-            val items: KList<Item>
+            val body: Module,
         ) : Item()
     }
 
     data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)
+
+    sealed class Module {
+        abstract val id: Id?
+
+        data class Var(val name: KString, override val id: Id?) : Module()
+        data class Str(val items: KList<Item>, override val id: Id?) : Module()
+        data class Sig(val types: KList<Pair<KString, Term>>, override val id: Id?) : Module()
+        data class Type(override val id: Id?) : Module()
+    }
 
     sealed class Term {
         abstract val id: Id

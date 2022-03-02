@@ -15,10 +15,24 @@ class Stage private constructor(
             val body = stageTerm(item.body)
             C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, item.effects, body)
         }
-        is C.Item.Module -> {
-            val items = item.items.map { stageItem(it) }
-            C.Item.Module(item.imports, item.exports, item.modifiers, item.name, items)
+        is C.Item.Mod -> {
+            val type = stageModule(item.type)
+            val body = stageModule(item.body)
+            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, type, body)
         }
+    }
+
+    private fun stageModule(module: C.Module): C.Module = when (module) {
+        is C.Module.Var -> module
+        is C.Module.Str -> {
+            val items = module.items.map { stageItem(it) }
+            C.Module.Str(items, module.id!!)
+        }
+        is C.Module.Sig -> {
+            val types = module.types.map { (name, type) -> name to stageTerm(type) }
+            C.Module.Sig(types, module.id!!)
+        }
+        is C.Module.Type -> module
     }
 
     private fun stageTerm(term: C.Term): C.Term = when (term) {
