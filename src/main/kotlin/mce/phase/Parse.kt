@@ -78,18 +78,34 @@ class Parse private constructor(
     }
 
     private fun parseModule(id: Id = freshId()): S.Module = when (peekChar()) {
-        '[' -> {
-            val items = parseList('[', ']') { parseItem() }
+        '{' -> {
+            val items = parseList('{', '}') { parseItem() }
             S.Module.Str(items, id)
         }
         else -> when (val word = readWord()) {
             "sig" -> {
-                val types = parseList('[', ']') { parsePair({ readWord() }, { expect(':') }, { parseTerm() }) }
-                S.Module.Sig(types, id)
+                val signatures = parseList('{', '}') { parseSignature() }
+                S.Module.Sig(signatures, id)
             }
             "type" -> S.Module.Type(id)
             else -> S.Module.Var(word, id)
         }
+    }
+
+    private fun parseSignature(id: Id = freshId()): S.Signature = when (val word = readWord()) {
+        "def" -> {
+            val name = readWord()
+            expect(':')
+            val type = parseTerm()
+            S.Signature.Def(name, type, id)
+        }
+        "mod" -> {
+            val name = readWord()
+            expect(':')
+            val type = parseModule()
+            S.Signature.Mod(name, type, id)
+        }
+        else -> error("unexpected signature '$word'")
     }
 
     private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {

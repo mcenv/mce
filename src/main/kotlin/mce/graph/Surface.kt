@@ -50,8 +50,15 @@ object Surface {
 
         data class Var(val name: KString, override val id: Id) : Module()
         data class Str(val items: KList<Item>, override val id: Id) : Module()
-        data class Sig(val types: KList<Pair<KString, Term>>, override val id: Id) : Module()
+        data class Sig(val signatures: KList<Signature>, override val id: Id) : Module()
         data class Type(override val id: Id) : Module()
+    }
+
+    sealed class Signature {
+        abstract val id: Id
+
+        data class Def(val name: KString, val type: Term, override val id: Id) : Signature()
+        data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
     }
 
     sealed class Term {

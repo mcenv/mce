@@ -29,13 +29,24 @@ class Zonk private constructor(
         is C.Module.Var -> module
         is C.Module.Str -> {
             val items = module.items.map { zonkItem(it) }
-            C.Module.Str(items, module.id!!)
+            C.Module.Str(items, module.id)
         }
         is C.Module.Sig -> {
-            val types = module.types.map { (name, type) -> name to zonkTerm(type) }
-            C.Module.Sig(types, module.id!!)
+            val signatures = module.signatures.map { zonkSignature(it) }
+            C.Module.Sig(signatures, module.id)
         }
         is C.Module.Type -> module
+    }
+
+    private fun zonkSignature(signature: C.Signature): C.Signature = when (signature) {
+        is C.Signature.Def -> {
+            val type = zonkTerm(signature.type)
+            C.Signature.Def(signature.name, type, signature.id)
+        }
+        is C.Signature.Mod -> {
+            val type = zonkModule(signature.type)
+            C.Signature.Mod(signature.name, type, signature.id)
+        }
     }
 
     private fun zonkTerm(term: C.Term): C.Term = when (term) {

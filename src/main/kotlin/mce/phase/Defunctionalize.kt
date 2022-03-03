@@ -35,10 +35,21 @@ class Defunctionalize private constructor() {
             D.Module.Str(items, module.id!!)
         }
         is C.Module.Sig -> {
-            val types = module.types.map { (name, type) -> name to defunctionalizeTerm(type) }
-            D.Module.Sig(types, module.id!!)
+            val signatures = module.signatures.map { defunctionalizeSignature(it) }
+            D.Module.Sig(signatures, module.id!!)
         }
         is C.Module.Type -> D.Module.Type(module.id)
+    }
+
+    private fun defunctionalizeSignature(signature: C.Signature): D.Signature = when (signature) {
+        is C.Signature.Def -> {
+            val type = defunctionalizeTerm(signature.type)
+            D.Signature.Def(signature.name, type, signature.id)
+        }
+        is C.Signature.Mod -> {
+            val type = defunctionalizeModule(signature.type)
+            D.Signature.Mod(signature.name, type, signature.id)
+        }
     }
 
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {

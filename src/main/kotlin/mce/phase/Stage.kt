@@ -29,10 +29,21 @@ class Stage private constructor(
             C.Module.Str(items, module.id!!)
         }
         is C.Module.Sig -> {
-            val types = module.types.map { (name, type) -> name to stageTerm(type) }
-            C.Module.Sig(types, module.id!!)
+            val signatures = module.signatures.map { stageSignature(it) }
+            C.Module.Sig(signatures, module.id!!)
         }
         is C.Module.Type -> module
+    }
+
+    private fun stageSignature(signature: C.Signature): C.Signature = when (signature) {
+        is C.Signature.Def -> {
+            val type = stageTerm(signature.type)
+            C.Signature.Def(signature.name, type, signature.id)
+        }
+        is C.Signature.Mod -> {
+            val type = stageModule(signature.type)
+            C.Signature.Mod(signature.name, type, signature.id)
+        }
     }
 
     private fun stageTerm(term: C.Term): C.Term = when (term) {
