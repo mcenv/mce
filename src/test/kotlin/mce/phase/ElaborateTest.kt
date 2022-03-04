@@ -433,4 +433,14 @@ class ElaborateTest {
     fun nonEmptyModule() {
         elaborate("non_empty_module").success()
     }
+
+    @Test
+    fun signature() {
+        elaborate("signature").success()
+    }
+
+    @Test
+    fun structure() {
+        elaborate("structure").success()
+    }
 }
