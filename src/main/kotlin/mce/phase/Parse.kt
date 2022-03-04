@@ -95,9 +95,12 @@ class Parse private constructor(
     private fun parseSignature(id: Id = freshId()): S.Signature = when (val word = readWord()) {
         "def" -> {
             val name = readWord()
-            expect(':')
-            val type = parseTerm()
-            S.Signature.Def(name, type, id)
+            val parameters = parseList('[', ']') { parseParameter() }
+            val resultant = run {
+                expect(':')
+                parseTerm()
+            }
+            S.Signature.Def(name, parameters, resultant, id)
         }
         "mod" -> {
             val name = readWord()

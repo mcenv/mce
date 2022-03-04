@@ -12,14 +12,22 @@ class Stage private constructor(
 ) {
     private fun stageItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
+            val parameters = item.parameters.map { stageParameter(it) }
             val body = stageTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, item.effects, body)
+            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body)
         }
         is C.Item.Mod -> {
             val type = stageModule(item.type)
             val body = stageModule(item.body)
             C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, type, body)
         }
+    }
+
+    private fun stageParameter(parameter: C.Parameter): C.Parameter {
+        val lower = parameter.lower?.let { stageTerm(it) }
+        val upper = parameter.upper?.let { stageTerm(it) }
+        val type = stageTerm(parameter.type)
+        return C.Parameter(parameter.relevant, parameter.name, lower, upper, type)
     }
 
     private fun stageModule(module: C.Module): C.Module = when (module) {
@@ -37,8 +45,9 @@ class Stage private constructor(
 
     private fun stageSignature(signature: C.Signature): C.Signature = when (signature) {
         is C.Signature.Def -> {
-            val type = stageTerm(signature.type)
-            C.Signature.Def(signature.name, type, signature.id)
+            val parameters = signature.parameters.map { stageParameter(it) }
+            val resultant = stageTerm(signature.resultant)
+            C.Signature.Def(signature.name, parameters, resultant, signature.id)
         }
         is C.Signature.Mod -> {
             val type = stageModule(signature.type)

@@ -93,8 +93,9 @@ class Elaborate private constructor(
 
     private fun Context.elaborateSignature(signature: S.Signature): C.Signature = when (signature) {
         is S.Signature.Def -> {
-            val type = checkTerm(signature.type, TYPE)
-            C.Signature.Def(signature.name, type, signature.id)
+            val (context, parameters) = irrelevant().elaborateParameters(signature.parameters)
+            val resultant = context.checkTerm(signature.resultant, TYPE)
+            C.Signature.Def(signature.name, parameters, resultant, signature.id)
         }
         is S.Signature.Mod -> {
             val type = checkModule(signature.type, C.Module.Type(null))

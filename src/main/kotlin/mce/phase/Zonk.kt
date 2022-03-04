@@ -15,14 +15,22 @@ class Zonk private constructor(
 
     private fun zonkItem(item: C.Item): C.Item = when (item) {
         is C.Item.Def -> {
+            val parameters = item.parameters.map { zonkParameter(it) }
             val body = zonkTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, item.parameters, item.resultant, item.effects, body)
+            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body)
         }
         is C.Item.Mod -> {
             val type = zonkModule(item.type)
             val body = zonkModule(item.body)
             C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, type, body)
         }
+    }
+
+    private fun zonkParameter(parameter: C.Parameter): C.Parameter {
+        val lower = parameter.lower?.let { zonkTerm(it) }
+        val upper = parameter.upper?.let { zonkTerm(it) }
+        val type = zonkTerm(parameter.type)
+        return C.Parameter(parameter.relevant, parameter.name, lower, upper, type)
     }
 
     private fun zonkModule(module: C.Module): C.Module = when (module) {
@@ -40,8 +48,9 @@ class Zonk private constructor(
 
     private fun zonkSignature(signature: C.Signature): C.Signature = when (signature) {
         is C.Signature.Def -> {
-            val type = zonkTerm(signature.type)
-            C.Signature.Def(signature.name, type, signature.id)
+            val parameters = signature.parameters.map { zonkParameter(it) }
+            val resultant = zonkTerm(signature.resultant)
+            C.Signature.Def(signature.name, parameters, resultant, signature.id)
         }
         is C.Signature.Mod -> {
             val type = zonkModule(signature.type)

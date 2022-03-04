@@ -46,7 +46,7 @@ object Defunctionalized {
     sealed class Signature {
         abstract val id: Id
 
-        data class Def(val name: KString, val type: Term, override val id: Id) : Signature()
+        data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Signature()
         data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
     }
 
