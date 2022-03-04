@@ -45,11 +45,11 @@ class Defunctionalize private constructor() {
         is C.Signature.Def -> {
             val parameters = signature.parameters.map { defunctionalizeParameter(it) }
             val resultant = defunctionalizeTerm(signature.resultant)
-            D.Signature.Def(signature.name, parameters, resultant, signature.id)
+            D.Signature.Def(signature.name, parameters, resultant, signature.id!!)
         }
         is C.Signature.Mod -> {
             val type = defunctionalizeModule(signature.type)
-            D.Signature.Mod(signature.name, type, signature.id)
+            D.Signature.Mod(signature.name, type, signature.id!!)
         }
     }
 
