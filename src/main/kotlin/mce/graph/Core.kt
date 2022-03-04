@@ -52,6 +52,9 @@ object Core {
 
     data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)
 
+    /**
+     * A syntactic module.
+     */
     sealed class Module {
         abstract val id: Id?
 
@@ -61,11 +64,14 @@ object Core {
         data class Type(override val id: Id?) : Module()
     }
 
+    /**
+     * A syntactic signature.
+     */
     sealed class Signature {
-        abstract val id: Id
+        abstract val id: Id?
 
-        data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Signature()
-        data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
+        data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id?) : Signature()
+        data class Mod(val name: KString, val type: Module, override val id: Id?) : Signature()
     }
 
     /**
@@ -124,43 +130,7 @@ object Core {
     }
 
     /**
-     * A syntactic pattern.
-     */
-    sealed class Pattern {
-        abstract val id: Id
-
-        data class Var(val name: KString, override val id: Id) : Pattern()
-        data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
-        data class ByteOf(val value: KByte, override val id: Id) : Pattern()
-        data class ShortOf(val value: KShort, override val id: Id) : Pattern()
-        data class IntOf(val value: KInt, override val id: Id) : Pattern()
-        data class LongOf(val value: KLong, override val id: Id) : Pattern()
-        data class FloatOf(val value: KFloat, override val id: Id) : Pattern()
-        data class DoubleOf(val value: KDouble, override val id: Id) : Pattern()
-        data class StringOf(val value: KString, override val id: Id) : Pattern()
-        data class ByteArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-        data class IntArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-        data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-        data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-        data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-        data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
-        data class RefOf(val element: Pattern, override val id: Id) : Pattern()
-        data class Refl(override val id: Id) : Pattern()
-        data class Bool(override val id: Id) : Pattern()
-        data class Byte(override val id: Id) : Pattern()
-        data class Short(override val id: Id) : Pattern()
-        data class Int(override val id: Id) : Pattern()
-        data class Long(override val id: Id) : Pattern()
-        data class Float(override val id: Id) : Pattern()
-        data class Double(override val id: Id) : Pattern()
-        data class String(override val id: Id) : Pattern()
-        data class ByteArray(override val id: Id) : Pattern()
-        data class IntArray(override val id: Id) : Pattern()
-        data class LongArray(override val id: Id) : Pattern()
-    }
-
-    /**
-     * A semantic object.
+     * A semantic term.
      */
     sealed class Value {
         abstract val id: Id?
@@ -211,6 +181,42 @@ object Core {
         data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>, override val id: Id? = null) : Value()
         data class Code(val element: Lazy<Value>, override val id: Id? = null) : Value()
         data class Type(override val id: Id? = null) : Value()
+    }
+
+    /**
+     * A syntactic pattern.
+     */
+    sealed class Pattern {
+        abstract val id: Id
+
+        data class Var(val name: KString, override val id: Id) : Pattern()
+        data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
+        data class ByteOf(val value: KByte, override val id: Id) : Pattern()
+        data class ShortOf(val value: KShort, override val id: Id) : Pattern()
+        data class IntOf(val value: KInt, override val id: Id) : Pattern()
+        data class LongOf(val value: KLong, override val id: Id) : Pattern()
+        data class FloatOf(val value: KFloat, override val id: Id) : Pattern()
+        data class DoubleOf(val value: KDouble, override val id: Id) : Pattern()
+        data class StringOf(val value: KString, override val id: Id) : Pattern()
+        data class ByteArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class IntArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class CompoundOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+        data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
+        data class RefOf(val element: Pattern, override val id: Id) : Pattern()
+        data class Refl(override val id: Id) : Pattern()
+        data class Bool(override val id: Id) : Pattern()
+        data class Byte(override val id: Id) : Pattern()
+        data class Short(override val id: Id) : Pattern()
+        data class Int(override val id: Id) : Pattern()
+        data class Long(override val id: Id) : Pattern()
+        data class Float(override val id: Id) : Pattern()
+        data class Double(override val id: Id) : Pattern()
+        data class String(override val id: Id) : Pattern()
+        data class ByteArray(override val id: Id) : Pattern()
+        data class IntArray(override val id: Id) : Pattern()
+        data class LongArray(override val id: Id) : Pattern()
     }
 
     sealed class Effect {

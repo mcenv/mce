@@ -20,13 +20,16 @@ class Elaborate private constructor(
     private val types: MutableMap<Id, C.Value> = mutableMapOf()
     private val solutions: MutableList<C.Value?> = mutableListOf()
 
+    /**
+     * Elaborates the [item].
+     */
     private fun elaborateItem(item: S.Item): C.Item {
         val context = Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), false, 0, true)
         val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
         return when (item) {
             is S.Item.Def -> {
                 val context1 = context.meta(item.modifiers.contains(S.Modifier.META))
-                val (context2, parameters) = context1.irrelevant().elaborateParameters(item.parameters)
+                val (context2, parameters) = context1.irrelevant().bindParameters(item.parameters)
                 val resultant = context2.normalizer.eval(context2.checkTerm(item.resultant, TYPE))
                 val effects = item.effects.map { elaborateEffect(it) }.toSet()
                 val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else run {
@@ -44,12 +47,18 @@ class Elaborate private constructor(
         }
     }
 
+    /**
+     * Elaborates the [modifier].
+     */
     private fun elaborateModifier(modifier: S.Modifier): C.Modifier = when (modifier) {
         S.Modifier.BUILTIN -> C.Modifier.BUILTIN
         S.Modifier.META -> C.Modifier.META
     }
 
-    private fun Context.elaborateParameters(parameters: List<S.Parameter>): Pair<Context, List<C.Parameter>> = parameters.foldMap(this) { context, parameter ->
+    /**
+     * Binds the [parameters] to this context.
+     */
+    private fun Context.bindParameters(parameters: List<S.Parameter>): Pair<Context, List<C.Parameter>> = parameters.foldMap(this) { context, parameter ->
         val tType = context.checkTerm(parameter.type, TYPE)
         val vType = context.normalizer.eval(tType)
         val tLower = parameter.lower?.let { context.checkTerm(it, vType) }
@@ -62,38 +71,52 @@ class Elaborate private constructor(
     /**
      * Infers the type of the [module] under this context.
      */
-    private fun Context.inferModule(module: S.Module): C.Module = when (module) {
-        is S.Module.Var -> {
-            if (items[module.name] !is C.Item.Mod) {
+    private fun Context.inferModule(module: S.Module): Pair<C.Module, C.Module> = when (module) {
+        is S.Module.Var -> when (val item = items[module.name]) {
+            is C.Item.Mod -> C.Module.Var(module.name, module.id) to item.type
+            else -> {
                 diagnose(Diagnostic.ModNotFound(module.name, module.id))
+                C.Module.Var(module.name, module.id) to TODO()
             }
-            C.Module.Var(module.name, module.id)
         }
         is S.Module.Str -> {
             val items = module.items.map { elaborateItem(it) }
-            C.Module.Str(items, module.id)
+            val signatures = items.map { item ->
+                when (item) {
+                    is C.Item.Def -> C.Signature.Def(item.name, item.parameters, normalizer.quote(item.resultant), null)
+                    is C.Item.Mod -> C.Signature.Mod(item.name, item.type, null)
+                }
+            }
+            C.Module.Str(items, module.id) to C.Module.Sig(signatures, null)
         }
         is S.Module.Sig -> {
             val signatures = module.signatures.map { elaborateSignature(it) }
-            C.Module.Sig(signatures, module.id)
+            C.Module.Sig(signatures, module.id) to C.Module.Type(null)
         }
-        is S.Module.Type -> C.Module.Type(module.id)
+        is S.Module.Type -> C.Module.Type(module.id) to C.Module.Type(null)
     }
 
     /**
      * Checks the [module] against the [type] under this context.
      */
     private fun Context.checkModule(module: S.Module, type: C.Module): C.Module = when {
+        module is S.Module.Str && type is C.Module.Sig -> {
+            val items = module.items.map { elaborateItem(it) /* TODO: check type */ }
+            C.Module.Str(items, module.id)
+        }
         else -> {
-            val inferred = inferModule(module)
-            // TODO
+            val (inferred, inferredType) = inferModule(module)
+            // TODO: check type
             inferred
         }
     }
 
+    /**
+     * Elaborates the [signature] under this context.
+     */
     private fun Context.elaborateSignature(signature: S.Signature): C.Signature = when (signature) {
         is S.Signature.Def -> {
-            val (context, parameters) = irrelevant().elaborateParameters(signature.parameters)
+            val (context, parameters) = irrelevant().bindParameters(signature.parameters)
             val resultant = context.checkTerm(signature.resultant, TYPE)
             C.Signature.Def(signature.name, parameters, resultant, signature.id)
         }
@@ -327,7 +350,7 @@ class Elaborate private constructor(
             }
         }
         is S.Term.Fun -> {
-            val (context, parameters) = elaborateParameters(computation.parameters)
+            val (context, parameters) = bindParameters(computation.parameters)
             val resultant = context.checkTerm(computation.resultant, TYPE) /* TODO: check effects */
             val effects = computation.effects.map { elaborateEffect(it) }.toSet()
             Typing(C.Term.Fun(parameters, resultant, effects, computation.id), TYPE)
@@ -549,6 +572,9 @@ class Elaborate private constructor(
         }
     }
 
+    /**
+     * Converts this pattern to a semantic term.
+     */
     private fun C.Pattern.toType(): C.Value? = when (this) {
         is C.Pattern.Bool -> BOOL
         is C.Pattern.Byte -> BYTE
@@ -564,6 +590,9 @@ class Elaborate private constructor(
         else -> null
     }
 
+    /**
+     * Elaborates the [effect].
+     */
     private fun elaborateEffect(effect: S.Effect): C.Effect = when (effect) {
         is S.Effect.Name -> C.Effect.Name(effect.name)
     }
@@ -705,6 +734,9 @@ class Elaborate private constructor(
         }
     }
 
+    /**
+     * Ensures that the representation of the [type] is monomorphic under this normalizer.
+     */
     private fun Normalizer.checkRepresentation(id: Id, type: C.Value) {
         fun join(left: C.Value, right: C.Value): Boolean = when (val left = force(left)) {
             is C.Value.Union -> left.variants.all { join(it.value, right) }
