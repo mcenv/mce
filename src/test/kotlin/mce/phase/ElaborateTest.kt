@@ -21,9 +21,9 @@ class ElaborateTest {
     @Test
     fun elaborate() {
         val result = elaborate("elaborate").success()
-        assertIs<C.Value.Type>(result.types[UUID(0, 0)])
-        assertIs<C.Value.Bool>(result.types[UUID(0, 1)])
-        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.Value.Bool(UUID(0, 0)), emptySet(), C.Term.BoolOf(false, UUID(0, 1))), result.item)
+        assertIs<C.VTerm.Type>(result.types[UUID(0, 0)])
+        assertIs<C.VTerm.Bool>(result.types[UUID(0, 1)])
+        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.VTerm.Bool(UUID(0, 0)), emptySet(), C.Term.BoolOf(false, UUID(0, 1))), result.item)
     }
 
     @Test
@@ -136,13 +136,13 @@ class ElaborateTest {
     @Test
     fun notEq() {
         val result = elaborate("not_eq")
-        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun meta() {
         val result = elaborate("meta").success()
-        assertIs<C.Value.Bool>(result.normalizer.getSolution(0))
+        assertIs<C.VTerm.Bool>(result.normalizer.getSolution(0))
     }
 
     @Test
@@ -153,7 +153,7 @@ class ElaborateTest {
     @Test
     fun symBad() {
         val result = elaborate("sym_bad")
-        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -164,7 +164,7 @@ class ElaborateTest {
     @Test
     fun transBad() {
         val result = elaborate("trans_bad")
-        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -207,7 +207,7 @@ class ElaborateTest {
     fun builtinIllTyped() {
         val result = elaborate("builtin_ill_typed")
         println(result.diagnostics)
-        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
@@ -358,13 +358,13 @@ class ElaborateTest {
     @Test
     fun boxIllTypedContent() {
         val result = elaborate("box_ill_typed_content")
-        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
     fun boxIllTypedTag() {
         val result = elaborate("box_ill_typed_tag")
-        assert(result.diagnostics.any { it is Diagnostic.TypeMismatch }) { result.diagnostics.joinToString("\n") }
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test

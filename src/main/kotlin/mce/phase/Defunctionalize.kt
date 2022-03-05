@@ -230,7 +230,7 @@ class Defunctionalize private constructor() {
 
     data class Result(
         val item: D.Item,
-        val types: Map<Id, C.Value>,
+        val types: Map<Id, C.VTerm>,
         val functions: Map<Int, D.Term>
     )
 

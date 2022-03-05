@@ -12,7 +12,7 @@ import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
 
 class Pack private constructor(
-    types: Map<Id, C.Value>
+    types: Map<Id, C.VTerm>
 ) {
     private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
 
@@ -183,53 +183,53 @@ class Pack private constructor(
 
     private fun getType(id: Id): P.NbtType = types[id]!!
 
-    private fun erase(type: C.Value): P.NbtType = when (type) {
-        is C.Value.Hole -> throw Error()
-        is C.Value.Meta -> throw Error()
-        is C.Value.Var -> TODO()
-        is C.Value.Def -> TODO()
-        is C.Value.Match -> TODO()
-        is C.Value.BoolOf -> throw Error()
-        is C.Value.ByteOf -> throw Error()
-        is C.Value.ShortOf -> throw Error()
-        is C.Value.IntOf -> throw Error()
-        is C.Value.LongOf -> throw Error()
-        is C.Value.FloatOf -> throw Error()
-        is C.Value.DoubleOf -> throw Error()
-        is C.Value.StringOf -> throw Error()
-        is C.Value.ByteArrayOf -> throw Error()
-        is C.Value.IntArrayOf -> throw Error()
-        is C.Value.LongArrayOf -> throw Error()
-        is C.Value.ListOf -> throw Error()
-        is C.Value.CompoundOf -> throw Error()
-        is C.Value.BoxOf -> throw Error()
-        is C.Value.RefOf -> throw Error()
-        is C.Value.Refl -> throw Error()
-        is C.Value.FunOf -> throw Error()
-        is C.Value.Apply -> TODO()
-        is C.Value.CodeOf -> throw Error()
-        is C.Value.Splice -> throw Error()
-        is C.Value.Union -> TODO()
-        is C.Value.Intersection -> TODO()
-        is C.Value.Bool -> NbtType.BYTE
-        is C.Value.Byte -> NbtType.BYTE
-        is C.Value.Short -> NbtType.SHORT
-        is C.Value.Int -> NbtType.INT
-        is C.Value.Long -> NbtType.LONG
-        is C.Value.Float -> NbtType.FLOAT
-        is C.Value.Double -> NbtType.DOUBLE
-        is C.Value.String -> NbtType.STRING
-        is C.Value.ByteArray -> NbtType.BYTE_ARRAY
-        is C.Value.IntArray -> NbtType.INT_ARRAY
-        is C.Value.LongArray -> NbtType.LONG_ARRAY
-        is C.Value.List -> NbtType.LIST
-        is C.Value.Compound -> NbtType.COMPOUND
-        is C.Value.Box -> NbtType.COMPOUND
-        is C.Value.Ref -> NbtType.INT
-        is C.Value.Eq -> NbtType.BYTE
-        is C.Value.Fun -> NbtType.BYTE
-        is C.Value.Code -> throw Error()
-        is C.Value.Type -> NbtType.BYTE
+    private fun erase(type: C.VTerm): P.NbtType = when (type) {
+        is C.VTerm.Hole -> throw Error()
+        is C.VTerm.Meta -> throw Error()
+        is C.VTerm.Var -> TODO()
+        is C.VTerm.Def -> TODO()
+        is C.VTerm.Match -> TODO()
+        is C.VTerm.BoolOf -> throw Error()
+        is C.VTerm.ByteOf -> throw Error()
+        is C.VTerm.ShortOf -> throw Error()
+        is C.VTerm.IntOf -> throw Error()
+        is C.VTerm.LongOf -> throw Error()
+        is C.VTerm.FloatOf -> throw Error()
+        is C.VTerm.DoubleOf -> throw Error()
+        is C.VTerm.StringOf -> throw Error()
+        is C.VTerm.ByteArrayOf -> throw Error()
+        is C.VTerm.IntArrayOf -> throw Error()
+        is C.VTerm.LongArrayOf -> throw Error()
+        is C.VTerm.ListOf -> throw Error()
+        is C.VTerm.CompoundOf -> throw Error()
+        is C.VTerm.BoxOf -> throw Error()
+        is C.VTerm.RefOf -> throw Error()
+        is C.VTerm.Refl -> throw Error()
+        is C.VTerm.FunOf -> throw Error()
+        is C.VTerm.Apply -> TODO()
+        is C.VTerm.CodeOf -> throw Error()
+        is C.VTerm.Splice -> throw Error()
+        is C.VTerm.Union -> TODO()
+        is C.VTerm.Intersection -> TODO()
+        is C.VTerm.Bool -> NbtType.BYTE
+        is C.VTerm.Byte -> NbtType.BYTE
+        is C.VTerm.Short -> NbtType.SHORT
+        is C.VTerm.Int -> NbtType.INT
+        is C.VTerm.Long -> NbtType.LONG
+        is C.VTerm.Float -> NbtType.FLOAT
+        is C.VTerm.Double -> NbtType.DOUBLE
+        is C.VTerm.String -> NbtType.STRING
+        is C.VTerm.ByteArray -> NbtType.BYTE_ARRAY
+        is C.VTerm.IntArray -> NbtType.INT_ARRAY
+        is C.VTerm.LongArray -> NbtType.LONG_ARRAY
+        is C.VTerm.List -> NbtType.LIST
+        is C.VTerm.Compound -> NbtType.COMPOUND
+        is C.VTerm.Box -> NbtType.COMPOUND
+        is C.VTerm.Ref -> NbtType.INT
+        is C.VTerm.Eq -> NbtType.BYTE
+        is C.VTerm.Fun -> NbtType.BYTE
+        is C.VTerm.Code -> throw Error()
+        is C.VTerm.Type -> NbtType.BYTE
     }
 
     private class Context(

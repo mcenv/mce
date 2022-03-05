@@ -14,7 +14,7 @@ class ZonkTest {
     @Test
     fun meta() {
         val result = zonk("meta")
-        assertIs<C.Value.Bool>(result.normalizer.getSolution(0))
+        assertIs<C.VTerm.Bool>(result.normalizer.getSolution(0))
     }
 
     @Test

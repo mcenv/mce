@@ -17,9 +17,8 @@ class Stage private constructor(
             C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body)
         }
         is C.Item.Mod -> {
-            val type = stageModule(item.type)
             val body = stageModule(item.body)
-            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, type, body)
+            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body)
         }
     }
 
@@ -69,7 +68,7 @@ class Stage private constructor(
 
     data class Result(
         val item: C.Item,
-        val types: Map<Id, C.Value>
+        val types: Map<Id, C.VTerm>
     )
 
     companion object {

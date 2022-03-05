@@ -15,9 +15,6 @@ import kotlin.collections.Set as KSet
  * A core representation.
  */
 object Core {
-    /**
-     * A top-level object.
-     */
     sealed class Item {
         abstract val imports: KList<KString>
         abstract val exports: KList<KString>
@@ -30,7 +27,7 @@ object Core {
             override val modifiers: KSet<Modifier>,
             override val name: KString,
             val parameters: KList<Parameter>,
-            val resultant: Value,
+            val resultant: VTerm,
             val effects: KSet<Effect>,
             val body: Term,
         ) : Item()
@@ -40,7 +37,7 @@ object Core {
             override val exports: KList<KString>,
             override val modifiers: KSet<Modifier>,
             override val name: KString,
-            val type: Module,
+            val type: VModule,
             val body: Module,
         ) : Item()
     }
@@ -65,6 +62,18 @@ object Core {
     }
 
     /**
+     * A semantic module.
+     */
+    sealed class VModule {
+        abstract val id: Id?
+
+        data class Var(val name: KString, override val id: Id?) : VModule()
+        data class Str(val items: KList<Item>, override val id: Id?) : VModule()
+        data class Sig(val signatures: KList<VSignature>, override val id: Id?) : VModule()
+        data class Type(override val id: Id?) : VModule()
+    }
+
+    /**
      * A syntactic signature.
      */
     sealed class Signature {
@@ -72,6 +81,16 @@ object Core {
 
         data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id?) : Signature()
         data class Mod(val name: KString, val type: Module, override val id: Id?) : Signature()
+    }
+
+    /**
+     * A semantic signature.
+     */
+    sealed class VSignature {
+        abstract val id: Id?
+
+        data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: VTerm, override val id: Id?) : VSignature()
+        data class Mod(val name: KString, val type: VModule, override val id: Id?) : VSignature()
     }
 
     /**
@@ -132,55 +151,55 @@ object Core {
     /**
      * A semantic term.
      */
-    sealed class Value {
+    sealed class VTerm {
         abstract val id: Id?
 
-        data class Hole(override val id: Id? = null) : Value()
-        data class Meta(val index: KInt, override val id: Id? = null) : Value()
-        data class Var(val name: KString, val level: KInt, override val id: Id? = null) : Value()
-        data class Def(val name: KString, val arguments: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class Match(val scrutinee: Value, val clauses: KList<Pair<Pattern, Lazy<Value>>>, override val id: Id? = null) : Value()
-        data class BoolOf(val value: KBoolean, override val id: Id? = null) : Value()
-        data class ByteOf(val value: KByte, override val id: Id? = null) : Value()
-        data class ShortOf(val value: KShort, override val id: Id? = null) : Value()
-        data class IntOf(val value: KInt, override val id: Id? = null) : Value()
-        data class LongOf(val value: KLong, override val id: Id? = null) : Value()
-        data class FloatOf(val value: KFloat, override val id: Id? = null) : Value()
-        data class DoubleOf(val value: KDouble, override val id: Id? = null) : Value()
-        data class StringOf(val value: KString, override val id: Id? = null) : Value()
-        data class ByteArrayOf(val elements: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class IntArrayOf(val elements: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class LongArrayOf(val elements: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class ListOf(val elements: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class CompoundOf(val elements: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class BoxOf(val content: Lazy<Value>, val tag: Lazy<Value>, override val id: Id? = null) : Value()
-        data class RefOf(val element: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Refl(override val id: Id? = null) : Value()
-        data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id? = null) : Value()
-        data class Apply(val function: Value, val arguments: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class CodeOf(val element: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Splice(val element: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Union(val variants: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class Intersection(val variants: KList<Lazy<Value>>, override val id: Id? = null) : Value()
-        data class Bool(override val id: Id? = null) : Value()
-        data class Byte(override val id: Id? = null) : Value()
-        data class Short(override val id: Id? = null) : Value()
-        data class Int(override val id: Id? = null) : Value()
-        data class Long(override val id: Id? = null) : Value()
-        data class Float(override val id: Id? = null) : Value()
-        data class Double(override val id: Id? = null) : Value()
-        data class String(override val id: Id? = null) : Value()
-        data class ByteArray(override val id: Id? = null) : Value()
-        data class IntArray(override val id: Id? = null) : Value()
-        data class LongArray(override val id: Id? = null) : Value()
-        data class List(val element: Lazy<Value>, val size: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id? = null) : Value()
-        data class Box(val content: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Ref(val element: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Eq(val left: Lazy<Value>, val right: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>, override val id: Id? = null) : Value()
-        data class Code(val element: Lazy<Value>, override val id: Id? = null) : Value()
-        data class Type(override val id: Id? = null) : Value()
+        data class Hole(override val id: Id? = null) : VTerm()
+        data class Meta(val index: KInt, override val id: Id? = null) : VTerm()
+        data class Var(val name: KString, val level: KInt, override val id: Id? = null) : VTerm()
+        data class Def(val name: KString, val arguments: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class Match(val scrutinee: VTerm, val clauses: KList<Pair<Pattern, Lazy<VTerm>>>, override val id: Id? = null) : VTerm()
+        data class BoolOf(val value: KBoolean, override val id: Id? = null) : VTerm()
+        data class ByteOf(val value: KByte, override val id: Id? = null) : VTerm()
+        data class ShortOf(val value: KShort, override val id: Id? = null) : VTerm()
+        data class IntOf(val value: KInt, override val id: Id? = null) : VTerm()
+        data class LongOf(val value: KLong, override val id: Id? = null) : VTerm()
+        data class FloatOf(val value: KFloat, override val id: Id? = null) : VTerm()
+        data class DoubleOf(val value: KDouble, override val id: Id? = null) : VTerm()
+        data class StringOf(val value: KString, override val id: Id? = null) : VTerm()
+        data class ByteArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class IntArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class LongArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class ListOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class CompoundOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class BoxOf(val content: Lazy<VTerm>, val tag: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class RefOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Refl(override val id: Id? = null) : VTerm()
+        data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id? = null) : VTerm()
+        data class Apply(val function: VTerm, val arguments: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class CodeOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Splice(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Union(val variants: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class Intersection(val variants: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+        data class Bool(override val id: Id? = null) : VTerm()
+        data class Byte(override val id: Id? = null) : VTerm()
+        data class Short(override val id: Id? = null) : VTerm()
+        data class Int(override val id: Id? = null) : VTerm()
+        data class Long(override val id: Id? = null) : VTerm()
+        data class Float(override val id: Id? = null) : VTerm()
+        data class Double(override val id: Id? = null) : VTerm()
+        data class String(override val id: Id? = null) : VTerm()
+        data class ByteArray(override val id: Id? = null) : VTerm()
+        data class IntArray(override val id: Id? = null) : VTerm()
+        data class LongArray(override val id: Id? = null) : VTerm()
+        data class List(val element: Lazy<VTerm>, val size: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id? = null) : VTerm()
+        data class Box(val content: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Ref(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Eq(val left: Lazy<VTerm>, val right: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>, override val id: Id? = null) : VTerm()
+        data class Code(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
+        data class Type(override val id: Id? = null) : VTerm()
     }
 
     /**
