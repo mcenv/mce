@@ -63,7 +63,7 @@ class Zonk private constructor(
                 diagnostics += Diagnostic.UnsolvedMeta(term.id!!)
                 term
             }
-            else -> normalizer.quote(solution)
+            else -> normalizer.quoteTerm(solution)
         }
         else -> term.map { zonkTerm(it) }
     }

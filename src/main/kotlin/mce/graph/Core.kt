@@ -27,7 +27,7 @@ object Core {
             override val modifiers: KSet<Modifier>,
             override val name: KString,
             val parameters: KList<Parameter>,
-            val resultant: VTerm,
+            val resultant: Term,
             val effects: KSet<Effect>,
             val body: Term,
         ) : Item()
@@ -89,7 +89,7 @@ object Core {
     sealed class VSignature {
         abstract val id: Id?
 
-        data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: VTerm, override val id: Id?) : VSignature()
+        data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id?) : VSignature()
         data class Mod(val name: KString, val type: VModule, override val id: Id?) : VSignature()
     }
 
@@ -202,9 +202,6 @@ object Core {
         data class Type(override val id: Id? = null) : VTerm()
     }
 
-    /**
-     * A syntactic pattern.
-     */
     sealed class Pattern {
         abstract val id: Id
 

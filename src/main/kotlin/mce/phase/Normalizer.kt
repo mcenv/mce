@@ -66,29 +66,29 @@ class Normalizer(
     }
 
     /**
-     * Evaluates the [term] to a value.
+     * Evaluates the [term] to a semantic term.
      */
-    fun eval(term: C.Term): C.VTerm = when (term) {
+    fun evalTerm(term: C.Term): C.VTerm = when (term) {
         is C.Term.Hole -> C.VTerm.Hole(term.id)
         is C.Term.Meta -> getSolution(term.index) ?: C.VTerm.Meta(term.index, term.id)
         is C.Term.Var -> lookup(term.level)
         is C.Term.Def -> {
             val item = items[term.name]!! as C.Item.Def
             if (item.modifiers.contains(C.Modifier.BUILTIN)) {
-                val normalizer = term.arguments.fold(this) { normalizer, argument -> normalizer.bind(lazy { normalizer.eval(argument) }) }
+                val normalizer = term.arguments.fold(this) { normalizer, argument -> normalizer.bind(lazy { normalizer.evalTerm(argument) }) }
                 BUILTINS[term.name]!!(normalizer)
-            } else eval(item.body)
+            } else evalTerm(item.body)
         }
-        is C.Term.Let -> bind(lazy { eval(term.init) }).eval(term.body)
+        is C.Term.Let -> bind(lazy { evalTerm(term.init) }).evalTerm(term.body)
         is C.Term.Match -> {
-            val scrutinee = eval(term.scrutinee)
+            val scrutinee = evalTerm(term.scrutinee)
             val clause = term.clauses.firstMapOrNull { (clause, body) ->
                 val (normalizer, matched) = match(clause, scrutinee)
                 (normalizer to body) to matched
             }
             when (clause) {
-                null -> C.VTerm.Match(scrutinee, term.clauses.map { (clause, body) -> clause to lazy { match(clause, scrutinee).first.eval(body) } }, term.id)
-                else -> clause.first.eval(clause.second)
+                null -> C.VTerm.Match(scrutinee, term.clauses.map { (clause, body) -> clause to lazy { match(clause, scrutinee).first.evalTerm(body) } }, term.id)
+                else -> clause.first.evalTerm(clause.second)
             }
         }
         is C.Term.BoolOf -> C.VTerm.BoolOf(term.value, term.id)
@@ -99,29 +99,29 @@ class Normalizer(
         is C.Term.FloatOf -> C.VTerm.FloatOf(term.value, term.id)
         is C.Term.DoubleOf -> C.VTerm.DoubleOf(term.value, term.id)
         is C.Term.StringOf -> C.VTerm.StringOf(term.value, term.id)
-        is C.Term.ByteArrayOf -> C.VTerm.ByteArrayOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.IntArrayOf -> C.VTerm.IntArrayOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.LongArrayOf -> C.VTerm.LongArrayOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.ListOf -> C.VTerm.ListOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.CompoundOf -> C.VTerm.CompoundOf(term.elements.map { lazy { eval(it) } }, term.id)
-        is C.Term.BoxOf -> C.VTerm.BoxOf(lazy { eval(term.content) }, lazy { eval(term.tag) }, term.id)
-        is C.Term.RefOf -> C.VTerm.RefOf(lazy { eval(term.element) }, term.id)
+        is C.Term.ByteArrayOf -> C.VTerm.ByteArrayOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.IntArrayOf -> C.VTerm.IntArrayOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.LongArrayOf -> C.VTerm.LongArrayOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.ListOf -> C.VTerm.ListOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.CompoundOf -> C.VTerm.CompoundOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.BoxOf -> C.VTerm.BoxOf(lazy { evalTerm(term.content) }, lazy { evalTerm(term.tag) }, term.id)
+        is C.Term.RefOf -> C.VTerm.RefOf(lazy { evalTerm(term.element) }, term.id)
         is C.Term.Refl -> C.VTerm.Refl(term.id)
         is C.Term.FunOf -> C.VTerm.FunOf(term.parameters, term.body, term.id)
         is C.Term.Apply -> {
-            val arguments = term.arguments.map { lazy { eval(it) } }
-            when (val function = eval(term.function)) {
-                is C.VTerm.FunOf -> arguments.fold(this) { normalizer, argument -> normalizer.bind(argument) }.eval(function.body)
+            val arguments = term.arguments.map { lazy { evalTerm(it) } }
+            when (val function = evalTerm(term.function)) {
+                is C.VTerm.FunOf -> arguments.fold(this) { normalizer, argument -> normalizer.bind(argument) }.evalTerm(function.body)
                 else -> C.VTerm.Apply(function, arguments, term.id)
             }
         }
-        is C.Term.CodeOf -> C.VTerm.CodeOf(lazy { eval(term.element) }, term.id)
-        is C.Term.Splice -> when (val element = eval(term.element)) {
+        is C.Term.CodeOf -> C.VTerm.CodeOf(lazy { evalTerm(term.element) }, term.id)
+        is C.Term.Splice -> when (val element = evalTerm(term.element)) {
             is C.VTerm.CodeOf -> element.element.value
             else -> C.VTerm.Splice(lazyOf(element), term.id)
         }
-        is C.Term.Union -> C.VTerm.Union(term.variants.map { lazy { eval(it) } }, term.id)
-        is C.Term.Intersection -> C.VTerm.Intersection(term.variants.map { lazy { eval(it) } }, term.id)
+        is C.Term.Union -> C.VTerm.Union(term.variants.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.Intersection -> C.VTerm.Intersection(term.variants.map { lazy { evalTerm(it) } }, term.id)
         is C.Term.Bool -> C.VTerm.Bool(term.id)
         is C.Term.Byte -> C.VTerm.Byte(term.id)
         is C.Term.Short -> C.VTerm.Short(term.id)
@@ -133,13 +133,13 @@ class Normalizer(
         is C.Term.ByteArray -> C.VTerm.ByteArray(term.id)
         is C.Term.IntArray -> C.VTerm.IntArray(term.id)
         is C.Term.LongArray -> C.VTerm.LongArray(term.id)
-        is C.Term.List -> C.VTerm.List(lazy { eval(term.element) }, lazy { eval(term.size) }, term.id)
+        is C.Term.List -> C.VTerm.List(lazy { evalTerm(term.element) }, lazy { evalTerm(term.size) }, term.id)
         is C.Term.Compound -> C.VTerm.Compound(term.elements, term.id)
-        is C.Term.Box -> C.VTerm.Box(lazy { eval(term.content) }, term.id)
-        is C.Term.Ref -> C.VTerm.Ref(lazy { eval(term.element) }, term.id)
-        is C.Term.Eq -> C.VTerm.Eq(lazy { eval(term.left) }, lazy { eval(term.right) }, term.id)
+        is C.Term.Box -> C.VTerm.Box(lazy { evalTerm(term.content) }, term.id)
+        is C.Term.Ref -> C.VTerm.Ref(lazy { evalTerm(term.element) }, term.id)
+        is C.Term.Eq -> C.VTerm.Eq(lazy { evalTerm(term.left) }, lazy { evalTerm(term.right) }, term.id)
         is C.Term.Fun -> C.VTerm.Fun(term.parameters, term.resultant, term.effects, term.id)
-        is C.Term.Code -> C.VTerm.Code(lazy { eval(term.element) }, term.id)
+        is C.Term.Code -> C.VTerm.Code(lazy { evalTerm(term.element) }, term.id)
         is C.Term.Type -> C.VTerm.Type(term.id)
     }
 
@@ -189,65 +189,92 @@ class Normalizer(
     }
 
     /**
-     * Quotes the [term] to a term.
+     * Quotes the [term] to a syntactic term.
      */
     @Suppress("NAME_SHADOWING")
-    fun quote(term: C.VTerm): C.Term = when (val value = force(term)) {
-        is C.VTerm.Hole -> C.Term.Hole(value.id)
-        is C.VTerm.Meta -> C.Term.Meta(value.index, value.id)
-        is C.VTerm.Var -> C.Term.Var(value.name, value.level, value.id)
-        is C.VTerm.Def -> C.Term.Def(value.name, value.arguments.map { quote(it.value) }, value.id)
-        is C.VTerm.Match -> C.Term.Match(quote(value.scrutinee), value.clauses.map { it.first to quote(it.second.value) }, value.id)
-        is C.VTerm.BoolOf -> C.Term.BoolOf(value.value, value.id)
-        is C.VTerm.ByteOf -> C.Term.ByteOf(value.value, value.id)
-        is C.VTerm.ShortOf -> C.Term.ShortOf(value.value, value.id)
-        is C.VTerm.IntOf -> C.Term.IntOf(value.value, value.id)
-        is C.VTerm.LongOf -> C.Term.LongOf(value.value, value.id)
-        is C.VTerm.FloatOf -> C.Term.FloatOf(value.value, value.id)
-        is C.VTerm.DoubleOf -> C.Term.DoubleOf(value.value, value.id)
-        is C.VTerm.StringOf -> C.Term.StringOf(value.value, value.id)
-        is C.VTerm.ByteArrayOf -> C.Term.ByteArrayOf(value.elements.map { quote(it.value) }, value.id)
-        is C.VTerm.IntArrayOf -> C.Term.IntArrayOf(value.elements.map { quote(it.value) }, value.id)
-        is C.VTerm.LongArrayOf -> C.Term.LongArrayOf(value.elements.map { quote(it.value) }, value.id)
-        is C.VTerm.ListOf -> C.Term.ListOf(value.elements.map { quote(it.value) }, value.id)
-        is C.VTerm.CompoundOf -> C.Term.CompoundOf(value.elements.map { quote(it.value) }, value.id)
-        is C.VTerm.BoxOf -> C.Term.BoxOf(quote(value.content.value), quote(value.tag.value), value.id)
-        is C.VTerm.RefOf -> C.Term.RefOf(quote(value.element.value), value.id)
-        is C.VTerm.Refl -> C.Term.Refl(value.id)
-        is C.VTerm.FunOf -> C.Term.FunOf(value.parameters, value.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter, normalizer.size, freshId()))) }.quote(eval(value.body)), value.id)
-        is C.VTerm.Apply -> C.Term.Apply(quote(value.function), value.arguments.map { quote(it.value) }, value.id)
-        is C.VTerm.CodeOf -> C.Term.CodeOf(quote(value.element.value), value.id)
-        is C.VTerm.Splice -> C.Term.Splice(quote(value.element.value), value.id)
-        is C.VTerm.Union -> C.Term.Union(value.variants.map { quote(it.value) }, value.id)
-        is C.VTerm.Intersection -> C.Term.Intersection(value.variants.map { quote(it.value) }, value.id)
-        is C.VTerm.Bool -> C.Term.Bool(value.id)
-        is C.VTerm.Byte -> C.Term.Byte(value.id)
-        is C.VTerm.Short -> C.Term.Short(value.id)
-        is C.VTerm.Int -> C.Term.Int(value.id)
-        is C.VTerm.Long -> C.Term.Long(value.id)
-        is C.VTerm.Float -> C.Term.Float(value.id)
-        is C.VTerm.Double -> C.Term.Double(value.id)
-        is C.VTerm.String -> C.Term.String(value.id)
-        is C.VTerm.ByteArray -> C.Term.ByteArray(value.id)
-        is C.VTerm.IntArray -> C.Term.IntArray(value.id)
-        is C.VTerm.LongArray -> C.Term.LongArray(value.id)
-        is C.VTerm.List -> C.Term.List(quote(value.element.value), quote(value.size.value), value.id)
-        is C.VTerm.Compound -> C.Term.Compound(value.elements, value.id)
-        is C.VTerm.Box -> C.Term.Box(quote(value.content.value), value.id)
-        is C.VTerm.Ref -> C.Term.Ref(quote(value.element.value), value.id)
-        is C.VTerm.Eq -> C.Term.Eq(quote(value.left.value), quote(value.right.value), value.id)
+    fun quoteTerm(term: C.VTerm): C.Term = when (val term = force(term)) {
+        is C.VTerm.Hole -> C.Term.Hole(term.id)
+        is C.VTerm.Meta -> C.Term.Meta(term.index, term.id)
+        is C.VTerm.Var -> C.Term.Var(term.name, term.level, term.id)
+        is C.VTerm.Def -> C.Term.Def(term.name, term.arguments.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.Match -> C.Term.Match(quoteTerm(term.scrutinee), term.clauses.map { it.first to quoteTerm(it.second.value) }, term.id)
+        is C.VTerm.BoolOf -> C.Term.BoolOf(term.value, term.id)
+        is C.VTerm.ByteOf -> C.Term.ByteOf(term.value, term.id)
+        is C.VTerm.ShortOf -> C.Term.ShortOf(term.value, term.id)
+        is C.VTerm.IntOf -> C.Term.IntOf(term.value, term.id)
+        is C.VTerm.LongOf -> C.Term.LongOf(term.value, term.id)
+        is C.VTerm.FloatOf -> C.Term.FloatOf(term.value, term.id)
+        is C.VTerm.DoubleOf -> C.Term.DoubleOf(term.value, term.id)
+        is C.VTerm.StringOf -> C.Term.StringOf(term.value, term.id)
+        is C.VTerm.ByteArrayOf -> C.Term.ByteArrayOf(term.elements.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.IntArrayOf -> C.Term.IntArrayOf(term.elements.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.LongArrayOf -> C.Term.LongArrayOf(term.elements.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.ListOf -> C.Term.ListOf(term.elements.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.CompoundOf -> C.Term.CompoundOf(term.elements.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.BoxOf -> C.Term.BoxOf(quoteTerm(term.content.value), quoteTerm(term.tag.value), term.id)
+        is C.VTerm.RefOf -> C.Term.RefOf(quoteTerm(term.element.value), term.id)
+        is C.VTerm.Refl -> C.Term.Refl(term.id)
+        is C.VTerm.FunOf -> C.Term.FunOf(term.parameters, term.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter, normalizer.size, freshId()))) }.quoteTerm(evalTerm(term.body)), term.id)
+        is C.VTerm.Apply -> C.Term.Apply(quoteTerm(term.function), term.arguments.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.CodeOf -> C.Term.CodeOf(quoteTerm(term.element.value), term.id)
+        is C.VTerm.Splice -> C.Term.Splice(quoteTerm(term.element.value), term.id)
+        is C.VTerm.Union -> C.Term.Union(term.variants.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.Intersection -> C.Term.Intersection(term.variants.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.Bool -> C.Term.Bool(term.id)
+        is C.VTerm.Byte -> C.Term.Byte(term.id)
+        is C.VTerm.Short -> C.Term.Short(term.id)
+        is C.VTerm.Int -> C.Term.Int(term.id)
+        is C.VTerm.Long -> C.Term.Long(term.id)
+        is C.VTerm.Float -> C.Term.Float(term.id)
+        is C.VTerm.Double -> C.Term.Double(term.id)
+        is C.VTerm.String -> C.Term.String(term.id)
+        is C.VTerm.ByteArray -> C.Term.ByteArray(term.id)
+        is C.VTerm.IntArray -> C.Term.IntArray(term.id)
+        is C.VTerm.LongArray -> C.Term.LongArray(term.id)
+        is C.VTerm.List -> C.Term.List(quoteTerm(term.element.value), quoteTerm(term.size.value), term.id)
+        is C.VTerm.Compound -> C.Term.Compound(term.elements, term.id)
+        is C.VTerm.Box -> C.Term.Box(quoteTerm(term.content.value), term.id)
+        is C.VTerm.Ref -> C.Term.Ref(quoteTerm(term.element.value), term.id)
+        is C.VTerm.Eq -> C.Term.Eq(quoteTerm(term.left.value), quoteTerm(term.right.value), term.id)
         is C.VTerm.Fun -> C.Term.Fun(
-            value.parameters,
-            value.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter.name, normalizer.size, freshId()))) }.quote(eval(value.resultant)),
-            value.effects,
-            value.id
+            term.parameters,
+            term.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter.name, normalizer.size, freshId()))) }.quoteTerm(evalTerm(term.resultant)),
+            term.effects,
+            term.id
         )
-        is C.VTerm.Code -> C.Term.Code(quote(value.element.value), value.id)
-        is C.VTerm.Type -> C.Term.Type(value.id)
+        is C.VTerm.Code -> C.Term.Code(quoteTerm(term.element.value), term.id)
+        is C.VTerm.Type -> C.Term.Type(term.id)
     }
 
     /**
      * Normalizes the [term] to a term.
      */
-    fun norm(term: C.Term): C.Term = quote(eval(term))
+    fun normTerm(term: C.Term): C.Term = quoteTerm(evalTerm(term))
+
+    /**
+     * Evaluates the [module] to a semantic module.
+     */
+    fun evalModule(module: C.Module): C.VModule = when (module) {
+        is C.Module.Var -> {
+            val item = items[module.name] as C.Item.Mod
+            evalModule(item.body)
+        }
+        is C.Module.Str -> C.VModule.Str(module.items, module.id)
+        is C.Module.Sig -> {
+            val signatures = module.signatures.map { evalSignature(it) }
+            C.VModule.Sig(signatures, module.id)
+        }
+        is C.Module.Type -> C.VModule.Type(module.id)
+    }
+
+    /**
+     * Evaluates the [signature] to a semantic signature.
+     */
+    fun evalSignature(signature: C.Signature): C.VSignature = when (signature) {
+        is C.Signature.Def -> C.VSignature.Def(signature.name, signature.parameters, signature.resultant, signature.id)
+        is C.Signature.Mod -> {
+            val type = evalModule(signature.type)
+            C.VSignature.Mod(signature.name, type, signature.id)
+        }
+    }
 }

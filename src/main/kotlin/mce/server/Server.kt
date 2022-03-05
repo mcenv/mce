@@ -46,14 +46,14 @@ class Server {
 
     suspend fun hover(name: String, id: Id): HoverItem {
         val output = fetch(Key.ElaborateResult(name))
-        val type = serializeTerm(output.normalizer.quote(output.types[id]!!))
+        val type = serializeTerm(output.normalizer.quoteTerm(output.types[id]!!))
         return HoverItem(type)
     }
 
     suspend fun completion(name: String, id: Id): List<CompletionItem> {
         val output = fetch(Key.ElaborateResult(name))
         return output.completions[id]?.let { completions ->
-            completions.map { (name, type) -> CompletionItem(name, serializeTerm(output.normalizer.quote(type))) }
+            completions.map { (name, type) -> CompletionItem(name, serializeTerm(output.normalizer.quoteTerm(type))) }
         } ?: emptyList()
     }
 

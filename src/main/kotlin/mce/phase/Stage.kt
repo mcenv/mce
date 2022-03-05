@@ -59,7 +59,7 @@ class Stage private constructor(
         is C.Term.Meta -> throw Error()
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> {
-            val staged = normalizer.norm(term)
+            val staged = normalizer.normTerm(term)
             stageTerm(staged)
         }
         is C.Term.Code -> throw Error()

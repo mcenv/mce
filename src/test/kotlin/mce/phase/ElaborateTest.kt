@@ -23,7 +23,7 @@ class ElaborateTest {
         val result = elaborate("elaborate").success()
         assertIs<C.VTerm.Type>(result.types[UUID(0, 0)])
         assertIs<C.VTerm.Bool>(result.types[UUID(0, 1)])
-        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.VTerm.Bool(UUID(0, 0)), emptySet(), C.Term.BoolOf(false, UUID(0, 1))), result.item)
+        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.Term.Bool(UUID(0, 0)), emptySet(), C.Term.BoolOf(false, UUID(0, 1))), result.item)
     }
 
     @Test
