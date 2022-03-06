@@ -6,6 +6,7 @@ import kotlinx.coroutines.coroutineScope
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.phase.*
+import mce.phase.pack.Pack
 import mce.graph.Surface as S
 
 class Server {

@@ -7,12 +7,12 @@ import mce.graph.Packed.Execute.Run
 import mce.graph.Packed.Execute.StoreValue
 import mce.graph.Packed.Nbt
 import mce.graph.Packed.SourceProvider.Value
-import mce.phase.Pack.Companion.BYTE
-import mce.phase.Pack.Companion.INT
-import mce.phase.Pack.Companion.REGISTERS
-import mce.phase.Pack.Companion.REGISTER_0
-import mce.phase.Pack.Companion.STACKS
-import mce.phase.Pack.Companion.get
+import mce.phase.pack.Def.BYTE
+import mce.phase.pack.Def.INT
+import mce.phase.pack.Def.REGISTERS
+import mce.phase.pack.Def.REGISTER_0
+import mce.phase.pack.Def.STACKS
+import mce.phase.pack.Dsl.get
 import mce.server.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,7 +30,7 @@ class PackTest {
                         P.ResourceLocation("apply"),
                         listOf(
                             Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-                            RemoveData(STACKS, Pack.INT[-1]),
+                            RemoveData(STACKS, INT[-1]),
                         ),
                     ),
                     P.Function(

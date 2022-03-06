@@ -1,12 +1,33 @@
-package mce.phase
+package mce.phase.pack
 
 import mce.graph.Id
 import mce.graph.Packed.Command.*
-import mce.graph.Packed.Consumer.*
-import mce.graph.Packed.Execute.*
+import mce.graph.Packed.Consumer.RESULT
+import mce.graph.Packed.Execute.Run
+import mce.graph.Packed.Execute.StoreValue
 import mce.graph.Packed.NbtType
-import mce.graph.Packed.SourceComparator.*
-import mce.graph.Packed.SourceProvider.*
+import mce.graph.Packed.SourceComparator.Matches
+import mce.graph.Packed.SourceProvider.From
+import mce.graph.Packed.SourceProvider.Value
+import mce.phase.Defunctionalize
+import mce.phase.pack.Def.APPLY
+import mce.phase.pack.Def.BYTE
+import mce.phase.pack.Def.BYTE_ARRAY
+import mce.phase.pack.Def.COMPOUND
+import mce.phase.pack.Def.DOUBLE
+import mce.phase.pack.Def.FLOAT
+import mce.phase.pack.Def.INT
+import mce.phase.pack.Def.INT_ARRAY
+import mce.phase.pack.Def.LIST
+import mce.phase.pack.Def.LONG
+import mce.phase.pack.Def.LONG_ARRAY
+import mce.phase.pack.Def.REGISTERS
+import mce.phase.pack.Def.REGISTER_0
+import mce.phase.pack.Def.SHORT
+import mce.phase.pack.Def.STACKS
+import mce.phase.pack.Def.STRING
+import mce.phase.pack.Dsl.Append
+import mce.phase.pack.Dsl.get
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
@@ -196,104 +217,55 @@ class Pack private constructor(
 
     private fun getType(id: Id): NbtType = types[id]!!
 
-    private fun erase(type: C.VTerm): NbtType = when (type) {
-        is C.VTerm.Hole -> throw Error()
-        is C.VTerm.Meta -> throw Error()
-        is C.VTerm.Var -> TODO()
-        is C.VTerm.Def -> TODO()
-        is C.VTerm.Match -> TODO()
-        is C.VTerm.BoolOf -> throw Error()
-        is C.VTerm.ByteOf -> throw Error()
-        is C.VTerm.ShortOf -> throw Error()
-        is C.VTerm.IntOf -> throw Error()
-        is C.VTerm.LongOf -> throw Error()
-        is C.VTerm.FloatOf -> throw Error()
-        is C.VTerm.DoubleOf -> throw Error()
-        is C.VTerm.StringOf -> throw Error()
-        is C.VTerm.ByteArrayOf -> throw Error()
-        is C.VTerm.IntArrayOf -> throw Error()
-        is C.VTerm.LongArrayOf -> throw Error()
-        is C.VTerm.ListOf -> throw Error()
-        is C.VTerm.CompoundOf -> throw Error()
-        is C.VTerm.BoxOf -> throw Error()
-        is C.VTerm.RefOf -> throw Error()
-        is C.VTerm.Refl -> throw Error()
-        is C.VTerm.FunOf -> throw Error()
-        is C.VTerm.Apply -> TODO()
-        is C.VTerm.CodeOf -> throw Error()
-        is C.VTerm.Splice -> throw Error()
-        is C.VTerm.Union -> TODO()
-        is C.VTerm.Intersection -> TODO()
-        is C.VTerm.Bool -> NbtType.BYTE
-        is C.VTerm.Byte -> NbtType.BYTE
-        is C.VTerm.Short -> NbtType.SHORT
-        is C.VTerm.Int -> NbtType.INT
-        is C.VTerm.Long -> NbtType.LONG
-        is C.VTerm.Float -> NbtType.FLOAT
-        is C.VTerm.Double -> NbtType.DOUBLE
-        is C.VTerm.String -> NbtType.STRING
-        is C.VTerm.ByteArray -> NbtType.BYTE_ARRAY
-        is C.VTerm.IntArray -> NbtType.INT_ARRAY
-        is C.VTerm.LongArray -> NbtType.LONG_ARRAY
-        is C.VTerm.List -> NbtType.LIST
-        is C.VTerm.Compound -> NbtType.COMPOUND
-        is C.VTerm.Box -> NbtType.COMPOUND
-        is C.VTerm.Ref -> NbtType.INT
-        is C.VTerm.Eq -> NbtType.BYTE
-        is C.VTerm.Fun -> NbtType.BYTE
-        is C.VTerm.Code -> throw Error()
-        is C.VTerm.Type -> NbtType.BYTE
-    }
-
-    private class Context(
-        private val _commands: MutableList<P.Command> = mutableListOf(),
-        private val entries: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() }
-    ) {
-        val commands: List<P.Command> get() = _commands
-
-        operator fun P.Command.unaryPlus() {
-            _commands.add(this)
-        }
-
-        fun getIndex(type: NbtType, name: String): Int {
-            val entry = entries[type]!!
-            return entry.lastIndexOf(name) - entry.size
-        }
-
-        fun bind(type: NbtType, name: String) {
-            entries[type]!! += name
-        }
-
-        fun pop(type: NbtType) {
-            entries[type]!!.removeLast()
-        }
-    }
-
     companion object {
-        /**
-         * A storage to store stacks.
-         * @see [net.minecraft.resources.ResourceLocation.isAllowedInResourceLocation]
-         */
-        @Suppress("KDocUnresolvedReference")
-        val STACKS = P.ResourceLocation("0")
-
-        val BYTE = P.NbtPath()["a"]
-        val SHORT = P.NbtPath()["b"]
-        val INT = P.NbtPath()["c"]
-        val LONG = P.NbtPath()["d"]
-        val FLOAT = P.NbtPath()["e"]
-        val DOUBLE = P.NbtPath()["f"]
-        val BYTE_ARRAY = P.NbtPath()["g"]
-        val STRING = P.NbtPath()["h"]
-        val LIST = P.NbtPath()["i"]
-        val COMPOUND = P.NbtPath()["j"]
-        val INT_ARRAY = P.NbtPath()["k"]
-        val LONG_ARRAY = P.NbtPath()["l"]
-
-        val REGISTERS = P.Objective("0")
-        val REGISTER_0 = P.ScoreHolder("0")
-
-        val APPLY = P.ResourceLocation("apply")
+        private fun erase(type: C.VTerm): NbtType = when (type) {
+            is C.VTerm.Hole -> throw Error()
+            is C.VTerm.Meta -> throw Error()
+            is C.VTerm.Var -> TODO()
+            is C.VTerm.Def -> TODO()
+            is C.VTerm.Match -> TODO()
+            is C.VTerm.BoolOf -> throw Error()
+            is C.VTerm.ByteOf -> throw Error()
+            is C.VTerm.ShortOf -> throw Error()
+            is C.VTerm.IntOf -> throw Error()
+            is C.VTerm.LongOf -> throw Error()
+            is C.VTerm.FloatOf -> throw Error()
+            is C.VTerm.DoubleOf -> throw Error()
+            is C.VTerm.StringOf -> throw Error()
+            is C.VTerm.ByteArrayOf -> throw Error()
+            is C.VTerm.IntArrayOf -> throw Error()
+            is C.VTerm.LongArrayOf -> throw Error()
+            is C.VTerm.ListOf -> throw Error()
+            is C.VTerm.CompoundOf -> throw Error()
+            is C.VTerm.BoxOf -> throw Error()
+            is C.VTerm.RefOf -> throw Error()
+            is C.VTerm.Refl -> throw Error()
+            is C.VTerm.FunOf -> throw Error()
+            is C.VTerm.Apply -> TODO()
+            is C.VTerm.CodeOf -> throw Error()
+            is C.VTerm.Splice -> throw Error()
+            is C.VTerm.Union -> TODO()
+            is C.VTerm.Intersection -> TODO()
+            is C.VTerm.Bool -> NbtType.BYTE
+            is C.VTerm.Byte -> NbtType.BYTE
+            is C.VTerm.Short -> NbtType.SHORT
+            is C.VTerm.Int -> NbtType.INT
+            is C.VTerm.Long -> NbtType.LONG
+            is C.VTerm.Float -> NbtType.FLOAT
+            is C.VTerm.Double -> NbtType.DOUBLE
+            is C.VTerm.String -> NbtType.STRING
+            is C.VTerm.ByteArray -> NbtType.BYTE_ARRAY
+            is C.VTerm.IntArray -> NbtType.INT_ARRAY
+            is C.VTerm.LongArray -> NbtType.LONG_ARRAY
+            is C.VTerm.List -> NbtType.LIST
+            is C.VTerm.Compound -> NbtType.COMPOUND
+            is C.VTerm.Box -> NbtType.COMPOUND
+            is C.VTerm.Ref -> NbtType.INT
+            is C.VTerm.Eq -> NbtType.BYTE
+            is C.VTerm.Fun -> NbtType.BYTE
+            is C.VTerm.Code -> throw Error()
+            is C.VTerm.Type -> NbtType.BYTE
+        }
 
         private fun NbtType.toPath(): P.NbtPath = when (this) {
             NbtType.BYTE -> BYTE
@@ -310,19 +282,29 @@ class Pack private constructor(
             NbtType.LONG_ARRAY -> LONG_ARRAY
         }
 
-        operator fun P.NbtPath.get(pattern: P.Nbt.Compound): P.NbtPath = P.NbtPath(nodes + P.NbtNode.MatchElement(pattern))
+        private class Context(
+            private val _commands: MutableList<P.Command> = mutableListOf(),
+            private val entries: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() }
+        ) {
+            val commands: List<P.Command> get() = _commands
 
-        operator fun P.NbtPath.invoke(): P.NbtPath = P.NbtPath(nodes + P.NbtNode.AllElements)
+            operator fun P.Command.unaryPlus() {
+                _commands.add(this)
+            }
 
-        operator fun P.NbtPath.get(index: Int): P.NbtPath = P.NbtPath(nodes + P.NbtNode.IndexedElement(index))
+            fun getIndex(type: NbtType, name: String): Int {
+                val entry = entries[type]!!
+                return entry.lastIndexOf(name) - entry.size
+            }
 
-        operator fun P.NbtPath.get(name: String, pattern: P.Nbt.Compound): P.NbtPath = P.NbtPath(nodes + P.NbtNode.MatchObject(name, pattern))
+            fun bind(type: NbtType, name: String) {
+                entries[type]!! += name
+            }
 
-        operator fun P.NbtPath.get(name: String): P.NbtPath = P.NbtPath(nodes + P.NbtNode.CompoundChild(name))
-
-        private fun Append(target: P.ResourceLocation, path: P.NbtPath, source: P.SourceProvider): P.Command = InsertAtIndex(target, path, -1, source)
-
-        private fun Prepend(target: P.ResourceLocation, path: P.NbtPath, source: P.SourceProvider): P.Command = InsertAtIndex(target, path, 0, source)
+            fun pop(type: NbtType) {
+                entries[type]!!.removeLast()
+            }
+        }
 
         operator fun invoke(input: Defunctionalize.Result): P.Datapack = Pack(input.types).pack(input.functions, input.item)
     }
