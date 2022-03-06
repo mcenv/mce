@@ -11,17 +11,30 @@ import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
 
+@Suppress("NAME_SHADOWING")
 class Pack private constructor(
     types: Map<Id, C.VTerm>
 ) {
     private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
 
-    private fun pack(functions: Map<Int, D.Term>, item: D.Item): P.Datapack = P.Datapack(functions.map { (tag, term) ->
-        Context().run {
-            packTerm(term)
-            P.Function(P.ResourceLocation("$tag"), commands)
+    private fun pack(functions: Map<Int, D.Term>, item: D.Item): P.Datapack {
+        val functions = functions.mapValues { (tag, term) ->
+            Context().run {
+                packTerm(term)
+                P.Function(P.ResourceLocation("$tag"), commands)
+            }
         }
-    } + packItem(item))
+        val dispatch = P.Function(APPLY, mutableListOf<P.Command>().apply {
+            add(Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))))
+            add(RemoveData(STACKS, INT[-1]))
+            // TODO: use 4-ary search
+            functions.forEach { (tag, function) ->
+                add(Execute(P.Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(tag..tag), Run(RunFunction(function.name)))))
+            }
+        })
+        val item = packItem(item)
+        return P.Datapack(functions.values + dispatch + item)
+    }
 
     private fun packItem(item: D.Item): P.Function = when (item) {
         is D.Item.Def -> Context().run {
@@ -156,7 +169,7 @@ class Pack private constructor(
             is D.Term.Apply -> {
                 term.arguments.forEach { packTerm(it) }
                 packTerm(term.function)
-                TODO()
+                +RunFunction(APPLY)
             }
             is D.Term.Union -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Intersection -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
@@ -181,9 +194,9 @@ class Pack private constructor(
         }
     }
 
-    private fun getType(id: Id): P.NbtType = types[id]!!
+    private fun getType(id: Id): NbtType = types[id]!!
 
-    private fun erase(type: C.VTerm): P.NbtType = when (type) {
+    private fun erase(type: C.VTerm): NbtType = when (type) {
         is C.VTerm.Hole -> throw Error()
         is C.VTerm.Meta -> throw Error()
         is C.VTerm.Var -> TODO()
@@ -277,6 +290,11 @@ class Pack private constructor(
         val INT_ARRAY = P.NbtPath()["k"]
         val LONG_ARRAY = P.NbtPath()["l"]
 
+        val REGISTERS = P.Objective("0")
+        val REGISTER_0 = P.ScoreHolder("0")
+
+        val APPLY = P.ResourceLocation("apply")
+
         private fun NbtType.toPath(): P.NbtPath = when (this) {
             NbtType.BYTE -> BYTE
             NbtType.SHORT -> SHORT
@@ -301,10 +319,6 @@ class Pack private constructor(
         operator fun P.NbtPath.get(name: String, pattern: P.Nbt.Compound): P.NbtPath = P.NbtPath(nodes + P.NbtNode.MatchObject(name, pattern))
 
         operator fun P.NbtPath.get(name: String): P.NbtPath = P.NbtPath(nodes + P.NbtNode.CompoundChild(name))
-
-        fun nbtListOf(vararg elements: P.Nbt): P.Nbt.List = P.Nbt.List(elements.toList())
-
-        fun nbtCompoundOf(vararg elements: Pair<String, P.Nbt>): P.Nbt.Compound = P.Nbt.Compound(elements.toMap())
 
         private fun Append(target: P.ResourceLocation, path: P.NbtPath, source: P.SourceProvider): P.Command = InsertAtIndex(target, path, -1, source)
 
