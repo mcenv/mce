@@ -1,4 +1,4 @@
-package mce.phase
+package mce.phase.front
 
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
@@ -6,6 +6,8 @@ import kotlinx.collections.immutable.plus
 import mce.BUILTINS
 import mce.graph.Id
 import mce.graph.freshId
+import mce.phase.firstMapOrNull
+import mce.phase.foldAll
 import mce.graph.Core as C
 
 class Normalizer(

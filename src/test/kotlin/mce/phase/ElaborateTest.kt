@@ -2,6 +2,7 @@ package mce.phase
 
 import mce.Diagnostic
 import mce.fetch
+import mce.phase.front.Elaborate
 import mce.server.Key
 import java.util.*
 import kotlin.test.Test

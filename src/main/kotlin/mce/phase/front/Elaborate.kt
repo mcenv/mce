@@ -1,4 +1,4 @@
-package mce.phase
+package mce.phase.front
 
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
@@ -9,6 +9,8 @@ import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
 import mce.graph.Name
 import mce.graph.freshId
+import mce.phase.foldAll
+import mce.phase.foldMap
 import mce.graph.Core as C
 import mce.graph.Surface as S
 

@@ -1,7 +1,8 @@
-package mce.phase
+package mce.phase.front
 
 import mce.Diagnostic
 import mce.graph.Id
+import mce.phase.map
 import mce.graph.Core as C
 
 /**

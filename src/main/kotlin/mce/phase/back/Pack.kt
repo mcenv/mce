@@ -1,4 +1,4 @@
-package mce.phase.pack
+package mce.phase.back
 
 import mce.graph.Id
 import mce.graph.Packed.Command.*
@@ -9,25 +9,25 @@ import mce.graph.Packed.NbtType
 import mce.graph.Packed.SourceComparator.Matches
 import mce.graph.Packed.SourceProvider.From
 import mce.graph.Packed.SourceProvider.Value
-import mce.phase.Defunctionalize
-import mce.phase.pack.Def.APPLY
-import mce.phase.pack.Def.BYTE
-import mce.phase.pack.Def.BYTE_ARRAY
-import mce.phase.pack.Def.COMPOUND
-import mce.phase.pack.Def.DOUBLE
-import mce.phase.pack.Def.FLOAT
-import mce.phase.pack.Def.INT
-import mce.phase.pack.Def.INT_ARRAY
-import mce.phase.pack.Def.LIST
-import mce.phase.pack.Def.LONG
-import mce.phase.pack.Def.LONG_ARRAY
-import mce.phase.pack.Def.REGISTERS
-import mce.phase.pack.Def.REGISTER_0
-import mce.phase.pack.Def.SHORT
-import mce.phase.pack.Def.STACKS
-import mce.phase.pack.Def.STRING
-import mce.phase.pack.Dsl.Append
-import mce.phase.pack.Dsl.get
+import mce.phase.back.Def.APPLY
+import mce.phase.back.Def.BYTE
+import mce.phase.back.Def.BYTE_ARRAY
+import mce.phase.back.Def.COMPOUND
+import mce.phase.back.Def.DOUBLE
+import mce.phase.back.Def.FLOAT
+import mce.phase.back.Def.INT
+import mce.phase.back.Def.INT_ARRAY
+import mce.phase.back.Def.LIST
+import mce.phase.back.Def.LONG
+import mce.phase.back.Def.LONG_ARRAY
+import mce.phase.back.Def.REGISTERS
+import mce.phase.back.Def.REGISTER_0
+import mce.phase.back.Def.SHORT
+import mce.phase.back.Def.STACKS
+import mce.phase.back.Def.STRING
+import mce.phase.back.Dsl.Append
+import mce.phase.back.Dsl.get
+import mce.phase.middle.Defunctionalize
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P

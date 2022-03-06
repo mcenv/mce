@@ -1,10 +1,10 @@
-package mce.phase.pack
+package mce.phase.back
 
 import mce.graph.Packed.NbtPath
 import mce.graph.Packed.Objective
 import mce.graph.Packed.ResourceLocation
 import mce.graph.Packed.ScoreHolder
-import mce.phase.pack.Dsl.get
+import mce.phase.back.Dsl.get
 
 object Def {
     /**

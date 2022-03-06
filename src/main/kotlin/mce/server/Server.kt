@@ -5,8 +5,12 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
-import mce.phase.*
-import mce.phase.pack.Pack
+import mce.phase.back.Pack
+import mce.phase.front.Elaborate
+import mce.phase.front.Parse
+import mce.phase.front.Zonk
+import mce.phase.middle.Defunctionalize
+import mce.phase.middle.Stage
 import mce.graph.Surface as S
 
 class Server {

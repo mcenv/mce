@@ -1,6 +1,9 @@
-package mce.phase
+package mce.phase.middle
 
 import mce.graph.Id
+import mce.phase.front.Normalizer
+import mce.phase.front.Zonk
+import mce.phase.map
 import mce.graph.Core as C
 
 /**

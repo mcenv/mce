@@ -1,4 +1,4 @@
-package mce.phase
+package mce.phase.front
 
 import mce.graph.Id
 import mce.graph.Name
