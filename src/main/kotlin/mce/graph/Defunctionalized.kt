@@ -32,7 +32,7 @@ object Defunctionalized {
         ) : Item()
     }
 
-    data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)
+    data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term, val id: Id)
 
     sealed class Module {
         abstract val id: Id?
@@ -89,7 +89,7 @@ object Defunctionalized {
         data class IntArray(override val id: Id) : Term()
         data class LongArray(override val id: Id) : Term()
         data class List(val element: Term, val size: Term, override val id: Id) : Term()
-        data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id) : Term()
+        data class Compound(val elements: KList<Pair<Name, Term>>, override val id: Id) : Term()
         data class Box(val content: Term, override val id: Id) : Term()
         data class Ref(val element: Term, override val id: Id) : Term()
         data class Eq(val left: Term, val right: Term, override val id: Id) : Term()

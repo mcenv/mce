@@ -1,6 +1,7 @@
 package mce.phase
 
 import mce.graph.Id
+import mce.graph.Name
 import mce.graph.freshId
 import java.util.*
 import mce.graph.Surface as S
@@ -52,14 +53,14 @@ class Parse private constructor(
         else -> error("unexpected modifier '$word'")
     }
 
-    private fun parseParameter(): S.Parameter {
+    private fun parseParameter(id: Id = freshId()): S.Parameter {
         val erased = if (peekChar() == '0') {
             skip()
             false
         } else true
         val name = parseTerm()
         return if (peekChar() == ',' || peekChar() == ']') {
-            S.Parameter(erased, "", null, null, name)
+            S.Parameter(erased, "", null, null, name, id)
         } else {
             val lower = if (peekChar() == '≥') {
                 skip()
@@ -73,7 +74,7 @@ class Parse private constructor(
                 expect(':')
                 parseTerm()
             }
-            S.Parameter(erased, (name as S.Term.Var).name, lower, upper, type)
+            S.Parameter(erased, (name as S.Term.Var).name, lower, upper, type, id)
         }
     }
 
@@ -184,7 +185,7 @@ class Parse private constructor(
         }
         'λ' -> {
             skip()
-            val parameters = parseList('[', ']', ::readWord)
+            val parameters = parseList('[', ']') { parseName() }
             expectString("→")
             val body = parseTerm()
             S.Term.FunOf(parameters, body, id)
@@ -244,11 +245,11 @@ class Parse private constructor(
                 val elements = parseList('{', '}') {
                     val left = parseTerm()
                     if (peekChar() == ',' || peekChar() == '}') {
-                        "" to left
+                        Name("", freshId()) to left
                     } else {
                         expect(':')
                         val right = parseTerm()
-                        ((left as? S.Term.Var)?.name ?: error("name expected")) to right
+                        Name((left as? S.Term.Var)?.name ?: error("name expected"), freshId()) to right
                     }
                 }
                 S.Term.Compound(elements, id)
@@ -349,6 +350,11 @@ class Parse private constructor(
     private fun parseEffect(): S.Effect {
         val name = readWord()
         return S.Effect.Name(name)
+    }
+
+    private fun parseName(): Name {
+        val name = readWord()
+        return Name(name, freshId())
     }
 
     private inline fun <A, B> parsePair(parseA: () -> A, delimit: () -> Unit, parseB: () -> B): Pair<A, B> {

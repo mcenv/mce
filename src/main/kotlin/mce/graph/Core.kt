@@ -47,7 +47,7 @@ object Core {
         META,
     }
 
-    data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term)
+    data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term, val id: Id)
 
     /**
      * A syntactic module.
@@ -121,7 +121,7 @@ object Core {
         data class BoxOf(val content: Term, val tag: Term, override val id: Id?) : Term()
         data class RefOf(val element: Term, override val id: Id?) : Term()
         data class Refl(override val id: Id?) : Term()
-        data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id?) : Term()
+        data class FunOf(val parameters: KList<Name>, val body: Term, override val id: Id?) : Term()
         data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id?) : Term()
         data class CodeOf(val element: Term, override val id: Id?) : Term()
         data class Splice(val element: Term, override val id: Id?) : Term()
@@ -139,7 +139,7 @@ object Core {
         data class IntArray(override val id: Id?) : Term()
         data class LongArray(override val id: Id?) : Term()
         data class List(val element: Term, val size: Term, override val id: Id?) : Term()
-        data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id?) : Term()
+        data class Compound(val elements: KList<Pair<Name, Term>>, override val id: Id?) : Term()
         data class Box(val content: Term, override val id: Id?) : Term()
         data class Ref(val element: Term, override val id: Id?) : Term()
         data class Eq(val left: Term, val right: Term, override val id: Id?) : Term()
@@ -175,7 +175,7 @@ object Core {
         data class BoxOf(val content: Lazy<VTerm>, val tag: Lazy<VTerm>, override val id: Id? = null) : VTerm()
         data class RefOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
         data class Refl(override val id: Id? = null) : VTerm()
-        data class FunOf(val parameters: KList<KString>, val body: Term, override val id: Id? = null) : VTerm()
+        data class FunOf(val parameters: KList<Name>, val body: Term, override val id: Id? = null) : VTerm()
         data class Apply(val function: VTerm, val arguments: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
         data class CodeOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
         data class Splice(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
@@ -193,7 +193,7 @@ object Core {
         data class IntArray(override val id: Id? = null) : VTerm()
         data class LongArray(override val id: Id? = null) : VTerm()
         data class List(val element: Lazy<VTerm>, val size: Lazy<VTerm>, override val id: Id? = null) : VTerm()
-        data class Compound(val elements: KList<Pair<KString, Term>>, override val id: Id? = null) : VTerm()
+        data class Compound(val elements: KList<Pair<Name, Term>>, override val id: Id? = null) : VTerm()
         data class Box(val content: Lazy<VTerm>, override val id: Id? = null) : VTerm()
         data class Ref(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
         data class Eq(val left: Lazy<VTerm>, val right: Lazy<VTerm>, override val id: Id? = null) : VTerm()

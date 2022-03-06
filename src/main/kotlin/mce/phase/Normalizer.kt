@@ -214,7 +214,7 @@ class Normalizer(
         is C.VTerm.BoxOf -> C.Term.BoxOf(quoteTerm(term.content.value), quoteTerm(term.tag.value), term.id)
         is C.VTerm.RefOf -> C.Term.RefOf(quoteTerm(term.element.value), term.id)
         is C.VTerm.Refl -> C.Term.Refl(term.id)
-        is C.VTerm.FunOf -> C.Term.FunOf(term.parameters, term.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter, normalizer.size, freshId()))) }.quoteTerm(evalTerm(term.body)), term.id)
+        is C.VTerm.FunOf -> C.Term.FunOf(term.parameters, term.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter.text, normalizer.size, freshId()))) }.quoteTerm(evalTerm(term.body)), term.id)
         is C.VTerm.Apply -> C.Term.Apply(quoteTerm(term.function), term.arguments.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.CodeOf -> C.Term.CodeOf(quoteTerm(term.element.value), term.id)
         is C.VTerm.Splice -> C.Term.Splice(quoteTerm(term.element.value), term.id)

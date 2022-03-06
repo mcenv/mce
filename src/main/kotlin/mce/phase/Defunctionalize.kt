@@ -25,7 +25,7 @@ class Defunctionalize private constructor() {
         val lower = parameter.lower?.let { defunctionalizeTerm(it) }
         val upper = parameter.upper?.let { defunctionalizeTerm(it) }
         val type = defunctionalizeTerm(parameter.type)
-        return D.Parameter(parameter.relevant, parameter.name, lower, upper, type)
+        return D.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
     }
 
     private fun defunctionalizeModule(module: C.Module): D.Module = when (module) {

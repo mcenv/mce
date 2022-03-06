@@ -7,6 +7,7 @@ import mce.Diagnostic
 import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
+import mce.graph.Name
 import mce.graph.freshId
 import mce.graph.Core as C
 import mce.graph.Surface as S
@@ -33,10 +34,7 @@ class Elaborate private constructor(
                 val resultant = context2.checkTerm(item.resultant, TYPE)
                 val vResultant = context2.normalizer.evalTerm(resultant)
                 val effects = item.effects.map { elaborateEffect(it) }.toSet()
-                val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else run {
-                    val body = context2.relevant().checkTerm(item.body, vResultant)
-                    if (parameters.isEmpty()) body else C.Term.FunOf(parameters.map { it.name }, body, freshId())
-                }
+                val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else context2.relevant().checkTerm(item.body, vResultant)
                 context2.checkPhase(item.body.id, vResultant)
                 C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body) to C.VSignature.Def(item.name, parameters, resultant, null)
             }
@@ -78,7 +76,7 @@ class Elaborate private constructor(
         val vLower = lower?.let { context.normalizer.evalTerm(it) }
         val upper = parameter.upper?.let { context.checkTerm(it, vType) }
         val vUpper = upper?.let { context.normalizer.evalTerm(it) }
-        context.bindUnchecked(Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, lower, upper, type)
+        context.bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
     }
 
     /**
@@ -218,8 +216,8 @@ class Elaborate private constructor(
             Typing(C.Term.ListOf(elements, term.id), C.VTerm.List(lazyOf(first.type), lazyOf(size)))
         }
         is S.Term.CompoundOf -> {
-            val elements = term.elements.map { "" to inferTerm(it) }
-            Typing(C.Term.CompoundOf(elements.map { it.second.term }, term.id), C.VTerm.Compound(elements.map { it.first to normalizer.quoteTerm(it.second.type) }))
+            val elements = term.elements.map { inferTerm(it) }
+            Typing(C.Term.CompoundOf(elements.map { it.term }, term.id), C.VTerm.Compound(elements.map { Name("", freshId()) to normalizer.quoteTerm(it.type) }))
         }
         is S.Term.BoxOf -> {
             val tTag = checkTerm(term.tag, TYPE)
@@ -275,7 +273,7 @@ class Elaborate private constructor(
         is S.Term.Compound -> {
             val (_, elements) = term.elements.foldMap(this) { context, (name, element) ->
                 val element = context.checkTerm(element, TYPE)
-                context.bind(term.id, Entry(true /* TODO */, name, END, ANY, context.normalizer.evalTerm(element), stage)) to (name to element)
+                context.bind(name.id, Entry(true /* TODO */, name.text, END, ANY, context.normalizer.evalTerm(element), stage)) to (name to element)
             }
             Typing(C.Term.Compound(elements, term.id), TYPE)
         }
@@ -322,13 +320,13 @@ class Elaborate private constructor(
                         if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
                     }
                     val type = context.normalizer.evalTerm(parameter.type)
-                    context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
+                    context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
                 }
                 val resultant = item.parameters.fold(this) { context, parameter ->
                     val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }
                     val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }
                     val type = context.normalizer.evalTerm(parameter.type)
-                    context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage))
+                    context.bind(parameter.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage))
                 }.normalizer.evalTerm(item.resultant)
                 Typing(C.Term.Def(computation.name, arguments, computation.id), resultant, item.effects)
             }
@@ -351,8 +349,8 @@ class Elaborate private constructor(
         }
         is S.Term.FunOf -> {
             val types = computation.parameters.map { normalizer.fresh(computation.id) }
-            val body = (computation.parameters zip types).fold(empty()) { context, (parameter, type) -> context.bind(computation.id, Entry(true /* TODO */, parameter, END, ANY, type, stage)) }.inferComputation(computation.body)
-            val parameters = (computation.parameters zip types).map { C.Parameter(true /* TODO */, it.first, normalizer.quoteTerm(END), normalizer.quoteTerm(ANY), normalizer.quoteTerm(it.second)) }
+            val body = (computation.parameters zip types).fold(empty()) { context, (parameter, type) -> context.bind(parameter.id, Entry(true /* TODO */, parameter.text, END, ANY, type, stage)) }.inferComputation(computation.body)
+            val parameters = (computation.parameters zip types).map { (parameter, type) -> C.Parameter(true /* TODO */, parameter.text, normalizer.quoteTerm(END), normalizer.quoteTerm(ANY), normalizer.quoteTerm(type), parameter.id) }
             Typing(C.Term.FunOf(computation.parameters, body.term, computation.id), C.VTerm.Fun(parameters, normalizer.quoteTerm(body.type), body.effects))
         }
         is S.Term.Apply -> {
@@ -372,7 +370,7 @@ class Elaborate private constructor(
                             if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
                         }
                         val type = context.normalizer.evalTerm(parameter.type)
-                        context.bindUnchecked(Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
+                        context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
                     }
                     val resultant = context.normalizer.evalTerm(type.resultant)
                     Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
@@ -416,7 +414,7 @@ class Elaborate private constructor(
                     val vType = context.normalizer.evalTerm(type.second)
                     val element = context.checkTerm(element, vType)
                     val vElement = context.normalizer.evalTerm(element)
-                    context.bindUnchecked(Entry(true /* TODO */, type.first, END, ANY, vType, context.stage), vElement) to element
+                    context.bind(freshId() /* TODO */, Entry(true /* TODO */, type.first.text, END, ANY, vType, context.stage), vElement) to element
                 }
                 C.Term.CompoundOf(elements, term.id)
             }
@@ -463,7 +461,7 @@ class Elaborate private constructor(
                     val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }
                     val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }
                     val type = context.normalizer.evalTerm(parameter.type)
-                    context.bindUnchecked(Entry(parameter.relevant, name, lower, upper, type, stage))
+                    context.bind(name.id, Entry(parameter.relevant, name.text, lower, upper, type, stage))
                 }
                 val resultant = context.checkComputation(computation.body, context.normalizer.evalTerm(type.resultant), effects)
                 Effecting(C.Term.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
@@ -525,7 +523,7 @@ class Elaborate private constructor(
             value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> unifyTerms(value1.element.value, value2.element.value)
             value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> true
             value1 is C.VTerm.FunOf && value2 is C.VTerm.FunOf -> value1.parameters.size == value2.parameters.size &&
-                    value1.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter, normalizer.size))) }.run { unifyTerms(evalTerm(value1.body), evalTerm(value2.body)) }
+                    value1.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter.text, normalizer.size))) }.run { unifyTerms(evalTerm(value1.body), evalTerm(value2.body)) }
             value1 is C.VTerm.Apply && value2 is C.VTerm.Apply -> unifyTerms(value1.function, value2.function) &&
                     (value1.arguments zip value2.arguments).all { unifyTerms(it.first.value, it.second.value) }
             value1 is C.VTerm.CodeOf && value2 is C.VTerm.CodeOf -> unifyTerms(value1.element.value, value2.element.value)
@@ -647,7 +645,7 @@ class Elaborate private constructor(
                 val (context, element, elementType) = context.inferPattern(element)
                 context to (element to elementType)
             }
-            Triple(context, C.Pattern.CompoundOf(elements.map { it.first }, pattern.id), C.VTerm.Compound(elements.map { "" to context.normalizer.quoteTerm(it.second) }))
+            Triple(context, C.Pattern.CompoundOf(elements.map { it.first }, pattern.id), C.VTerm.Compound(elements.map { Name("", freshId()) to context.normalizer.quoteTerm(it.second) }))
         }
         is S.Pattern.BoxOf -> {
             val (context1, tag) = checkPattern(pattern.tag, TYPE)
@@ -861,7 +859,7 @@ class Elaborate private constructor(
 
         fun lookup(name: String): Int = entries.indexOfLast { it.name == name }
 
-        fun bind(id: Id, entry: Entry, term: C.VTerm? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(term ?: C.VTerm.Var(entry.name, size))), meta, stage, relevant).also { checkPhase(id, entry.type) }
+        fun bind(id: Id, entry: Entry, term: C.VTerm? = null): Context = bindUnchecked(entry, term).also { checkPhase(id, entry.type) }
 
         fun bindUnchecked(entry: Entry, term: C.VTerm? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(term ?: C.VTerm.Var(entry.name, size))), meta, stage, relevant)
 

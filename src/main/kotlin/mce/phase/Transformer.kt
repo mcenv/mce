@@ -47,7 +47,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.Box -> C.Term.Box(transform(content), id)
     is C.Term.Ref -> C.Term.Ref(transform(element), id)
     is C.Term.Eq -> C.Term.Eq(transform(left), transform(right), id)
-    is C.Term.Fun -> C.Term.Fun(parameters.map { C.Parameter(it.relevant, it.name, it.lower?.let(transform), it.upper?.let(transform), transform(it.type)) }, transform(resultant), effects, id)
+    is C.Term.Fun -> C.Term.Fun(parameters.map { C.Parameter(it.relevant, it.name, it.lower?.let(transform), it.upper?.let(transform), transform(it.type), it.id) }, transform(resultant), effects, id)
     is C.Term.Code -> C.Term.Code(transform(element), id)
     is C.Term.Type -> C.Term.Type(id)
 }
