@@ -88,6 +88,7 @@ class Pack private constructor(
                 packTerm(term.scrutinee)
                 TODO()
             }
+            is D.Term.UnitOf -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(0)))
             is D.Term.BoolOf -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(if (term.value) 1 else 0)))
             is D.Term.ByteOf -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(term.value)))
             is D.Term.ShortOf -> +Append(STACKS, SHORT, Value(P.Nbt.Short(term.value)))
@@ -194,6 +195,7 @@ class Pack private constructor(
             }
             is D.Term.Union -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Intersection -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Unit -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Bool -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Byte -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Short -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.SHORT.ordinal.toByte())))
@@ -224,6 +226,7 @@ class Pack private constructor(
             is C.VTerm.Var -> TODO()
             is C.VTerm.Def -> TODO()
             is C.VTerm.Match -> TODO()
+            is C.VTerm.UnitOf -> throw Error()
             is C.VTerm.BoolOf -> throw Error()
             is C.VTerm.ByteOf -> throw Error()
             is C.VTerm.ShortOf -> throw Error()
@@ -246,6 +249,7 @@ class Pack private constructor(
             is C.VTerm.Splice -> throw Error()
             is C.VTerm.Union -> TODO()
             is C.VTerm.Intersection -> TODO()
+            is C.VTerm.Unit -> NbtType.BYTE
             is C.VTerm.Bool -> NbtType.BYTE
             is C.VTerm.Byte -> NbtType.BYTE
             is C.VTerm.Short -> NbtType.SHORT

@@ -71,6 +71,7 @@ object Surface {
         data class Def(val name: KString, val arguments: KList<Term>, override val id: Id) : Term()
         data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
         data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
+        data class UnitOf(override val id: Id) : Term()
         data class BoolOf(val value: KBoolean, override val id: Id) : Term()
         data class ByteOf(val value: KByte, override val id: Id) : Term()
         data class ShortOf(val value: KShort, override val id: Id) : Term()
@@ -93,6 +94,7 @@ object Surface {
         data class Splice(val element: Term, override val id: Id) : Term()
         data class Union(val variants: KList<Term>, override val id: Id) : Term()
         data class Intersection(val variants: KList<Term>, override val id: Id) : Term()
+        data class Unit(override val id: Id) : Term()
         data class Bool(override val id: Id) : Term()
         data class Byte(override val id: Id) : Term()
         data class Short(override val id: Id) : Term()
@@ -118,6 +120,7 @@ object Surface {
         abstract val id: Id
 
         data class Var(val name: KString, override val id: Id) : Pattern()
+        data class UnitOf(override val id: Id) : Pattern()
         data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
         data class ByteOf(val value: KByte, override val id: Id) : Pattern()
         data class ShortOf(val value: KShort, override val id: Id) : Pattern()
@@ -134,6 +137,7 @@ object Surface {
         data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
         data class RefOf(val element: Pattern, override val id: Id) : Pattern()
         data class Refl(override val id: Id) : Pattern()
+        data class Unit(override val id: Id) : Pattern()
         data class Bool(override val id: Id) : Pattern()
         data class Byte(override val id: Id) : Pattern()
         data class Short(override val id: Id) : Pattern()

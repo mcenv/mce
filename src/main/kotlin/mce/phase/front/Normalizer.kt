@@ -93,6 +93,7 @@ class Normalizer(
                 else -> clause.first.evalTerm(clause.second)
             }
         }
+        is C.Term.UnitOf -> C.VTerm.UnitOf(term.id)
         is C.Term.BoolOf -> C.VTerm.BoolOf(term.value, term.id)
         is C.Term.ByteOf -> C.VTerm.ByteOf(term.value, term.id)
         is C.Term.ShortOf -> C.VTerm.ShortOf(term.value, term.id)
@@ -124,6 +125,7 @@ class Normalizer(
         }
         is C.Term.Union -> C.VTerm.Union(term.variants.map { lazy { evalTerm(it) } }, term.id)
         is C.Term.Intersection -> C.VTerm.Intersection(term.variants.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.Unit -> C.VTerm.Unit(term.id)
         is C.Term.Bool -> C.VTerm.Bool(term.id)
         is C.Term.Byte -> C.VTerm.Byte(term.id)
         is C.Term.Short -> C.VTerm.Short(term.id)
@@ -200,6 +202,7 @@ class Normalizer(
         is C.VTerm.Var -> C.Term.Var(term.name, term.level, term.id)
         is C.VTerm.Def -> C.Term.Def(term.name, term.arguments.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.Match -> C.Term.Match(quoteTerm(term.scrutinee), term.clauses.map { it.first to quoteTerm(it.second.value) }, term.id)
+        is C.VTerm.UnitOf -> C.Term.UnitOf(term.id)
         is C.VTerm.BoolOf -> C.Term.BoolOf(term.value, term.id)
         is C.VTerm.ByteOf -> C.Term.ByteOf(term.value, term.id)
         is C.VTerm.ShortOf -> C.Term.ShortOf(term.value, term.id)
@@ -222,6 +225,7 @@ class Normalizer(
         is C.VTerm.Splice -> C.Term.Splice(quoteTerm(term.element.value), term.id)
         is C.VTerm.Union -> C.Term.Union(term.variants.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.Intersection -> C.Term.Intersection(term.variants.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.Unit -> C.Term.Unit(term.id)
         is C.VTerm.Bool -> C.Term.Bool(term.id)
         is C.VTerm.Byte -> C.Term.Byte(term.id)
         is C.VTerm.Short -> C.Term.Short(term.id)

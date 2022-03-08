@@ -1,0 +1,1 @@
+def unit_intro [] : unit ≔ ⟨⟩

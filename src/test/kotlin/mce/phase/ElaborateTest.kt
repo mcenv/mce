@@ -444,4 +444,14 @@ class ElaborateTest {
     fun structure() {
         elaborate("structure").success()
     }
+
+    @Test
+    fun unitIntro() {
+        elaborate("unit_intro").success()
+    }
+
+    @Test
+    fun unitElim() {
+        elaborate("unit_elim").success()
+    }
 }

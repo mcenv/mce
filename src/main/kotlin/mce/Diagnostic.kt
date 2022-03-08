@@ -33,6 +33,7 @@ sealed class Diagnostic {
             is C.Term.Def -> S.Term.Def(term.name, term.arguments.map { serializeTerm(it) }, term.id ?: freshId())
             is C.Term.Let -> S.Term.Let(term.name, serializeTerm(term.init), serializeTerm(term.body), term.id ?: freshId())
             is C.Term.Match -> S.Term.Match(serializeTerm(term.scrutinee), term.clauses.map { serializePattern(it.first) to serializeTerm(it.second) }, term.id ?: freshId())
+            is C.Term.UnitOf -> S.Term.UnitOf(term.id ?: freshId())
             is C.Term.BoolOf -> S.Term.BoolOf(term.value, term.id ?: freshId())
             is C.Term.ByteOf -> S.Term.ByteOf(term.value, term.id ?: freshId())
             is C.Term.ShortOf -> S.Term.ShortOf(term.value, term.id ?: freshId())
@@ -55,6 +56,7 @@ sealed class Diagnostic {
             is C.Term.Splice -> S.Term.Splice(serializeTerm(term.element), term.id ?: freshId())
             is C.Term.Union -> S.Term.Union(term.variants.map { serializeTerm(it) }, term.id ?: freshId())
             is C.Term.Intersection -> S.Term.Intersection(term.variants.map { serializeTerm(it) }, term.id ?: freshId())
+            is C.Term.Unit -> S.Term.Unit(term.id ?: freshId())
             is C.Term.Bool -> S.Term.Bool(term.id ?: freshId())
             is C.Term.Byte -> S.Term.Byte(term.id ?: freshId())
             is C.Term.Short -> S.Term.Short(term.id ?: freshId())
@@ -83,6 +85,7 @@ sealed class Diagnostic {
 
         fun serializePattern(pattern: C.Pattern): S.Pattern = when (pattern) {
             is C.Pattern.Var -> S.Pattern.Var(pattern.name, pattern.id)
+            is C.Pattern.UnitOf -> S.Pattern.UnitOf(pattern.id)
             is C.Pattern.BoolOf -> S.Pattern.BoolOf(pattern.value, pattern.id)
             is C.Pattern.ByteOf -> S.Pattern.ByteOf(pattern.value, pattern.id)
             is C.Pattern.ShortOf -> S.Pattern.ShortOf(pattern.value, pattern.id)
@@ -99,6 +102,7 @@ sealed class Diagnostic {
             is C.Pattern.BoxOf -> S.Pattern.BoxOf(serializePattern(pattern.content), serializePattern(pattern.tag), pattern.id)
             is C.Pattern.RefOf -> S.Pattern.RefOf(serializePattern(pattern.element), pattern.id)
             is C.Pattern.Refl -> S.Pattern.Refl(pattern.id)
+            is C.Pattern.Unit -> S.Pattern.Unit(pattern.id)
             is C.Pattern.Bool -> S.Pattern.Bool(pattern.id)
             is C.Pattern.Byte -> S.Pattern.Byte(pattern.id)
             is C.Pattern.Short -> S.Pattern.Short(pattern.id)

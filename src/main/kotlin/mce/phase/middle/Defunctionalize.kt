@@ -68,6 +68,7 @@ class Defunctionalize private constructor() {
             val clauses = term.clauses.map { defunctionalizePattern(it.first) to defunctionalizeTerm(it.second) }
             D.Term.Match(scrutinee, clauses, term.id!!)
         }
+        is C.Term.UnitOf -> D.Term.UnitOf(term.id!!)
         is C.Term.BoolOf -> D.Term.BoolOf(term.value, term.id!!)
         is C.Term.ByteOf -> D.Term.ByteOf(term.value, term.id!!)
         is C.Term.ShortOf -> D.Term.ShortOf(term.value, term.id!!)
@@ -128,6 +129,7 @@ class Defunctionalize private constructor() {
             val variants = term.variants.map { defunctionalizeTerm(it) }
             D.Term.Intersection(variants, term.id!!)
         }
+        is C.Term.Unit -> D.Term.Unit(term.id!!)
         is C.Term.Bool -> D.Term.Bool(term.id!!)
         is C.Term.Byte -> D.Term.Byte(term.id!!)
         is C.Term.Short -> D.Term.Short(term.id!!)
@@ -173,6 +175,7 @@ class Defunctionalize private constructor() {
 
     private fun defunctionalizePattern(pattern: C.Pattern): D.Pattern = when (pattern) {
         is C.Pattern.Var -> D.Pattern.Var(pattern.name, pattern.id)
+        is C.Pattern.UnitOf -> D.Pattern.UnitOf(pattern.id)
         is C.Pattern.BoolOf -> D.Pattern.BoolOf(pattern.value, pattern.id)
         is C.Pattern.ByteOf -> D.Pattern.ByteOf(pattern.value, pattern.id)
         is C.Pattern.ShortOf -> D.Pattern.ShortOf(pattern.value, pattern.id)
@@ -211,6 +214,7 @@ class Defunctionalize private constructor() {
             D.Pattern.RefOf(element, pattern.id)
         }
         is C.Pattern.Refl -> D.Pattern.Refl(pattern.id)
+        is C.Pattern.Unit -> D.Pattern.Unit(pattern.id)
         is C.Pattern.Bool -> D.Pattern.Bool(pattern.id)
         is C.Pattern.Byte -> D.Pattern.Byte(pattern.id)
         is C.Pattern.Short -> D.Pattern.Short(pattern.id)

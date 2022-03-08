@@ -189,6 +189,7 @@ class Elaborate private constructor(
             }
             Typing(C.Term.Var(term.name, level, term.id), type)
         }
+        is S.Term.UnitOf -> Typing(C.Term.UnitOf(term.id), UNIT)
         is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value, term.id), BOOL)
         is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value, term.id), BYTE)
         is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value, term.id), SHORT)
@@ -256,6 +257,7 @@ class Elaborate private constructor(
             val variants = term.variants.map { checkTerm(it, TYPE) }
             Typing(C.Term.Intersection(variants, term.id), TYPE)
         }
+        is S.Term.Unit -> Typing(C.Term.Unit(term.id), TYPE)
         is S.Term.Bool -> Typing(C.Term.Bool(term.id), TYPE)
         is S.Term.Byte -> Typing(C.Term.Byte(term.id), TYPE)
         is S.Term.Short -> Typing(C.Term.Short(term.id), TYPE)
@@ -503,6 +505,7 @@ class Elaborate private constructor(
             value1 is C.VTerm.Var && value2 is C.VTerm.Var -> value1.level == value2.level
             value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> true
             value1 is C.VTerm.Match && value2 is C.VTerm.Match -> false // TODO
+            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> true
             value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> value1.value == value2.value
             value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> value1.value == value2.value
             value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> value1.value == value2.value
@@ -532,6 +535,7 @@ class Elaborate private constructor(
             value1 is C.VTerm.Splice && value2 is C.VTerm.Splice -> unifyTerms(value1.element.value, value2.element.value)
             value1 is C.VTerm.Union && value1.variants.isEmpty() && value2 is C.VTerm.Union && value2.variants.isEmpty() -> true
             value1 is C.VTerm.Intersection && value1.variants.isEmpty() && value2 is C.VTerm.Intersection && value2.variants.isEmpty() -> true
+            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> true
             value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> true
             value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> true
             value1 is C.VTerm.Short && value2 is C.VTerm.Short -> true
@@ -614,6 +618,7 @@ class Elaborate private constructor(
             val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
             Triple(context, C.Pattern.Var(pattern.name, pattern.id), type)
         }
+        is S.Pattern.UnitOf -> Triple(this, C.Pattern.UnitOf(pattern.id), UNIT)
         is S.Pattern.BoolOf -> Triple(this, C.Pattern.BoolOf(pattern.value, pattern.id), BOOL)
         is S.Pattern.ByteOf -> Triple(this, C.Pattern.ByteOf(pattern.value, pattern.id), BYTE)
         is S.Pattern.ShortOf -> Triple(this, C.Pattern.ShortOf(pattern.value, pattern.id), SHORT)
@@ -663,6 +668,7 @@ class Elaborate private constructor(
             val left = lazy { normalizer.fresh(pattern.id) }
             Triple(this, C.Pattern.Refl(pattern.id), C.VTerm.Eq(left, left))
         }
+        is S.Pattern.Unit -> Triple(this, C.Pattern.Unit(pattern.id), UNIT)
         is S.Pattern.Bool -> Triple(this, C.Pattern.Bool(pattern.id), TYPE)
         is S.Pattern.Byte -> Triple(this, C.Pattern.Byte(pattern.id), TYPE)
         is S.Pattern.Short -> Triple(this, C.Pattern.Short(pattern.id), TYPE)
@@ -730,6 +736,7 @@ class Elaborate private constructor(
      * Converts this pattern to a semantic term.
      */
     private fun C.Pattern.toType(): C.VTerm? = when (this) {
+        is C.Pattern.Unit -> UNIT
         is C.Pattern.Bool -> BOOL
         is C.Pattern.Byte -> BYTE
         is C.Pattern.Short -> SHORT
@@ -778,8 +785,8 @@ class Elaborate private constructor(
         fun join(left: C.VTerm, right: C.VTerm): Boolean = when (val left = force(left)) {
             is C.VTerm.Union -> left.variants.all { join(it.value, right) }
             is C.VTerm.Intersection -> left.variants.any { join(it.value, right) }
-            is C.VTerm.Bool, is C.VTerm.Byte, is C.VTerm.Eq, is C.VTerm.Fun, is C.VTerm.Type -> when (force(right)) {
-                is C.VTerm.Bool, is C.VTerm.Byte, is C.VTerm.Eq, is C.VTerm.Fun, is C.VTerm.Type -> true
+            is C.VTerm.Unit, is C.VTerm.Bool, is C.VTerm.Byte, is C.VTerm.Eq, is C.VTerm.Fun, is C.VTerm.Type -> when (force(right)) {
+                is C.VTerm.Unit, is C.VTerm.Bool, is C.VTerm.Byte, is C.VTerm.Eq, is C.VTerm.Fun, is C.VTerm.Type -> true
                 else -> false
             }
             is C.VTerm.Short -> right is C.VTerm.Short
@@ -885,6 +892,7 @@ class Elaborate private constructor(
     }
 
     companion object {
+        private val UNIT = C.VTerm.Unit()
         private val BOOL = C.VTerm.Bool()
         private val BYTE = C.VTerm.Byte()
         private val SHORT = C.VTerm.Short()

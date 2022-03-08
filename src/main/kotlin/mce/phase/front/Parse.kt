@@ -162,6 +162,10 @@ class Parse private constructor(
             skip()
             S.Term.Meta(id)
         }
+        '⟨' -> {
+            skip()
+            S.Term.UnitOf(id).also { expect('⟩') }
+        }
         '"' -> S.Term.StringOf(readString(), id)
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
@@ -225,6 +229,7 @@ class Parse private constructor(
                 S.Term.Intersection(variants, id)
             }
             "any" -> S.Term.Intersection(emptyList(), id)
+            "unit" -> S.Term.Unit(id)
             "bool" -> S.Term.Bool(id)
             "byte" -> S.Term.Byte(id)
             "short" -> S.Term.Short(id)
@@ -297,6 +302,10 @@ class Parse private constructor(
                 else -> error("unexpected operator '$char'")
             }.also { expect(')') }
         }
+        '⟨' -> {
+            skip()
+            S.Pattern.UnitOf(id).also { expect('⟩') }
+        }
         '"' -> S.Pattern.StringOf(readString(), id)
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
@@ -322,6 +331,7 @@ class Parse private constructor(
             "false" -> S.Pattern.BoolOf(false, id)
             "true" -> S.Pattern.BoolOf(true, id)
             "refl" -> S.Pattern.Refl(id)
+            "unit" -> S.Pattern.Unit(id)
             "bool" -> S.Pattern.Bool(id)
             "byte" -> S.Pattern.Byte(id)
             "short" -> S.Pattern.Short(id)
