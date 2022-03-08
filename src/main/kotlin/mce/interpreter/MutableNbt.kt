@@ -1,107 +1,188 @@
 package mce.interpreter
 
+import mce.graph.Packed.Nbt
+import mce.graph.Packed.NbtType
 import kotlin.math.floor
-import mce.graph.Packed as P
-import kotlin.Byte as KByte
-import kotlin.Double as KDouble
-import kotlin.Float as KFloat
-import kotlin.Int as KInt
-import kotlin.Long as KLong
-import kotlin.Short as KShort
-import kotlin.String as KString
 
 sealed class MutableNbt {
-    sealed class Numeric : MutableNbt() {
-        abstract fun toByte(): KByte
-        abstract fun toShort(): KShort
-        abstract fun toInt(): KInt
-        abstract fun toLong(): KLong
-        abstract fun toFloat(): KFloat
-        abstract fun toDouble(): KDouble
-    }
+    abstract val type: NbtType
+}
 
-    data class Byte(val data: KByte) : Numeric() {
-        override fun toByte(): KByte = data
-        override fun toShort(): KShort = data.toShort()
-        override fun toInt(): KInt = data.toInt()
-        override fun toLong(): KLong = data.toLong()
-        override fun toFloat(): KFloat = data.toFloat()
-        override fun toDouble(): KDouble = data.toDouble()
-    }
+sealed class NumericNbt : MutableNbt() {
+    abstract fun toByte(): Byte
+    abstract fun toShort(): Short
+    abstract fun toInt(): Int
+    abstract fun toLong(): Long
+    abstract fun toFloat(): Float
+    abstract fun toDouble(): Double
+}
 
-    data class Short(val data: KShort) : Numeric() {
-        override fun toByte(): KByte = data.toInt().and(0xff).toByte()
-        override fun toShort(): KShort = data
-        override fun toInt(): KInt = data.toInt()
-        override fun toLong(): KLong = data.toLong()
-        override fun toFloat(): KFloat = data.toFloat()
-        override fun toDouble(): KDouble = data.toDouble()
-    }
+data class ByteNbt(val data: Byte) : NumericNbt() {
+    override val type: NbtType = NbtType.BYTE
+    override fun toByte(): Byte = data
+    override fun toShort(): Short = data.toShort()
+    override fun toInt(): Int = data.toInt()
+    override fun toLong(): Long = data.toLong()
+    override fun toFloat(): Float = data.toFloat()
+    override fun toDouble(): Double = data.toDouble()
+}
 
-    data class Int(val data: KInt) : Numeric() {
-        override fun toByte(): KByte = data.and(0xff).toByte()
-        override fun toShort(): KShort = data.and(0xffff).toShort()
-        override fun toInt(): KInt = data
-        override fun toLong(): KLong = data.toLong()
-        override fun toFloat(): KFloat = data.toFloat()
-        override fun toDouble(): KDouble = data.toDouble()
-    }
+data class ShortNbt(val data: Short) : NumericNbt() {
+    override val type: NbtType = NbtType.SHORT
+    override fun toByte(): Byte = data.toInt().and(0xff).toByte()
+    override fun toShort(): Short = data
+    override fun toInt(): Int = data.toInt()
+    override fun toLong(): Long = data.toLong()
+    override fun toFloat(): Float = data.toFloat()
+    override fun toDouble(): Double = data.toDouble()
+}
 
-    data class Long(val data: KLong) : Numeric() {
-        override fun toByte(): KByte = data.and(0xff).toInt().toByte()
-        override fun toShort(): KShort = data.and(0xffff).toInt().toShort()
-        override fun toInt(): KInt = data.toInt()
-        override fun toLong(): KLong = data
-        override fun toFloat(): KFloat = data.toFloat()
-        override fun toDouble(): KDouble = data.toDouble()
-    }
+data class IntNbt(val data: Int) : NumericNbt() {
+    override val type: NbtType = NbtType.INT
+    override fun toByte(): Byte = data.and(0xff).toByte()
+    override fun toShort(): Short = data.and(0xffff).toShort()
+    override fun toInt(): Int = data
+    override fun toLong(): Long = data.toLong()
+    override fun toFloat(): Float = data.toFloat()
+    override fun toDouble(): Double = data.toDouble()
+}
 
-    data class Float(val data: KFloat) : Numeric() {
-        override fun toByte(): KByte = Math.floor(data).and(0xff).toByte()
-        override fun toShort(): KShort = Math.floor(data).and(0xffff).toShort()
-        override fun toInt(): KInt = Math.floor(data)
-        override fun toLong(): KLong = data.toLong()
-        override fun toFloat(): KFloat = data
-        override fun toDouble(): KDouble = data.toDouble()
-    }
+data class LongNbt(val data: Long) : NumericNbt() {
+    override val type: NbtType = NbtType.LONG
+    override fun toByte(): Byte = data.and(0xff).toInt().toByte()
+    override fun toShort(): Short = data.and(0xffff).toInt().toShort()
+    override fun toInt(): Int = data.toInt()
+    override fun toLong(): Long = data
+    override fun toFloat(): Float = data.toFloat()
+    override fun toDouble(): Double = data.toDouble()
+}
 
-    data class Double(val data: KDouble) : Numeric() {
-        override fun toByte(): KByte = Math.floor(data).and(0xff).toByte()
-        override fun toShort(): KShort = Math.floor(data).and(0xffff).toShort()
-        override fun toInt(): KInt = Math.floor(data)
-        override fun toLong(): KLong = floor(data).toLong()
-        override fun toFloat(): KFloat = data.toFloat()
-        override fun toDouble(): KDouble = data
-    }
+data class FloatNbt(val data: Float) : NumericNbt() {
+    override val type: NbtType = NbtType.FLOAT
+    override fun toByte(): Byte = Math.floor(data).and(0xff).toByte()
+    override fun toShort(): Short = Math.floor(data).and(0xffff).toShort()
+    override fun toInt(): Int = Math.floor(data)
+    override fun toLong(): Long = data.toLong()
+    override fun toFloat(): Float = data
+    override fun toDouble(): Double = data.toDouble()
+}
 
-    sealed class Collection<T : MutableNbt>(elements: MutableList<T>) : MutableNbt(), MutableList<T> by elements
+data class DoubleNbt(val data: Double) : NumericNbt() {
+    override val type: NbtType = NbtType.DOUBLE
+    override fun toByte(): Byte = Math.floor(data).and(0xff).toByte()
+    override fun toShort(): Short = Math.floor(data).and(0xffff).toShort()
+    override fun toInt(): Int = Math.floor(data)
+    override fun toLong(): Long = floor(data).toLong()
+    override fun toFloat(): Float = data.toFloat()
+    override fun toDouble(): Double = data
+}
 
-    data class ByteArray(val elements: MutableList<Byte>) : Collection<Byte>(elements)
+sealed class CollectionNbt<T : MutableNbt>(elements: MutableList<T>) : MutableNbt(), MutableList<T> by elements {
+    abstract fun setNbt(index: Int, nbt: MutableNbt): Boolean
+    abstract fun addNbt(index: Int, nbt: MutableNbt): Boolean
+}
 
-    data class IntArray(val elements: MutableList<Int>) : Collection<Int>(elements)
+data class ByteArrayNbt(val elements: MutableList<ByteNbt>) : CollectionNbt<ByteNbt>(elements) {
+    override val type: NbtType = NbtType.BYTE_ARRAY
 
-    data class LongArray(val elements: MutableList<Long>) : Collection<Long>(elements)
-
-    data class List(val elements: MutableList<MutableNbt>) : Collection<MutableNbt>(elements)
-
-    data class String(val data: KString) : MutableNbt()
-
-    data class Compound(val elements: MutableMap<KString, MutableNbt>) : MutableNbt(), MutableMap<KString, MutableNbt> by elements
-
-    companion object {
-        fun P.Nbt.toMutableNbt(): MutableNbt = when (this) {
-            is P.Nbt.Byte -> Byte(data)
-            is P.Nbt.Short -> Short(data)
-            is P.Nbt.Int -> Int(data)
-            is P.Nbt.Long -> Long(data)
-            is P.Nbt.Float -> Float(data)
-            is P.Nbt.Double -> Double(data)
-            is P.Nbt.ByteArray -> ByteArray(elements.map { Byte(it) }.toMutableList())
-            is P.Nbt.String -> String(data)
-            is P.Nbt.List -> List(elements.map { it.toMutableNbt() }.toMutableList())
-            is P.Nbt.Compound -> Compound(elements.mapValues { it.value.toMutableNbt() }.toMutableMap())
-            is P.Nbt.IntArray -> IntArray(elements.map { Int(it) }.toMutableList())
-            is P.Nbt.LongArray -> LongArray(elements.map { Long(it) }.toMutableList())
+    override fun setNbt(index: Int, nbt: MutableNbt): Boolean = when (nbt) {
+        is NumericNbt -> {
+            elements[index] = ByteNbt(nbt.toByte())
+            true
         }
+        else -> false
     }
+
+    override fun addNbt(index: Int, nbt: MutableNbt): Boolean = when (nbt) {
+        is NumericNbt -> {
+            elements.add(index, ByteNbt(nbt.toByte()))
+            true
+        }
+        else -> false
+    }
+}
+
+data class IntArrayNbt(val elements: MutableList<IntNbt>) : CollectionNbt<IntNbt>(elements) {
+    override val type: NbtType = NbtType.INT_ARRAY
+
+    override fun setNbt(index: Int, nbt: MutableNbt): Boolean = when (nbt) {
+        is NumericNbt -> {
+            elements[index] = IntNbt(nbt.toInt())
+            true
+        }
+        else -> false
+    }
+
+    override fun addNbt(index: Int, nbt: MutableNbt): Boolean = when (nbt) {
+        is NumericNbt -> {
+            elements.add(index, IntNbt(nbt.toInt()))
+            true
+        }
+        else -> false
+    }
+}
+
+data class LongArrayNbt(val elements: MutableList<LongNbt>) : CollectionNbt<LongNbt>(elements) {
+    override val type: NbtType = NbtType.LONG_ARRAY
+
+    override fun setNbt(index: Int, nbt: MutableNbt): Boolean = when (nbt) {
+        is NumericNbt -> {
+            elements[index] = LongNbt(nbt.toLong())
+            true
+        }
+        else -> false
+    }
+
+    override fun addNbt(index: Int, nbt: MutableNbt): Boolean = when (nbt) {
+        is NumericNbt -> {
+            elements.add(index, LongNbt(nbt.toLong()))
+            true
+        }
+        else -> false
+    }
+}
+
+data class ListNbt(val elements: MutableList<MutableNbt>, private var elementType: NbtType?) : CollectionNbt<MutableNbt>(elements) {
+    override val type: NbtType = NbtType.LIST
+
+    override fun setNbt(index: Int, nbt: MutableNbt): Boolean = if (updateType(nbt)) {
+        elements[index] = nbt
+        true
+    } else false
+
+    override fun addNbt(index: Int, nbt: MutableNbt): Boolean = if (updateType(nbt)) {
+        elements.add(index, nbt)
+        true
+    } else false
+
+    private fun updateType(nbt: MutableNbt): Boolean = when (elementType) {
+        null -> {
+            elementType = nbt.type
+            true
+        }
+        else -> elementType == nbt.type
+    }
+}
+
+data class StringNbt(val data: String) : MutableNbt() {
+    override val type: NbtType = NbtType.STRING
+}
+
+data class CompoundNbt(val elements: MutableMap<String, MutableNbt>) : MutableNbt(), MutableMap<String, MutableNbt> by elements {
+    override val type: NbtType = NbtType.COMPOUND
+}
+
+fun Nbt.toMutableNbt(): MutableNbt = when (this) {
+    is Nbt.Byte -> ByteNbt(data)
+    is Nbt.Short -> ShortNbt(data)
+    is Nbt.Int -> IntNbt(data)
+    is Nbt.Long -> LongNbt(data)
+    is Nbt.Float -> FloatNbt(data)
+    is Nbt.Double -> DoubleNbt(data)
+    is Nbt.ByteArray -> ByteArrayNbt(elements.map { ByteNbt(it) }.toMutableList())
+    is Nbt.String -> StringNbt(data)
+    is Nbt.List -> elements.map { it.toMutableNbt() }.toMutableList().let { ListNbt(it, it.firstOrNull()?.type) }
+    is Nbt.Compound -> CompoundNbt(elements.mapValues { it.value.toMutableNbt() }.toMutableMap())
+    is Nbt.IntArray -> IntArrayNbt(elements.map { IntNbt(it) }.toMutableList())
+    is Nbt.LongArray -> LongArrayNbt(elements.map { LongNbt(it) }.toMutableList())
 }
