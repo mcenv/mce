@@ -1,5 +1,5 @@
 def nested_patterns [] : list int 3 ≔
-  match {{0}, {1, 2}} [
-    {{a}, {b, c}} ⇒ [a, b, c],
-    else          ⇒ [0, 0, 0]
+  match {a: {b: 0}, c: {d: 1, e: 2}} [
+    {a: {b: x}, c: {d: y, e: z}} ⇒ [x, y, z],
+    else                         ⇒ [0, 0, 0],
   ]

@@ -13,8 +13,8 @@ class Parse private constructor(
 
     private fun parseItem(): S.Item {
         var word = readWord()
-        val imports = if (word == "import") parseList('{', '}', ::readWord).also { word = readWord() } else emptyList()
-        val exports = if (word == "export") parseList('{', '}', ::readWord).also { word = readWord() } else emptyList()
+        val imports = if (word == "import") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
+        val exports = if (word == "export") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
         return when (word) {
             "def" -> {
                 val name = readWord()
@@ -123,12 +123,12 @@ class Parse private constructor(
                 when (peekChar()) {
                     ')' -> left
                     '[' -> {
-                        val arguments = parseList('[', ']', ::parseTerm)
+                        val arguments = parseList('[', ']') { parseTerm() }
                         S.Term.Def((left as? S.Term.Var)?.name ?: error("name expected"), arguments, id)
                     }
                     '@' -> {
                         skip()
-                        val arguments = parseList('[', ']', ::parseTerm)
+                        val arguments = parseList('[', ']') { parseTerm() }
                         S.Term.Apply(left, arguments, id)
                     }
                     ':' -> {
@@ -170,19 +170,19 @@ class Parse private constructor(
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
                 skip(2)
-                S.Term.ByteArrayOf(parseList(';', ']', ::parseTerm), id)
+                S.Term.ByteArrayOf(parseList(';', ']') { parseTerm() }, id)
             }
             peek(1) == 'i' && peek(2) == ';' -> {
                 skip(2)
-                S.Term.IntArrayOf(parseList(';', ']', ::parseTerm), id)
+                S.Term.IntArrayOf(parseList(';', ']') { parseTerm() }, id)
             }
             peek(1) == 'l' && peek(2) == ';' -> {
                 skip(2)
-                S.Term.LongArrayOf(parseList(';', ']', ::parseTerm), id)
+                S.Term.LongArrayOf(parseList(';', ']') { parseTerm() }, id)
             }
-            else -> S.Term.ListOf(parseList('[', ']', ::parseTerm), id)
+            else -> S.Term.ListOf(parseList('[', ']') { parseTerm() }, id)
         }
-        '{' -> S.Term.CompoundOf(parseList('{', '}', ::parseTerm), id)
+        '{' -> S.Term.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parseTerm() }) }, id)
         '&' -> {
             skip()
             S.Term.RefOf(parseTerm(), id)
@@ -213,19 +213,19 @@ class Parse private constructor(
             }
             "match" -> {
                 val scrutinee = parseTerm()
-                val clauses = parseList('[', ']') { parsePair(::parsePattern, { expectString("⇒") }, ::parseTerm) }
+                val clauses = parseList('[', ']') { parsePair({ parsePattern() }, { expectString("⇒") }, { parseTerm() }) }
                 S.Term.Match(scrutinee, clauses, id)
             }
             "false" -> S.Term.BoolOf(false, id)
             "true" -> S.Term.BoolOf(true, id)
             "refl" -> S.Term.Refl(id)
             "union" -> {
-                val variants = parseList('{', '}', ::parseTerm)
+                val variants = parseList('{', '}') { parseTerm() }
                 S.Term.Union(variants, id)
             }
             "end" -> S.Term.Union(emptyList(), id)
             "intersection" -> {
-                val variants = parseList('{', '}', ::parseTerm)
+                val variants = parseList('{', '}') { parseTerm() }
                 S.Term.Intersection(variants, id)
             }
             "any" -> S.Term.Intersection(emptyList(), id)
@@ -310,19 +310,19 @@ class Parse private constructor(
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
                 skip(2)
-                S.Pattern.ByteArrayOf(parseList(';', ']', ::parsePattern), id)
+                S.Pattern.ByteArrayOf(parseList(';', ']') { parsePattern() }, id)
             }
             peek(1) == 'i' && peek(2) == ';' -> {
                 skip(2)
-                S.Pattern.IntArrayOf(parseList(';', ']', ::parsePattern), id)
+                S.Pattern.IntArrayOf(parseList(';', ']') { parsePattern() }, id)
             }
             peek(1) == 'l' && peek(2) == ';' -> {
                 skip(2)
-                S.Pattern.LongArrayOf(parseList(';', ']', ::parsePattern), id)
+                S.Pattern.LongArrayOf(parseList(';', ']') { parsePattern() }, id)
             }
-            else -> S.Pattern.ListOf(parseList('[', ']', ::parsePattern), id)
+            else -> S.Pattern.ListOf(parseList('[', ']') { parsePattern() }, id)
         }
-        '{' -> S.Pattern.CompoundOf(parseList('{', '}', ::parsePattern), id)
+        '{' -> S.Pattern.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parsePattern() }) }, id)
         '&' -> {
             skip()
             S.Pattern.RefOf(parsePattern(), id)
@@ -355,7 +355,7 @@ class Parse private constructor(
         }
     }
 
-    private fun parseEffects(): List<S.Effect> = parseList('{', '}', ::parseEffect)
+    private fun parseEffects(): List<S.Effect> = parseList('{', '}') { parseEffect() }
 
     private fun parseEffect(): S.Effect {
         val name = readWord()
@@ -427,7 +427,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    private fun Char.isWordPart(): Boolean = this != ',' && this != ')' && this != ']' && this != '}' && !this.isWhitespace()
+    private fun Char.isWordPart(): Boolean = this != ',' && this != ')' && this != ']' && this != '}' && this != ':' && !this.isWhitespace()
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 

@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.util.toLinkedHashMap
 import mce.graph.Core as C
 
 inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
@@ -22,7 +23,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.IntArrayOf -> C.Term.IntArrayOf(elements.map(transform), id)
     is C.Term.LongArrayOf -> C.Term.LongArrayOf(elements.map(transform), id)
     is C.Term.ListOf -> C.Term.ListOf(elements.map(transform), id)
-    is C.Term.CompoundOf -> C.Term.CompoundOf(elements.map(transform), id)
+    is C.Term.CompoundOf -> C.Term.CompoundOf(elements.map { (name, element) -> name to transform(element) }.toLinkedHashMap(), id)
     is C.Term.BoxOf -> C.Term.BoxOf(transform(content), transform(tag), id)
     is C.Term.RefOf -> C.Term.RefOf(transform(element), id)
     is C.Term.Refl -> C.Term.Refl(id)
@@ -45,7 +46,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.IntArray -> C.Term.IntArray(id)
     is C.Term.LongArray -> C.Term.LongArray(id)
     is C.Term.List -> C.Term.List(transform(element), transform(size), id)
-    is C.Term.Compound -> C.Term.Compound(elements.map { it.first to transform(it.second) }, id)
+    is C.Term.Compound -> C.Term.Compound(elements.map { (name, element) -> name to transform(element) }.toLinkedHashMap(), id)
     is C.Term.Box -> C.Term.Box(transform(content), id)
     is C.Term.Ref -> C.Term.Ref(transform(element), id)
     is C.Term.Eq -> C.Term.Eq(transform(left), transform(right), id)

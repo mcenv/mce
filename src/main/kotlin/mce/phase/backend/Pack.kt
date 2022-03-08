@@ -142,9 +142,9 @@ class Pack private constructor(
             is D.Term.CompoundOf -> {
                 +Append(STACKS, COMPOUND, Value(P.Nbt.Compound(emptyMap())))
                 if (term.elements.isNotEmpty()) {
-                    term.elements.forEachIndexed { index, element ->
+                    term.elements.entries.forEach { (name, element) ->
                         val type = getType(element.id)
-                        val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1]["$index"]
+                        val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1][name.text]
                         val sourcePath = type.toPath()[-1]
                         packTerm(element)
                         +SetData(STACKS, targetPath, From(STACKS, sourcePath))

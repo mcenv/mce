@@ -7,10 +7,10 @@ import mce.Diagnostic
 import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
-import mce.graph.Name
-import mce.graph.freshId
-import mce.phase.foldAll
-import mce.phase.foldMap
+import mce.util.foldAll
+import mce.util.foldMap
+import mce.util.mapSecond
+import mce.util.toLinkedHashMap
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -219,8 +219,8 @@ class Elaborate private constructor(
             Typing(C.Term.ListOf(elements, term.id), C.VTerm.List(lazyOf(first.type), lazyOf(size)))
         }
         is S.Term.CompoundOf -> {
-            val elements = term.elements.map { inferTerm(it) }
-            Typing(C.Term.CompoundOf(elements.map { it.term }, term.id), C.VTerm.Compound(elements.map { Name("", freshId()) to normalizer.quoteTerm(it.type) }))
+            val elements = term.elements.map { (name, element) -> name to inferTerm(element) }
+            Typing(C.Term.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id), C.VTerm.Compound(elements.map { (name, element) -> name to normalizer.quoteTerm(element.type) }.toLinkedHashMap()))
         }
         is S.Term.BoxOf -> {
             val tTag = checkTerm(term.tag, TYPE)
@@ -277,9 +277,9 @@ class Elaborate private constructor(
         is S.Term.Compound -> {
             val (_, elements) = term.elements.foldMap(this) { context, (name, element) ->
                 val element = context.checkTerm(element, TYPE)
-                context.bind(name.id, Entry(true /* TODO */, name.text, END, ANY, context.normalizer.evalTerm(element), stage)) to (name to element)
+                context.bind(name.id, Entry(false, name.text, END, ANY, context.normalizer.evalTerm(element), stage)) to (name to element)
             }
-            Typing(C.Term.Compound(elements, term.id), TYPE)
+            Typing(C.Term.Compound(elements.toLinkedHashMap(), term.id), TYPE)
         }
         is S.Term.Box -> {
             val content = checkTerm(term.content, TYPE)
@@ -414,13 +414,13 @@ class Elaborate private constructor(
                 C.Term.ListOf(elements, term.id)
             }
             term is S.Term.CompoundOf && type is C.VTerm.Compound -> {
-                val (_, elements) = (term.elements zip type.elements).foldMap(this) { context, (element, type) ->
-                    val vType = context.normalizer.evalTerm(type.second)
-                    val element = context.checkTerm(element, vType)
-                    val vElement = context.normalizer.evalTerm(element)
-                    context.bind(freshId() /* TODO */, Entry(true /* TODO */, type.first.text, END, ANY, vType, context.stage), vElement) to element
+                val (_, elements) = (term.elements zip type.elements.values).foldMap(this) { context, (element, type) ->
+                    val vType = context.normalizer.evalTerm(type)
+                    val tElement = context.checkTerm(element.second, vType)
+                    val vElement = context.normalizer.evalTerm(tElement)
+                    context.bind(element.first.id, Entry(true /* TODO */, element.first.text, END, ANY, vType, context.stage), vElement) to (element.first to tElement)
                 }
-                C.Term.CompoundOf(elements, term.id)
+                C.Term.CompoundOf(elements.toLinkedHashMap(), term.id)
             }
             term is S.Term.RefOf && type is C.VTerm.Ref -> {
                 val element = checkTerm(term.element, type.element.value)
@@ -505,7 +505,7 @@ class Elaborate private constructor(
             value1 is C.VTerm.Var && value2 is C.VTerm.Var -> value1.level == value2.level
             value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> true
             value1 is C.VTerm.Match && value2 is C.VTerm.Match -> false // TODO
-            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> true
+            value1 is C.VTerm.UnitOf && value2 is C.VTerm.UnitOf -> true
             value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> value1.value == value2.value
             value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> value1.value == value2.value
             value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> value1.value == value2.value
@@ -523,7 +523,7 @@ class Elaborate private constructor(
             value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf -> value1.elements.size == value2.elements.size &&
                     (value1.elements zip value2.elements).all { unifyTerms(it.first.value, it.second.value) }
             value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unifyTerms(it.first.value, it.second.value) }
+                    (value1.elements.entries zip value2.elements.entries).all { (entry1, entry2) -> entry1.key.text == entry2.key.text && unifyTerms(entry1.value.value, entry2.value.value) }
             value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf -> unifyTerms(value1.content.value, value2.content.value) && unifyTerms(value1.tag.value, value2.tag.value)
             value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> unifyTerms(value1.element.value, value2.element.value)
             value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> true
@@ -549,8 +549,10 @@ class Elaborate private constructor(
             value1 is C.VTerm.LongArray && value2 is C.VTerm.LongArray -> true
             value1 is C.VTerm.List && value2 is C.VTerm.List -> unifyTerms(value1.element.value, value2.element.value) && unifyTerms(value1.size.value, value2.size.value)
             value1 is C.VTerm.Compound && value2 is C.VTerm.Compound -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).foldAll(this) { normalizer, (element1, element2) ->
-                        normalizer.bind(lazyOf(C.VTerm.Var("", normalizer.size))) to normalizer.unifyTerms(normalizer.evalTerm(element1.second), normalizer.evalTerm(element2.second))
+                    (value1.elements.entries zip value2.elements.entries).foldAll(this) { normalizer, (entry1, entry2) ->
+                        (normalizer.bind(lazyOf(C.VTerm.Var(entry1.key.text, normalizer.size))) to normalizer.unifyTerms(normalizer.evalTerm(entry1.value), normalizer.evalTerm(entry2.value))).mapSecond {
+                            it && entry1.key.text == entry2.key.text
+                        }
                     }.second
             value1 is C.VTerm.Box && value2 is C.VTerm.Box -> unifyTerms(value1.content.value, value2.content.value)
             value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> unifyTerms(value1.element.value, value2.element.value)
@@ -588,11 +590,13 @@ class Elaborate private constructor(
             value2 is C.VTerm.Intersection -> value2.variants.all { subtypeTerms(value1, it.value) }
             value1 is C.VTerm.Intersection -> value1.variants.any { subtypeTerms(it.value, value2) }
             value1 is C.VTerm.List && value2 is C.VTerm.List -> subtypeTerms(value1.element.value, value2.element.value) && normalizer.unifyTerms(value1.size.value, value2.size.value)
-            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).foldAll(this) { context, (elements1, elements2) ->
-                        val upper1 = context.normalizer.evalTerm(elements1.second)
-                        context.bindUnchecked(Entry(true /* TODO */, "", null, upper1, TYPE, stage)) to context.subtypeTerms(upper1, context.normalizer.evalTerm(elements2.second))
-                    }.second
+            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound -> value2.elements.entries.foldAll(this) { context, entry2 ->
+                val element1 = value1.elements[entry2.key]
+                if (element1 != null) {
+                    val upper1 = context.normalizer.evalTerm(element1)
+                    context.bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage)) to context.subtypeTerms(upper1, context.normalizer.evalTerm(entry2.value))
+                } else context to false
+            }.second
             value1 is C.VTerm.Box && value2 is C.VTerm.Box -> subtypeTerms(value1.content.value, value2.content.value)
             value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> subtypeTerms(value1.element.value, value2.element.value)
             value1 is C.VTerm.Fun && value2 is C.VTerm.Fun -> value1.parameters.size == value2.parameters.size && run {
@@ -648,11 +652,15 @@ class Elaborate private constructor(
             Triple(context2, C.Pattern.ListOf(listOf(head) + elements, pattern.id), C.VTerm.List(lazyOf(headType), lazyOf(size)))
         }
         is S.Pattern.CompoundOf -> {
-            val (context, elements) = pattern.elements.foldMap(this) { context, element ->
+            val (context, elements) = pattern.elements.foldMap(this) { context, (name, element) ->
                 val (context, element, elementType) = context.inferPattern(element)
-                context to (element to elementType)
+                context to Triple(name, element, elementType)
             }
-            Triple(context, C.Pattern.CompoundOf(elements.map { it.first }, pattern.id), C.VTerm.Compound(elements.map { Name("", freshId()) to context.normalizer.quoteTerm(it.second) }))
+            Triple(
+                context,
+                C.Pattern.CompoundOf(elements.map { (name, element, _) -> name to element }.toLinkedHashMap(), pattern.id),
+                C.VTerm.Compound(elements.map { (name, _, type) -> name to context.normalizer.quoteTerm(type) }.toLinkedHashMap())
+            )
         }
         is S.Pattern.BoxOf -> {
             val (context1, tag) = checkPattern(pattern.tag, TYPE)
@@ -704,8 +712,10 @@ class Elaborate private constructor(
                 context to C.Pattern.ListOf(elements, pattern.id)
             }
             pattern is S.Pattern.CompoundOf && type is C.VTerm.Compound -> {
-                val (context, elements) = (pattern.elements zip type.elements).foldMap(this) { context, element -> context.checkPattern(element.first, context.normalizer.evalTerm(element.second.second)) }
-                context to C.Pattern.CompoundOf(elements, pattern.id)
+                val (context, elements) = (pattern.elements zip type.elements.entries).foldMap(this) { context, (element, type) ->
+                    context.checkPattern(element.second, context.normalizer.evalTerm(type.value)).mapSecond { element.first to it }
+                }
+                context to C.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
             }
             pattern is S.Pattern.BoxOf && type is C.VTerm.Box -> {
                 val (context1, tag) = checkPattern(pattern.tag, TYPE)
@@ -764,7 +774,9 @@ class Elaborate private constructor(
             value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
             value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
             value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
-            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
+            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf -> (value1.elements.entries zip value2.elements.entries).fold(this) { normalizer, (entry1, entry2) ->
+                if (entry1.key == entry2.key) normalizer.match(entry1.value.value, entry2.value.value) else normalizer
+            }
             value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf -> match(value1.content.value, value2.content.value).match(value1.tag.value, value2.tag.value)
             value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> match(value1.element.value, value2.element.value)
             else -> this // TODO

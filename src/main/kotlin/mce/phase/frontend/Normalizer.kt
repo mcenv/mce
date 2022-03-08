@@ -6,8 +6,10 @@ import kotlinx.collections.immutable.plus
 import mce.BUILTINS
 import mce.graph.Id
 import mce.graph.freshId
-import mce.phase.firstMapOrNull
-import mce.phase.foldAll
+import mce.util.firstMapOrNull
+import mce.util.foldAll
+import mce.util.mapSecond
+import mce.util.toLinkedHashMap
 import mce.graph.Core as C
 
 class Normalizer(
@@ -106,7 +108,7 @@ class Normalizer(
         is C.Term.IntArrayOf -> C.VTerm.IntArrayOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
         is C.Term.LongArrayOf -> C.VTerm.LongArrayOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
         is C.Term.ListOf -> C.VTerm.ListOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
-        is C.Term.CompoundOf -> C.VTerm.CompoundOf(term.elements.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.CompoundOf -> C.VTerm.CompoundOf(term.elements.map { (name, element) -> name to lazy { evalTerm(element) } }.toLinkedHashMap(), term.id)
         is C.Term.BoxOf -> C.VTerm.BoxOf(lazy { evalTerm(term.content) }, lazy { evalTerm(term.tag) }, term.id)
         is C.Term.RefOf -> C.VTerm.RefOf(lazy { evalTerm(term.element) }, term.id)
         is C.Term.Refl -> C.VTerm.Refl(term.id)
@@ -170,7 +172,7 @@ class Normalizer(
             (pattern.elements zip term.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
         } else this to false
         pattern is C.Pattern.CompoundOf && term is C.VTerm.CompoundOf -> if (pattern.elements.size == term.elements.size) {
-            (pattern.elements zip term.elements).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern, value.value) }
+            (pattern.elements.entries zip term.elements.entries).foldAll(this) { normalizer, (pattern, value) -> normalizer.match(pattern.value, value.value.value).mapSecond { it && pattern.key.text == value.key.text } }
         } else this to false
         pattern is C.Pattern.BoxOf && term is C.VTerm.BoxOf -> {
             val (normalizer, matched) = match(pattern.content, term.content.value)
@@ -215,7 +217,7 @@ class Normalizer(
         is C.VTerm.IntArrayOf -> C.Term.IntArrayOf(term.elements.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.LongArrayOf -> C.Term.LongArrayOf(term.elements.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.ListOf -> C.Term.ListOf(term.elements.map { quoteTerm(it.value) }, term.id)
-        is C.VTerm.CompoundOf -> C.Term.CompoundOf(term.elements.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.CompoundOf -> C.Term.CompoundOf(term.elements.map { (name, element) -> name to quoteTerm(element.value) }.toLinkedHashMap(), term.id)
         is C.VTerm.BoxOf -> C.Term.BoxOf(quoteTerm(term.content.value), quoteTerm(term.tag.value), term.id)
         is C.VTerm.RefOf -> C.Term.RefOf(quoteTerm(term.element.value), term.id)
         is C.VTerm.Refl -> C.Term.Refl(term.id)

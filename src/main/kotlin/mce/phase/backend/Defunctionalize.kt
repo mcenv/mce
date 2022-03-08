@@ -1,6 +1,7 @@
 package mce.phase.backend
 
 import mce.graph.Id
+import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
@@ -94,8 +95,8 @@ class Defunctionalize private constructor() {
             D.Term.ListOf(elements, term.id!!)
         }
         is C.Term.CompoundOf -> {
-            val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.CompoundOf(elements, term.id!!)
+            val elements = term.elements.map { (name, element) -> name to defunctionalizeTerm(element) }
+            D.Term.CompoundOf(elements.toLinkedHashMap(), term.id!!)
         }
         is C.Term.BoxOf -> {
             val content = defunctionalizeTerm(term.content)
@@ -147,8 +148,8 @@ class Defunctionalize private constructor() {
             D.Term.List(element, size, term.id!!)
         }
         is C.Term.Compound -> {
-            val elements = term.elements.map { it.first to defunctionalizeTerm(it.second) }
-            D.Term.Compound(elements, term.id!!)
+            val elements = term.elements.map { (name, element) -> name to defunctionalizeTerm(element) }
+            D.Term.Compound(elements.toLinkedHashMap(), term.id!!)
         }
         is C.Term.Box -> {
             val content = defunctionalizeTerm(term.content)
@@ -201,8 +202,8 @@ class Defunctionalize private constructor() {
             D.Pattern.ListOf(elements, pattern.id)
         }
         is C.Pattern.CompoundOf -> {
-            val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.CompoundOf(elements, pattern.id)
+            val elements = pattern.elements.map { (name, element) -> name to defunctionalizePattern(element) }
+            D.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
         }
         is C.Pattern.BoxOf -> {
             val content = defunctionalizePattern(pattern.content)
