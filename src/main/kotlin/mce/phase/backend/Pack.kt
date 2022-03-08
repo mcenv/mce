@@ -1,4 +1,4 @@
-package mce.phase.back
+package mce.phase.backend
 
 import mce.graph.Id
 import mce.graph.Packed.Command.*
@@ -9,25 +9,6 @@ import mce.graph.Packed.NbtType
 import mce.graph.Packed.SourceComparator.Matches
 import mce.graph.Packed.SourceProvider.From
 import mce.graph.Packed.SourceProvider.Value
-import mce.phase.back.Def.APPLY
-import mce.phase.back.Def.BYTE
-import mce.phase.back.Def.BYTE_ARRAY
-import mce.phase.back.Def.COMPOUND
-import mce.phase.back.Def.DOUBLE
-import mce.phase.back.Def.FLOAT
-import mce.phase.back.Def.INT
-import mce.phase.back.Def.INT_ARRAY
-import mce.phase.back.Def.LIST
-import mce.phase.back.Def.LONG
-import mce.phase.back.Def.LONG_ARRAY
-import mce.phase.back.Def.REGISTERS
-import mce.phase.back.Def.REGISTER_0
-import mce.phase.back.Def.SHORT
-import mce.phase.back.Def.STACKS
-import mce.phase.back.Def.STRING
-import mce.phase.back.Dsl.Append
-import mce.phase.back.Dsl.get
-import mce.phase.middle.Defunctionalize
 import mce.graph.Core as C
 import mce.graph.Defunctionalized as D
 import mce.graph.Packed as P
@@ -220,6 +201,54 @@ class Pack private constructor(
     private fun getType(id: Id): NbtType = types[id]!!
 
     companion object {
+        /**
+         * A storage to store stacks.
+         * @see [net.minecraft.resources.ResourceLocation.isAllowedInResourceLocation]
+         */
+        @Suppress("KDocUnresolvedReference")
+        val STACKS = mce.graph.Packed.ResourceLocation("0")
+
+        val BYTE = mce.graph.Packed.NbtPath()["a"]
+        val SHORT = mce.graph.Packed.NbtPath()["b"]
+        val INT = mce.graph.Packed.NbtPath()["c"]
+        val LONG = mce.graph.Packed.NbtPath()["d"]
+        val FLOAT = mce.graph.Packed.NbtPath()["e"]
+        val DOUBLE = mce.graph.Packed.NbtPath()["f"]
+        val BYTE_ARRAY = mce.graph.Packed.NbtPath()["g"]
+        val STRING = mce.graph.Packed.NbtPath()["h"]
+        val LIST = mce.graph.Packed.NbtPath()["i"]
+        val COMPOUND = mce.graph.Packed.NbtPath()["j"]
+        val INT_ARRAY = mce.graph.Packed.NbtPath()["k"]
+        val LONG_ARRAY = mce.graph.Packed.NbtPath()["l"]
+
+        /**
+         * An objective to store registers.
+         * @see [net.minecraft.commands.arguments.ObjectiveArgument.parse]
+         */
+        @Suppress("KDocUnresolvedReference")
+        val REGISTERS = mce.graph.Packed.Objective("0")
+
+        val REGISTER_0 = mce.graph.Packed.ScoreHolder("0")
+
+        /**
+         * A resource location of the apply function.
+         */
+        val APPLY = mce.graph.Packed.ResourceLocation("apply")
+
+        operator fun mce.graph.Packed.NbtPath.get(pattern: mce.graph.Packed.Nbt.Compound): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.MatchElement(pattern))
+
+        operator fun mce.graph.Packed.NbtPath.invoke(): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.AllElements)
+
+        operator fun mce.graph.Packed.NbtPath.get(index: Int): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.IndexedElement(index))
+
+        operator fun mce.graph.Packed.NbtPath.get(name: String, pattern: mce.graph.Packed.Nbt.Compound): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.MatchObject(name, pattern))
+
+        operator fun mce.graph.Packed.NbtPath.get(name: String): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.CompoundChild(name))
+
+        fun Append(target: mce.graph.Packed.ResourceLocation, path: mce.graph.Packed.NbtPath, source: mce.graph.Packed.SourceProvider): mce.graph.Packed.Command = mce.graph.Packed.Command.InsertAtIndex(target, path, -1, source)
+
+        fun Prepend(target: mce.graph.Packed.ResourceLocation, path: mce.graph.Packed.NbtPath, source: mce.graph.Packed.SourceProvider): mce.graph.Packed.Command = mce.graph.Packed.Command.InsertAtIndex(target, path, 0, source)
+
         private fun erase(type: C.VTerm): NbtType = when (type) {
             is C.VTerm.Hole -> throw Error()
             is C.VTerm.Meta -> throw Error()

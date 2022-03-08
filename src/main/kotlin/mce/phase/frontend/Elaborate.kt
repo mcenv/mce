@@ -1,4 +1,4 @@
-package mce.phase.front
+package mce.phase.frontend
 
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf

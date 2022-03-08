@@ -1,8 +1,8 @@
-package mce.phase.middle
+package mce.phase.backend
 
 import mce.graph.Id
-import mce.phase.front.Normalizer
-import mce.phase.front.Zonk
+import mce.phase.frontend.Normalizer
+import mce.phase.frontend.Zonk
 import mce.phase.map
 import mce.graph.Core as C
 

@@ -2,10 +2,10 @@ package mce.server
 
 import mce.graph.Packed
 import mce.graph.Surface
-import mce.phase.front.Elaborate
-import mce.phase.front.Zonk
-import mce.phase.middle.Defunctionalize
-import mce.phase.middle.Stage
+import mce.phase.backend.Defunctionalize
+import mce.phase.backend.Stage
+import mce.phase.frontend.Elaborate
+import mce.phase.frontend.Zonk
 
 sealed class Key<V> {
     abstract val name: String

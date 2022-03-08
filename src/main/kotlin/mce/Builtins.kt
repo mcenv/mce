@@ -1,6 +1,6 @@
 package mce
 
-import mce.phase.front.Normalizer
+import mce.phase.frontend.Normalizer
 import mce.graph.Core as C
 
 @Suppress("NAME_SHADOWING")
