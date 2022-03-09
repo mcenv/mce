@@ -11,7 +11,7 @@ class Parse private constructor(
 ) {
     private var cursor: Int = 0
 
-    private fun parseItem(): S.Item {
+    private fun parseItem(id: Id = freshId()): S.Item {
         var word = readWord()
         val imports = if (word == "import") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
         val exports = if (word == "export") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
@@ -32,7 +32,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                S.Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body)
+                S.Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body, id)
             }
             "mod" -> {
                 val name = readWord()
@@ -41,7 +41,7 @@ class Parse private constructor(
                 val type = parseModule()
                 expectString("≔")
                 val body = parseModule()
-                S.Item.Mod(imports, exports, modifiers, name, type, body)
+                S.Item.Mod(imports, exports, modifiers, name, type, body, id)
             }
             else -> error("unexpected item '$word'")
         }

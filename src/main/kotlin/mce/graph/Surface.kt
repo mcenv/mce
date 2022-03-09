@@ -16,6 +16,7 @@ object Surface {
         abstract val exports: KList<KString>
         abstract val modifiers: KList<Modifier>
         abstract val name: KString
+        abstract val id: Id
 
         data class Def(
             override val imports: KList<KString>,
@@ -26,6 +27,7 @@ object Surface {
             val resultant: Term,
             val effects: KList<Effect>,
             val body: Term,
+            override val id: Id,
         ) : Item()
 
         data class Mod(
@@ -35,6 +37,7 @@ object Surface {
             override val name: KString,
             val type: Module,
             val body: Module,
+            override val id: Id,
         ) : Item()
     }
 

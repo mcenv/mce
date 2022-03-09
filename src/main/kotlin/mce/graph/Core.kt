@@ -20,6 +20,7 @@ object Core {
         abstract val exports: KList<KString>
         abstract val modifiers: KSet<Modifier>
         abstract val name: KString
+        abstract val id: Id
 
         data class Def(
             override val imports: KList<KString>,
@@ -30,6 +31,7 @@ object Core {
             val resultant: Term,
             val effects: KSet<Effect>,
             val body: Term,
+            override val id: Id,
         ) : Item()
 
         data class Mod(
@@ -39,6 +41,7 @@ object Core {
             override val name: KString,
             val type: VModule,
             val body: Module,
+            override val id: Id,
         ) : Item()
     }
 

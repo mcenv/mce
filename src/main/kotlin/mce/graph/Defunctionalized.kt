@@ -15,6 +15,7 @@ object Defunctionalized {
         abstract val imports: KList<KString>
         abstract val exports: KList<KString>
         abstract val name: KString
+        abstract val id: Id
 
         data class Def(
             override val imports: KList<KString>,
@@ -22,6 +23,7 @@ object Defunctionalized {
             override val name: KString,
             val parameters: KList<Parameter>,
             val body: Term,
+            override val id: Id,
         ) : Item()
 
         data class Mod(
@@ -29,6 +31,7 @@ object Defunctionalized {
             override val exports: KList<KString>,
             override val name: KString,
             val body: Module,
+            override val id: Id,
         ) : Item()
     }
 

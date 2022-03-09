@@ -7,7 +7,6 @@ import mce.server.Key
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertContains
-import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import mce.graph.Core as C
 import mce.graph.Surface as S
@@ -24,7 +23,6 @@ class ElaborateTest {
         val result = elaborate("elaborate").success()
         assertIs<C.VTerm.Type>(result.types[UUID(0, 0)])
         assertIs<C.VTerm.Bool>(result.types[UUID(0, 1)])
-        assertEquals(C.Item.Def(emptyList(), emptyList(), emptySet(), "elaborate", emptyList(), C.Term.Bool(UUID(0, 0)), emptySet(), C.Term.BoolOf(false, UUID(0, 1))), result.item)
     }
 
     @Test

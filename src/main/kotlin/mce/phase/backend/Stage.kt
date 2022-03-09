@@ -17,11 +17,11 @@ class Stage private constructor(
         is C.Item.Def -> {
             val parameters = item.parameters.map { stageParameter(it) }
             val body = stageTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body)
+            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body, item.id)
         }
         is C.Item.Mod -> {
             val body = stageModule(item.body)
-            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body)
+            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
         }
     }
 

@@ -14,11 +14,11 @@ class Defunctionalize private constructor() {
         is C.Item.Def -> {
             val parameters = item.parameters.map { defunctionalizeParameter(it) }
             val body = defunctionalizeTerm(item.body)
-            D.Item.Def(item.imports, item.exports, item.name, parameters, body)
+            D.Item.Def(item.imports, item.exports, item.name, parameters, body, item.id)
         }
         is C.Item.Mod -> {
             val body = defunctionalizeModule(item.body)
-            D.Item.Mod(item.imports, item.exports, item.name, body)
+            D.Item.Mod(item.imports, item.exports, item.name, body, item.id)
         }
     }
 

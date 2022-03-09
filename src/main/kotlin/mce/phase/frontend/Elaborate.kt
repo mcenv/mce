@@ -38,13 +38,13 @@ class Elaborate private constructor(
                 val effects = item.effects.map { elaborateEffect(it) }.toSet()
                 val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else context2.relevant().checkTerm(item.body, vResultant)
                 context2.checkPhase(item.body.id, vResultant)
-                C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body) to C.VSignature.Def(item.name, parameters, resultant, null)
+                C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to C.VSignature.Def(item.name, parameters, resultant, null)
             }
             is S.Item.Mod -> {
                 val type = context.checkModule(item.type, C.VModule.Type(null))
                 val vType = context.normalizer.evalModule(type)
                 val body = context.checkModule(item.body, vType)
-                C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body) to C.VSignature.Mod(item.name, vType, null)
+                C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to C.VSignature.Mod(item.name, vType, null)
             }
         }
     }
@@ -55,7 +55,7 @@ class Elaborate private constructor(
     private fun checkItem(item: S.Item, signature: C.VSignature): C.Item {
         val (inferred, inferredSignature) = inferItem(item)
         if (!Normalizer(persistentListOf(), items, solutions).unifySignatures(inferredSignature, signature)) {
-            diagnose(Diagnostic.SignatureMismatch(TODO()))
+            diagnose(Diagnostic.SignatureMismatch(item.id)) // TODO: serialize signatures
         }
         return inferred
     }
