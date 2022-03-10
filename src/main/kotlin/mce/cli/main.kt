@@ -6,7 +6,11 @@ import kotlinx.cli.ExperimentalCli
 @OptIn(ExperimentalCli::class)
 fun main(args: Array<String>) {
     ArgParser("mce").run {
-        subcommands(Version)
+        subcommands(
+            Version,
+            Test,
+        )
+
         parse(args)
     }
 }
