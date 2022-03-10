@@ -7,10 +7,7 @@ import mce.Diagnostic
 import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
 import mce.graph.Id
-import mce.util.foldAll
-import mce.util.foldMap
-import mce.util.mapSecond
-import mce.util.toLinkedHashMap
+import mce.util.*
 import mce.graph.Core as C
 import mce.graph.Surface as S
 
@@ -728,7 +725,7 @@ class Elaborate private constructor(
                 context to C.Pattern.RefOf(element, pattern.id)
             }
             pattern is S.Pattern.Refl && type is C.VTerm.Eq -> {
-                val normalizer = normalizer.match(type.left.value, type.right.value)
+                val (normalizer, _) = match(type.left.value, type.right.value) with normalizer
                 withNormalizer(normalizer) to C.Pattern.Refl(pattern.id)
             }
             else -> {
@@ -764,24 +761,23 @@ class Elaborate private constructor(
     /**
      * Matches the [term1] and the [term2].
      */
-    private fun Normalizer.match(term1: C.VTerm, term2: C.VTerm): Normalizer {
-        val value1 = force(term1)
-        val value2 = force(term2)
-        return when {
-            value2 is C.VTerm.Var -> subst(value2.level, lazyOf(value1))
-            value1 is C.VTerm.Var -> subst(value1.level, lazyOf(value2))
-            value1 is C.VTerm.ByteArrayOf && value2 is C.VTerm.ByteArrayOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
-            value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
-            value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
-            value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf -> (value1.elements zip value2.elements).fold(this) { normalizer, (element1, element2) -> normalizer.match(element1.value, element2.value) }
-            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf -> (value1.elements.entries zip value2.elements.entries).fold(this) { normalizer, (entry1, entry2) ->
-                if (entry1.key == entry2.key) normalizer.match(entry1.value.value, entry2.value.value) else normalizer
+    private fun match(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Unit> =
+        gets<Normalizer, Pair<C.VTerm, C.VTerm>> { force(term1) to force(term2) } % { (term1, term2) ->
+            when {
+                term2 is C.VTerm.Var -> modify { subst(term2.level, lazyOf(term1)) }
+                term1 is C.VTerm.Var -> modify { subst(term1.level, lazyOf(term2)) }
+                term1 is C.VTerm.ByteArrayOf && term2 is C.VTerm.ByteArrayOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
+                term1 is C.VTerm.IntArrayOf && term2 is C.VTerm.IntArrayOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
+                term1 is C.VTerm.LongArrayOf && term2 is C.VTerm.LongArrayOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
+                term1 is C.VTerm.ListOf && term2 is C.VTerm.ListOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
+                term1 is C.VTerm.CompoundOf && term2 is C.VTerm.CompoundOf -> (term1.elements.entries zip term2.elements.entries).map { (entry1, entry2) ->
+                    if (entry1.key == entry2.key) match(entry1.value.value, entry2.value.value) else pure(Unit)
+                }.forEach()
+                term1 is C.VTerm.BoxOf && term2 is C.VTerm.BoxOf -> match(term1.content.value, term2.content.value) % { match(term1.tag.value, term2.tag.value) }
+                term1 is C.VTerm.RefOf && term2 is C.VTerm.RefOf -> match(term1.element.value, term2.element.value)
+                else -> pure(Unit) // TODO
             }
-            value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf -> match(value1.content.value, value2.content.value).match(value1.tag.value, value2.tag.value)
-            value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> match(value1.element.value, value2.element.value)
-            else -> this // TODO
         }
-    }
 
     /**
      * Elaborates the [effect].
