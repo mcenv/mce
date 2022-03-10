@@ -795,31 +795,33 @@ class Elaborate private constructor(
      * Ensures that the representation of the [type] is monomorphic under this normalizer.
      */
     private fun Normalizer.checkRepresentation(id: Id, type: C.VTerm) {
-        fun join(left: C.VTerm, right: C.VTerm): Boolean = when (val left = force(left)) {
-            is C.VTerm.Union -> left.variants.all { join(it.value, right) }
-            is C.VTerm.Intersection -> left.variants.any { join(it.value, right) }
-            is C.VTerm.Unit, is C.VTerm.Bool, is C.VTerm.Byte, is C.VTerm.Eq, is C.VTerm.Fun, is C.VTerm.Type -> when (force(right)) {
-                is C.VTerm.Unit, is C.VTerm.Bool, is C.VTerm.Byte, is C.VTerm.Eq, is C.VTerm.Fun, is C.VTerm.Type -> true
+        fun join(term1: C.VTerm, term2: C.VTerm): Boolean {
+            val term1 = force(term1)
+            val term2 = force(term2)
+            return when (term1) {
+                is C.VTerm.Union -> term1.variants.all { join(it.value, term2) }
+                is C.VTerm.Intersection -> term1.variants.any { join(it.value, term2) }
+                is C.VTerm.Unit -> term2 is C.VTerm.Unit
+                is C.VTerm.Bool -> term2 is C.VTerm.Bool
+                is C.VTerm.Byte -> term2 is C.VTerm.Byte
+                is C.VTerm.Short -> term2 is C.VTerm.Short
+                is C.VTerm.Int -> term2 is C.VTerm.Int
+                is C.VTerm.Long -> term2 is C.VTerm.Long
+                is C.VTerm.Float -> term2 is C.VTerm.Float
+                is C.VTerm.Double -> term2 is C.VTerm.Double
+                is C.VTerm.String -> term2 is C.VTerm.String
+                is C.VTerm.ByteArray -> term2 is C.VTerm.ByteArray
+                is C.VTerm.IntArray -> term2 is C.VTerm.IntArray
+                is C.VTerm.LongArray -> term2 is C.VTerm.LongArray
+                is C.VTerm.List -> term2 is C.VTerm.List
+                is C.VTerm.Compound -> term2 is C.VTerm.Compound
+                is C.VTerm.Box -> term2 is C.VTerm.Box
+                is C.VTerm.Ref -> term2 is C.VTerm.Ref
+                is C.VTerm.Eq -> term2 is C.VTerm.Eq
+                is C.VTerm.Fun -> term2 is C.VTerm.Fun
+                is C.VTerm.Type -> term2 is C.VTerm.Type
                 else -> false
             }
-            is C.VTerm.Short -> right is C.VTerm.Short
-            is C.VTerm.Int, is C.VTerm.Ref -> when (force(right)) {
-                is C.VTerm.Int, is C.VTerm.Ref -> true
-                else -> false
-            }
-            is C.VTerm.Long -> right is C.VTerm.Long
-            is C.VTerm.Float -> right is C.VTerm.Float
-            is C.VTerm.Double -> right is C.VTerm.Double
-            is C.VTerm.String -> right is C.VTerm.String
-            is C.VTerm.ByteArray -> right is C.VTerm.ByteArray
-            is C.VTerm.IntArray -> right is C.VTerm.IntArray
-            is C.VTerm.LongArray -> right is C.VTerm.LongArray
-            is C.VTerm.List -> right is C.VTerm.List
-            is C.VTerm.Compound, is C.VTerm.Box -> when (force(right)) {
-                is C.VTerm.Compound, is C.VTerm.Box -> true
-                else -> false
-            }
-            else -> false
         }
 
         when (type) {
