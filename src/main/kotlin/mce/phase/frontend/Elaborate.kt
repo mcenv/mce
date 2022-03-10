@@ -29,7 +29,7 @@ class Elaborate private constructor(
         return when (item) {
             is S.Item.Def -> {
                 val context1 = context.meta(item.modifiers.contains(S.Modifier.META))
-                val (context2, parameters) = context1.irrelevant().bindParameters(item.parameters)
+                val (context2, parameters) = bindParameters(item.parameters) with context1.irrelevant()
                 val resultant = context2.checkTerm(item.resultant, TYPE)
                 val vResultant = context2.normalizer.evalTerm(resultant)
                 val effects = item.effects.map { elaborateEffect(it) }.toSet()
@@ -38,9 +38,9 @@ class Elaborate private constructor(
                 C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to C.VSignature.Def(item.name, parameters, resultant, null)
             }
             is S.Item.Mod -> {
-                val type = context.checkModule(item.type, C.VModule.Type(null))
+                val (context, type) = checkModule(item.type, C.VModule.Type(null)) with context
                 val vType = context.normalizer.evalModule(type)
-                val body = context.checkModule(item.body, vType)
+                val (_, body) = checkModule(item.body, vType) with context
                 C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to C.VSignature.Mod(item.name, vType, null)
             }
         }
@@ -66,54 +66,57 @@ class Elaborate private constructor(
     }
 
     /**
-     * Binds the [parameters] to this context.
+     * Binds the [parameters] to the context.
      */
-    private fun Context.bindParameters(parameters: List<S.Parameter>): Pair<Context, List<C.Parameter>> = parameters.foldMap(this) { context, parameter ->
-        val type = context.checkTerm(parameter.type, TYPE)
-        val vType = context.normalizer.evalTerm(type)
-        val lower = parameter.lower?.let { context.checkTerm(it, vType) }
-        val vLower = lower?.let { context.normalizer.evalTerm(it) }
-        val upper = parameter.upper?.let { context.checkTerm(it, vType) }
-        val vUpper = upper?.let { context.normalizer.evalTerm(it) }
-        context.bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
-    }
+    private fun bindParameters(parameters: List<S.Parameter>): State<Context, List<C.Parameter>> =
+        parameters.map { parameter ->
+            State<Context, C.Parameter> {
+                val type = checkTerm(parameter.type, TYPE)
+                val vType = normalizer.evalTerm(type)
+                val lower = parameter.lower?.let { checkTerm(it, vType) }
+                val vLower = lower?.let { normalizer.evalTerm(it) }
+                val upper = parameter.upper?.let { checkTerm(it, vType) }
+                val vUpper = upper?.let { normalizer.evalTerm(it) }
+                bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+            }
+        }.fold()
 
     /**
-     * Infers the type of the [module] under this context.
+     * Infers the type of the [module] under the context.
      */
-    private fun Context.inferModule(module: S.Module): Pair<C.Module, C.VModule> = when (module) {
+    private fun inferModule(module: S.Module): State<Context, Pair<C.Module, C.VModule>> = when (module) {
         is S.Module.Var -> when (val item = items[module.name]) {
-            is C.Item.Mod -> C.Module.Var(module.name, module.id) to item.type
+            is C.Item.Mod -> pure(C.Module.Var(module.name, module.id) to item.type)
             else -> {
                 diagnose(Diagnostic.ModNotFound(module.name, module.id))
-                C.Module.Var(module.name, module.id) to TODO()
+                pure(C.Module.Var(module.name, module.id) to TODO())
             }
         }
         is S.Module.Str -> {
             val (items, signatures) = module.items.map { inferItem(it) }.unzip()
-            C.Module.Str(items, module.id) to C.VModule.Sig(signatures, null)
+            pure(C.Module.Str(items, module.id) to C.VModule.Sig(signatures, null))
         }
-        is S.Module.Sig -> {
-            val signatures = module.signatures.map { elaborateSignature(it) }
+        is S.Module.Sig -> module.signatures.map { elaborateSignature(it) }.fold() / { signatures ->
             C.Module.Sig(signatures, module.id) to C.VModule.Type(null)
         }
-        is S.Module.Type -> C.Module.Type(module.id) to C.VModule.Type(null)
+        is S.Module.Type -> pure(C.Module.Type(module.id) to C.VModule.Type(null))
     }
 
     /**
-     * Checks the [module] against the [type] under this context.
+     * Checks the [module] against the [type] under the context.
      */
-    private fun Context.checkModule(module: S.Module, type: C.VModule): C.Module = when {
+    private fun checkModule(module: S.Module, type: C.VModule): State<Context, C.Module> = when {
         module is S.Module.Str && type is C.VModule.Sig -> {
             val items = (module.items zip type.signatures).map { (item, signature) -> checkItem(item, signature) }
-            C.Module.Str(items, module.id)
+            pure(C.Module.Str(items, module.id))
         }
-        else -> {
-            val (inferred, inferredType) = inferModule(module)
-            if (!normalizer.unifyModules(inferredType, type)) {
-                diagnose(Diagnostic.ModuleMismatch(module.id))
+        else -> inferModule(module) % { (inferred, inferredType) ->
+            gets {
+                if (!normalizer.unifyModules(inferredType, type)) {
+                    diagnose(Diagnostic.ModuleMismatch(module.id))
+                }
+                inferred
             }
-            inferred
         }
     }
 
@@ -141,16 +144,18 @@ class Elaborate private constructor(
     }
 
     /**
-     * Elaborates the [signature] under this context.
+     * Elaborates the [signature] under the context.
      */
-    private fun Context.elaborateSignature(signature: S.Signature): C.Signature = when (signature) {
-        is S.Signature.Def -> {
-            val (context, parameters) = irrelevant().bindParameters(signature.parameters)
-            val resultant = context.checkTerm(signature.resultant, TYPE)
-            C.Signature.Def(signature.name, parameters, resultant, signature.id)
+    private fun elaborateSignature(signature: S.Signature): State<Context, C.Signature> = when (signature) {
+        is S.Signature.Def -> modify<Context> { irrelevant() } % {
+            bindParameters(signature.parameters) % { parameters ->
+                gets {
+                    val resultant = checkTerm(signature.resultant, TYPE)
+                    C.Signature.Def(signature.name, parameters, resultant, signature.id)
+                }
+            }
         }
-        is S.Signature.Mod -> {
-            val type = checkModule(signature.type, C.VModule.Type(null))
+        is S.Signature.Mod -> checkModule(signature.type, C.VModule.Type(null)) / { type ->
             C.Signature.Mod(signature.name, type, signature.id)
         }
     }
@@ -381,7 +386,7 @@ class Elaborate private constructor(
             }
         }
         is S.Term.Fun -> {
-            val (context, parameters) = bindParameters(computation.parameters)
+            val (context, parameters) = bindParameters(computation.parameters) with this
             val resultant = context.checkTerm(computation.resultant, TYPE) /* TODO: check effects */
             val effects = computation.effects.map { elaborateEffect(it) }.toSet()
             Typing(C.Term.Fun(parameters, resultant, effects, computation.id), TYPE)
