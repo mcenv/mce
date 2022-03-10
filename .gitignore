@@ -1,6 +1,5 @@
 .gradle
 .idea
 **/build/
-!client/src/**/build/
-!server/src/**/build/
+!src/**/build/
 !gradle-wrapper.jar
