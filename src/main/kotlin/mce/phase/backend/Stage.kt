@@ -23,6 +23,10 @@ class Stage private constructor(
             val body = stageModule(item.body)
             C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
         }
+        is C.Item.Test -> {
+            val body = stageTerm(item.body)
+            C.Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
+        }
     }
 
     private fun stageParameter(parameter: C.Parameter): C.Parameter {
@@ -55,6 +59,7 @@ class Stage private constructor(
             val type = stageModule(signature.type)
             C.Signature.Mod(signature.name, type, signature.id)
         }
+        is C.Signature.Test -> C.Signature.Test(signature.name, signature.id)
     }
 
     private fun stageTerm(term: C.Term): C.Term = when (term) {

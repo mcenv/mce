@@ -24,6 +24,10 @@ class Zonk private constructor(
             val body = zonkModule(item.body)
             C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
         }
+        is C.Item.Test -> {
+            val body = zonkTerm(item.body)
+            C.Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
+        }
     }
 
     private fun zonkParameter(parameter: C.Parameter): C.Parameter {
@@ -56,6 +60,7 @@ class Zonk private constructor(
             val type = zonkModule(signature.type)
             C.Signature.Mod(signature.name, type, signature.id)
         }
+        is C.Signature.Test -> C.Signature.Test(signature.name, signature.id)
     }
 
     private fun zonkTerm(term: C.Term): C.Term = when (term) {

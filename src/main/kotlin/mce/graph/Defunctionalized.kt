@@ -33,6 +33,14 @@ object Defunctionalized {
             val body: Module,
             override val id: Id,
         ) : Item()
+
+        data class Test(
+            override val imports: KList<KString>,
+            override val exports: KList<KString>,
+            override val name: KString,
+            val body: Term,
+            override val id: Id,
+        ) : Item()
     }
 
     data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term, val id: Id)
@@ -51,6 +59,7 @@ object Defunctionalized {
 
         data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Signature()
         data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
+        data class Test(val name: KString, override val id: Id) : Signature()
     }
 
     sealed class Term {

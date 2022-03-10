@@ -43,6 +43,10 @@ class Elaborate private constructor(
                 val (_, body) = checkModule(item.body, vType) with context
                 C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to C.VSignature.Mod(item.name, vType, null)
             }
+            is S.Item.Test -> {
+                val body = context.checkTerm(item.body, BOOL)
+                C.Item.Test(item.imports, item.exports, modifiers, item.name, body, item.id) to C.VSignature.Test(item.name, null)
+            }
         }
     }
 
@@ -141,6 +145,7 @@ class Elaborate private constructor(
             success && normalizer.unifyTerms(normalizer.evalTerm(signature1.resultant), normalizer.evalTerm(signature2.resultant))
         }
         is C.VSignature.Mod -> signature2 is C.VSignature.Mod && signature1.name == signature2.name && unifyModules(signature1.type, signature2.type)
+        is C.VSignature.Test -> signature2 is C.VSignature.Test && signature1.name == signature2.name
     }
 
     /**
@@ -158,6 +163,7 @@ class Elaborate private constructor(
         is S.Signature.Mod -> checkModule(signature.type, C.VModule.Type(null)) / { type ->
             C.Signature.Mod(signature.name, type, signature.id)
         }
+        is S.Signature.Test -> pure(C.Signature.Test(signature.name, signature.id))
     }
 
     /**

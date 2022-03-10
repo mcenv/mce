@@ -284,5 +284,6 @@ class Normalizer(
             val type = evalModule(signature.type)
             C.VSignature.Mod(signature.name, type, signature.id)
         }
+        is C.Signature.Test -> C.VSignature.Test(signature.name, signature.id)
     }
 }

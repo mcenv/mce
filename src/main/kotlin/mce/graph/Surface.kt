@@ -39,6 +39,15 @@ object Surface {
             val body: Module,
             override val id: Id,
         ) : Item()
+
+        data class Test(
+            override val imports: KList<KString>,
+            override val exports: KList<KString>,
+            override val modifiers: KList<Modifier>,
+            override val name: KString,
+            val body: Term,
+            override val id: Id,
+        ) : Item()
     }
 
     enum class Modifier {
@@ -62,6 +71,7 @@ object Surface {
 
         data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Signature()
         data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
+        data class Test(val name: KString, override val id: Id) : Signature()
     }
 
     sealed class Term {

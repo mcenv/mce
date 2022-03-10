@@ -452,4 +452,15 @@ class ElaborateTest {
     fun unitElim() {
         elaborate("unit_elim").success()
     }
+
+    @Test
+    fun testSuccess() {
+        elaborate("test_success").success()
+    }
+
+    @Test
+    fun testIllTyped() {
+        val result = elaborate("test_ill_typed")
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
+    }
 }

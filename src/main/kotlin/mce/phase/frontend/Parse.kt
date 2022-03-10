@@ -43,6 +43,15 @@ class Parse private constructor(
                 val body = parseModule()
                 S.Item.Mod(imports, exports, modifiers, name, type, body, id)
             }
+            "test" -> {
+                val name = readWord()
+                val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
+                val body = run {
+                    expectString("≔")
+                    parseTerm()
+                }
+                S.Item.Test(imports, exports, modifiers, name, body, id)
+            }
             else -> error("unexpected item '$word'")
         }
     }
@@ -108,6 +117,10 @@ class Parse private constructor(
             expect(':')
             val type = parseModule()
             S.Signature.Mod(name, type, id)
+        }
+        "test" -> {
+            val name = readWord()
+            S.Signature.Test(name, id)
         }
         else -> error("unexpected signature '$word'")
     }

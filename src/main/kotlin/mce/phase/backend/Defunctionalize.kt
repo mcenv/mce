@@ -20,6 +20,10 @@ class Defunctionalize private constructor() {
             val body = defunctionalizeModule(item.body)
             D.Item.Mod(item.imports, item.exports, item.name, body, item.id)
         }
+        is C.Item.Test -> {
+            val body = defunctionalizeTerm(item.body)
+            D.Item.Test(item.imports, item.exports, item.name, body, item.id)
+        }
     }
 
     private fun defunctionalizeParameter(parameter: C.Parameter): D.Parameter {
@@ -52,6 +56,7 @@ class Defunctionalize private constructor() {
             val type = defunctionalizeModule(signature.type)
             D.Signature.Mod(signature.name, type, signature.id!!)
         }
+        is C.Signature.Test -> D.Signature.Test(signature.name, signature.id!!)
     }
 
     private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {
