@@ -3,9 +3,9 @@ package mce.phase.frontend
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
-import mce.BUILTINS
 import mce.ast.Id
 import mce.ast.freshId
+import mce.builtin.builtins
 import mce.util.firstMapOrNull
 import mce.util.foldAll
 import mce.util.mapSecond
@@ -80,7 +80,7 @@ class Normalizer(
             val item = items[term.name]!! as C.Item.Def
             if (item.modifiers.contains(C.Modifier.BUILTIN)) {
                 val normalizer = term.arguments.fold(this) { normalizer, argument -> normalizer.bind(lazy { normalizer.evalTerm(argument) }) }
-                BUILTINS[term.name]!!(normalizer)
+                builtins[term.name]!!(normalizer)
             } else evalTerm(item.body)
         }
         is C.Term.Let -> bind(lazy { evalTerm(term.init) }).evalTerm(term.body)
