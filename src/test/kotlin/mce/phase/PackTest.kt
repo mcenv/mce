@@ -1,12 +1,12 @@
 package mce.phase
 
+import mce.ast.Packed.Command.*
+import mce.ast.Packed.Consumer.RESULT
+import mce.ast.Packed.Execute.Run
+import mce.ast.Packed.Execute.StoreValue
+import mce.ast.Packed.Nbt
+import mce.ast.Packed.SourceProvider.Value
 import mce.fetch
-import mce.graph.Packed.Command.*
-import mce.graph.Packed.Consumer.RESULT
-import mce.graph.Packed.Execute.Run
-import mce.graph.Packed.Execute.StoreValue
-import mce.graph.Packed.Nbt
-import mce.graph.Packed.SourceProvider.Value
 import mce.phase.backend.Pack.Companion.BYTE
 import mce.phase.backend.Pack.Companion.INT
 import mce.phase.backend.Pack.Companion.REGISTERS
@@ -16,7 +16,7 @@ import mce.phase.backend.Pack.Companion.get
 import mce.server.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import mce.graph.Packed as P
+import mce.ast.Packed as P
 
 class PackTest {
     private fun pack(name: String): P.Datapack = fetch(Key.Datapack(name))

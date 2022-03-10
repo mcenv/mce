@@ -1,10 +1,10 @@
 package mce.phase.frontend
 
-import mce.graph.Id
-import mce.graph.Name
-import mce.graph.freshId
+import mce.ast.Id
+import mce.ast.Name
+import mce.ast.freshId
 import java.util.*
-import mce.graph.Surface as S
+import mce.ast.Surface as S
 
 class Parse private constructor(
     private val source: String

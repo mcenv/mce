@@ -6,7 +6,7 @@ import mce.server.Key
 import org.junit.jupiter.api.Test
 import java.util.*
 import kotlin.test.assertEquals
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 class StageTest {
     private fun stage(name: String): Stage.Result = fetch(Key.StageResult(name))

@@ -8,8 +8,8 @@ import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertIs
-import mce.graph.Core as C
-import mce.graph.Surface as S
+import mce.ast.Core as C
+import mce.ast.Surface as S
 
 class ElaborateTest {
     private fun elaborate(name: String): Elaborate.Result = fetch(Key.ElaborateResult(name))

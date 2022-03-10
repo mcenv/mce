@@ -1,7 +1,7 @@
 package mce
 
 import mce.phase.frontend.Normalizer
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 @Suppress("NAME_SHADOWING")
 private val COMM: Comparator<C.VTerm> = Comparator { value1, value2 ->

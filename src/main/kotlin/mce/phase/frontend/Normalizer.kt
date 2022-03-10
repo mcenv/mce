@@ -4,13 +4,13 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import mce.BUILTINS
-import mce.graph.Id
-import mce.graph.freshId
+import mce.ast.Id
+import mce.ast.freshId
 import mce.util.firstMapOrNull
 import mce.util.foldAll
 import mce.util.mapSecond
 import mce.util.toLinkedHashMap
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 class Normalizer(
     private val values: PersistentList<Lazy<C.VTerm>>,

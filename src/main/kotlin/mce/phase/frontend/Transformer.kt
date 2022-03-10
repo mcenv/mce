@@ -1,7 +1,7 @@
 package mce.phase
 
 import mce.util.toLinkedHashMap
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.Hole -> C.Term.Hole(id)

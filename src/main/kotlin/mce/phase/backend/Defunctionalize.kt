@@ -1,10 +1,10 @@
 package mce.phase.backend
 
-import mce.graph.Id
+import mce.ast.Id
 import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import mce.graph.Core as C
-import mce.graph.Defunctionalized as D
+import mce.ast.Core as C
+import mce.ast.Defunctionalized as D
 
 @Suppress("NAME_SHADOWING")
 class Defunctionalize private constructor() {

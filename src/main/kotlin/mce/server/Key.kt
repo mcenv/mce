@@ -1,7 +1,7 @@
 package mce.server
 
-import mce.graph.Packed
-import mce.graph.Surface
+import mce.ast.Packed
+import mce.ast.Surface
 import mce.phase.backend.Defunctionalize
 import mce.phase.backend.Stage
 import mce.phase.frontend.Elaborate

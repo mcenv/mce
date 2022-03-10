@@ -1,9 +1,9 @@
 package mce.phase.frontend
 
 import mce.Diagnostic
-import mce.graph.Id
+import mce.ast.Id
 import mce.phase.map
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 /**
  * Performs zonking.

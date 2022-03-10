@@ -1,17 +1,17 @@
 package mce.phase.backend
 
-import mce.graph.Id
-import mce.graph.Packed.Command.*
-import mce.graph.Packed.Consumer.RESULT
-import mce.graph.Packed.Execute.Run
-import mce.graph.Packed.Execute.StoreValue
-import mce.graph.Packed.NbtType
-import mce.graph.Packed.SourceComparator.Matches
-import mce.graph.Packed.SourceProvider.From
-import mce.graph.Packed.SourceProvider.Value
-import mce.graph.Core as C
-import mce.graph.Defunctionalized as D
-import mce.graph.Packed as P
+import mce.ast.Id
+import mce.ast.Packed.Command.*
+import mce.ast.Packed.Consumer.RESULT
+import mce.ast.Packed.Execute.Run
+import mce.ast.Packed.Execute.StoreValue
+import mce.ast.Packed.NbtType
+import mce.ast.Packed.SourceComparator.Matches
+import mce.ast.Packed.SourceProvider.From
+import mce.ast.Packed.SourceProvider.Value
+import mce.ast.Core as C
+import mce.ast.Defunctionalized as D
+import mce.ast.Packed as P
 
 @Suppress("NAME_SHADOWING")
 class Pack private constructor(
@@ -207,48 +207,48 @@ class Pack private constructor(
          * @see [net.minecraft.resources.ResourceLocation.isAllowedInResourceLocation]
          */
         @Suppress("KDocUnresolvedReference")
-        val STACKS = mce.graph.Packed.ResourceLocation("0")
+        val STACKS = mce.ast.Packed.ResourceLocation("0")
 
-        val BYTE = mce.graph.Packed.NbtPath()["a"]
-        val SHORT = mce.graph.Packed.NbtPath()["b"]
-        val INT = mce.graph.Packed.NbtPath()["c"]
-        val LONG = mce.graph.Packed.NbtPath()["d"]
-        val FLOAT = mce.graph.Packed.NbtPath()["e"]
-        val DOUBLE = mce.graph.Packed.NbtPath()["f"]
-        val BYTE_ARRAY = mce.graph.Packed.NbtPath()["g"]
-        val STRING = mce.graph.Packed.NbtPath()["h"]
-        val LIST = mce.graph.Packed.NbtPath()["i"]
-        val COMPOUND = mce.graph.Packed.NbtPath()["j"]
-        val INT_ARRAY = mce.graph.Packed.NbtPath()["k"]
-        val LONG_ARRAY = mce.graph.Packed.NbtPath()["l"]
+        val BYTE = mce.ast.Packed.NbtPath()["a"]
+        val SHORT = mce.ast.Packed.NbtPath()["b"]
+        val INT = mce.ast.Packed.NbtPath()["c"]
+        val LONG = mce.ast.Packed.NbtPath()["d"]
+        val FLOAT = mce.ast.Packed.NbtPath()["e"]
+        val DOUBLE = mce.ast.Packed.NbtPath()["f"]
+        val BYTE_ARRAY = mce.ast.Packed.NbtPath()["g"]
+        val STRING = mce.ast.Packed.NbtPath()["h"]
+        val LIST = mce.ast.Packed.NbtPath()["i"]
+        val COMPOUND = mce.ast.Packed.NbtPath()["j"]
+        val INT_ARRAY = mce.ast.Packed.NbtPath()["k"]
+        val LONG_ARRAY = mce.ast.Packed.NbtPath()["l"]
 
         /**
          * An objective to store registers.
          * @see [net.minecraft.commands.arguments.ObjectiveArgument.parse]
          */
         @Suppress("KDocUnresolvedReference")
-        val REGISTERS = mce.graph.Packed.Objective("0")
+        val REGISTERS = mce.ast.Packed.Objective("0")
 
-        val REGISTER_0 = mce.graph.Packed.ScoreHolder("0")
+        val REGISTER_0 = mce.ast.Packed.ScoreHolder("0")
 
         /**
          * A resource location of the apply function.
          */
-        val APPLY = mce.graph.Packed.ResourceLocation("apply")
+        val APPLY = mce.ast.Packed.ResourceLocation("apply")
 
-        operator fun mce.graph.Packed.NbtPath.get(pattern: mce.graph.Packed.Nbt.Compound): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.MatchElement(pattern))
+        operator fun mce.ast.Packed.NbtPath.get(pattern: mce.ast.Packed.Nbt.Compound): mce.ast.Packed.NbtPath = mce.ast.Packed.NbtPath(nodes + mce.ast.Packed.NbtNode.MatchElement(pattern))
 
-        operator fun mce.graph.Packed.NbtPath.invoke(): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.AllElements)
+        operator fun mce.ast.Packed.NbtPath.invoke(): mce.ast.Packed.NbtPath = mce.ast.Packed.NbtPath(nodes + mce.ast.Packed.NbtNode.AllElements)
 
-        operator fun mce.graph.Packed.NbtPath.get(index: Int): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.IndexedElement(index))
+        operator fun mce.ast.Packed.NbtPath.get(index: Int): mce.ast.Packed.NbtPath = mce.ast.Packed.NbtPath(nodes + mce.ast.Packed.NbtNode.IndexedElement(index))
 
-        operator fun mce.graph.Packed.NbtPath.get(name: String, pattern: mce.graph.Packed.Nbt.Compound): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.MatchObject(name, pattern))
+        operator fun mce.ast.Packed.NbtPath.get(name: String, pattern: mce.ast.Packed.Nbt.Compound): mce.ast.Packed.NbtPath = mce.ast.Packed.NbtPath(nodes + mce.ast.Packed.NbtNode.MatchObject(name, pattern))
 
-        operator fun mce.graph.Packed.NbtPath.get(name: String): mce.graph.Packed.NbtPath = mce.graph.Packed.NbtPath(nodes + mce.graph.Packed.NbtNode.CompoundChild(name))
+        operator fun mce.ast.Packed.NbtPath.get(name: String): mce.ast.Packed.NbtPath = mce.ast.Packed.NbtPath(nodes + mce.ast.Packed.NbtNode.CompoundChild(name))
 
-        fun Append(target: mce.graph.Packed.ResourceLocation, path: mce.graph.Packed.NbtPath, source: mce.graph.Packed.SourceProvider): mce.graph.Packed.Command = mce.graph.Packed.Command.InsertAtIndex(target, path, -1, source)
+        fun Append(target: mce.ast.Packed.ResourceLocation, path: mce.ast.Packed.NbtPath, source: mce.ast.Packed.SourceProvider): mce.ast.Packed.Command = mce.ast.Packed.Command.InsertAtIndex(target, path, -1, source)
 
-        fun Prepend(target: mce.graph.Packed.ResourceLocation, path: mce.graph.Packed.NbtPath, source: mce.graph.Packed.SourceProvider): mce.graph.Packed.Command = mce.graph.Packed.Command.InsertAtIndex(target, path, 0, source)
+        fun Prepend(target: mce.ast.Packed.ResourceLocation, path: mce.ast.Packed.NbtPath, source: mce.ast.Packed.SourceProvider): mce.ast.Packed.Command = mce.ast.Packed.Command.InsertAtIndex(target, path, 0, source)
 
         private fun erase(type: C.VTerm): NbtType = when (type) {
             is C.VTerm.Hole -> throw Error()

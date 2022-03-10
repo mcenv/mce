@@ -1,7 +1,7 @@
 package mce.interpreter
 
-import mce.graph.Packed.Nbt
-import mce.graph.Packed.NbtType
+import mce.ast.Packed.Nbt
+import mce.ast.Packed.NbtType
 import kotlin.math.floor
 
 sealed class MutableNbt {

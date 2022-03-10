@@ -6,10 +6,10 @@ import kotlinx.collections.immutable.plus
 import mce.Diagnostic
 import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
-import mce.graph.Id
+import mce.ast.Id
 import mce.util.*
-import mce.graph.Core as C
-import mce.graph.Surface as S
+import mce.ast.Core as C
+import mce.ast.Surface as S
 
 @Suppress("NAME_SHADOWING")
 class Elaborate private constructor(

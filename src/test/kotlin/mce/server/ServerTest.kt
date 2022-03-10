@@ -5,7 +5,7 @@ import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import mce.graph.Surface as S
+import mce.ast.Surface as S
 
 class ServerTest {
     private fun runServer(action: suspend Server.() -> Unit) {

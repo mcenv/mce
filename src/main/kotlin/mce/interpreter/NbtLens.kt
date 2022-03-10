@@ -1,6 +1,6 @@
 package mce.interpreter
 
-import mce.graph.Packed as P
+import mce.ast.Packed as P
 
 object NbtLens {
     fun P.NbtPath.get(target: MutableNbt): List<MutableNbt> =

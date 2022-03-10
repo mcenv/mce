@@ -7,7 +7,7 @@ import mce.server.Key
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertIs
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 class ZonkTest {
     private fun zonk(name: String): Zonk.Result = fetch(Key.ZonkResult(name))

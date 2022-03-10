@@ -1,9 +1,9 @@
 package mce
 
-import mce.graph.Id
-import mce.graph.freshId
-import mce.graph.Core as C
-import mce.graph.Surface as S
+import mce.ast.Id
+import mce.ast.freshId
+import mce.ast.Core as C
+import mce.ast.Surface as S
 
 sealed class Diagnostic {
     abstract val id: Id

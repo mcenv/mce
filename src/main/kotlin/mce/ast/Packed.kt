@@ -1,4 +1,4 @@
-package mce.graph
+package mce.ast
 
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble

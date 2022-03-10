@@ -1,10 +1,10 @@
 package mce.phase.backend
 
-import mce.graph.Id
+import mce.ast.Id
 import mce.phase.frontend.Normalizer
 import mce.phase.frontend.Zonk
 import mce.phase.map
-import mce.graph.Core as C
+import mce.ast.Core as C
 
 /**
  * Performs staging.
