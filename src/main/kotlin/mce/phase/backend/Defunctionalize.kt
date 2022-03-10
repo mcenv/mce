@@ -122,13 +122,13 @@ class Defunctionalize private constructor() {
         }
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> throw Error()
-        is C.Term.Union -> {
+        is C.Term.Or -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
-            D.Term.Union(variants, term.id!!)
+            D.Term.Or(variants, term.id!!)
         }
-        is C.Term.Intersection -> {
+        is C.Term.And -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
-            D.Term.Intersection(variants, term.id!!)
+            D.Term.And(variants, term.id!!)
         }
         is C.Term.Unit -> D.Term.Unit(term.id!!)
         is C.Term.Bool -> D.Term.Bool(term.id!!)

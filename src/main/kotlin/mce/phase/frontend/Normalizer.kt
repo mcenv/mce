@@ -125,8 +125,8 @@ class Normalizer(
             is C.VTerm.CodeOf -> element.element.value
             else -> C.VTerm.Splice(lazyOf(element), term.id)
         }
-        is C.Term.Union -> C.VTerm.Union(term.variants.map { lazy { evalTerm(it) } }, term.id)
-        is C.Term.Intersection -> C.VTerm.Intersection(term.variants.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.Or -> C.VTerm.Or(term.variants.map { lazy { evalTerm(it) } }, term.id)
+        is C.Term.And -> C.VTerm.And(term.variants.map { lazy { evalTerm(it) } }, term.id)
         is C.Term.Unit -> C.VTerm.Unit(term.id)
         is C.Term.Bool -> C.VTerm.Bool(term.id)
         is C.Term.Byte -> C.VTerm.Byte(term.id)
@@ -225,8 +225,8 @@ class Normalizer(
         is C.VTerm.Apply -> C.Term.Apply(quoteTerm(term.function), term.arguments.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.CodeOf -> C.Term.CodeOf(quoteTerm(term.element.value), term.id)
         is C.VTerm.Splice -> C.Term.Splice(quoteTerm(term.element.value), term.id)
-        is C.VTerm.Union -> C.Term.Union(term.variants.map { quoteTerm(it.value) }, term.id)
-        is C.VTerm.Intersection -> C.Term.Intersection(term.variants.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.Or -> C.Term.Or(term.variants.map { quoteTerm(it.value) }, term.id)
+        is C.VTerm.And -> C.Term.And(term.variants.map { quoteTerm(it.value) }, term.id)
         is C.VTerm.Unit -> C.Term.Unit(term.id)
         is C.VTerm.Bool -> C.Term.Bool(term.id)
         is C.VTerm.Byte -> C.Term.Byte(term.id)

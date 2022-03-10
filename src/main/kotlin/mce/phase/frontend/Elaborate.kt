@@ -251,13 +251,13 @@ class Elaborate private constructor(
             }
             Typing(C.Term.Splice(element.term, term.id), type)
         }
-        is S.Term.Union -> {
+        is S.Term.Or -> {
             val variants = term.variants.map { checkTerm(it, TYPE) }
-            Typing(C.Term.Union(variants, term.id), TYPE)
+            Typing(C.Term.Or(variants, term.id), TYPE)
         }
-        is S.Term.Intersection -> {
+        is S.Term.And -> {
             val variants = term.variants.map { checkTerm(it, TYPE) }
-            Typing(C.Term.Intersection(variants, term.id), TYPE)
+            Typing(C.Term.And(variants, term.id), TYPE)
         }
         is S.Term.Unit -> Typing(C.Term.Unit(term.id), TYPE)
         is S.Term.Bool -> Typing(C.Term.Bool(term.id), TYPE)
@@ -535,8 +535,8 @@ class Elaborate private constructor(
                     (value1.arguments zip value2.arguments).all { unifyTerms(it.first.value, it.second.value) }
             value1 is C.VTerm.CodeOf && value2 is C.VTerm.CodeOf -> unifyTerms(value1.element.value, value2.element.value)
             value1 is C.VTerm.Splice && value2 is C.VTerm.Splice -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Union && value1.variants.isEmpty() && value2 is C.VTerm.Union && value2.variants.isEmpty() -> true
-            value1 is C.VTerm.Intersection && value1.variants.isEmpty() && value2 is C.VTerm.Intersection && value2.variants.isEmpty() -> true
+            value1 is C.VTerm.Or && value1.variants.isEmpty() && value2 is C.VTerm.Or && value2.variants.isEmpty() -> true
+            value1 is C.VTerm.And && value1.variants.isEmpty() && value2 is C.VTerm.And && value2.variants.isEmpty() -> true
             value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> true
             value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> true
             value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> true
@@ -587,10 +587,10 @@ class Elaborate private constructor(
                     it.second.value
                 ) /* pointwise subtyping */
             }
-            value1 is C.VTerm.Union -> value1.variants.all { subtypeTerms(it.value, value2) }
-            value2 is C.VTerm.Union -> value2.variants.any { subtypeTerms(value1, it.value) }
-            value2 is C.VTerm.Intersection -> value2.variants.all { subtypeTerms(value1, it.value) }
-            value1 is C.VTerm.Intersection -> value1.variants.any { subtypeTerms(it.value, value2) }
+            value1 is C.VTerm.Or -> value1.variants.all { subtypeTerms(it.value, value2) }
+            value2 is C.VTerm.Or -> value2.variants.any { subtypeTerms(value1, it.value) }
+            value2 is C.VTerm.And -> value2.variants.all { subtypeTerms(value1, it.value) }
+            value1 is C.VTerm.And -> value1.variants.any { subtypeTerms(it.value, value2) }
             value1 is C.VTerm.List && value2 is C.VTerm.List -> subtypeTerms(value1.element.value, value2.element.value) && normalizer.unifyTerms(value1.size.value, value2.size.value)
             value1 is C.VTerm.Compound && value2 is C.VTerm.Compound -> value2.elements.entries.foldAll(this) { context, entry2 ->
                 val element1 = value1.elements[entry2.key]
@@ -799,8 +799,8 @@ class Elaborate private constructor(
             val term1 = force(term1)
             val term2 = force(term2)
             return when (term1) {
-                is C.VTerm.Union -> term1.variants.all { join(it.value, term2) }
-                is C.VTerm.Intersection -> term1.variants.any { join(it.value, term2) }
+                is C.VTerm.Or -> term1.variants.all { join(it.value, term2) }
+                is C.VTerm.And -> term1.variants.any { join(it.value, term2) }
                 is C.VTerm.Unit -> term2 is C.VTerm.Unit
                 is C.VTerm.Bool -> term2 is C.VTerm.Bool
                 is C.VTerm.Byte -> term2 is C.VTerm.Byte
@@ -826,13 +826,13 @@ class Elaborate private constructor(
 
         when (type) {
             is C.VTerm.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
-            is C.VTerm.Union -> if (type.variants.size >= 2) {
+            is C.VTerm.Or -> if (type.variants.size >= 2) {
                 val first = type.variants.first().value
                 if (!type.variants.drop(1).all { join(first, it.value) }) {
                     diagnose(Diagnostic.PolymorphicRepresentation(id))
                 }
             }
-            is C.VTerm.Intersection -> if (type.variants.isEmpty()) {
+            is C.VTerm.And -> if (type.variants.isEmpty()) {
                 diagnose(Diagnostic.PolymorphicRepresentation(id))
             }
             else -> {}
@@ -919,8 +919,8 @@ class Elaborate private constructor(
         private val BYTE_ARRAY = C.VTerm.ByteArray()
         private val INT_ARRAY = C.VTerm.IntArray()
         private val LONG_ARRAY = C.VTerm.LongArray()
-        private val END = C.VTerm.Union(emptyList())
-        private val ANY = C.VTerm.Intersection(emptyList())
+        private val END = C.VTerm.Or(emptyList())
+        private val ANY = C.VTerm.And(emptyList())
         private val TYPE = C.VTerm.Type()
 
         operator fun invoke(item: S.Item, items: Map<String, C.Item>): Result = Elaborate(items).run {

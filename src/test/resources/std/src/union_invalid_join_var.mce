@@ -1,1 +1,0 @@
-def union_invalid_join_var [a : union {bool, int}] : union {bool, int} ≔ (#0-0-0-0-0 a)

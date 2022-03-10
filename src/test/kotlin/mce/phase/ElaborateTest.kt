@@ -329,14 +329,14 @@ class ElaborateTest {
     }
 
     @Test
-    fun unionInvalidJoinVar() {
-        val result = elaborate("union_invalid_join_var")
+    fun orInvalidJoinVar() {
+        val result = elaborate("or_invalid_join_var")
         assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
     }
 
     @Test
-    fun unionJoinVar() {
-        elaborate("union_join_var").success()
+    fun orJoinVar() {
+        elaborate("or_join_var").success()
     }
 
     @Test

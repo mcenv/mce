@@ -174,8 +174,8 @@ class Pack private constructor(
                 packTerm(term.function)
                 +RunFunction(APPLY)
             }
-            is D.Term.Union -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is D.Term.Intersection -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.Or -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is D.Term.And -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Unit -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Bool -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
             is D.Term.Byte -> +Append(STACKS, BYTE, Value(P.Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
@@ -276,8 +276,8 @@ class Pack private constructor(
             is C.VTerm.Apply -> TODO()
             is C.VTerm.CodeOf -> throw Error()
             is C.VTerm.Splice -> throw Error()
-            is C.VTerm.Union -> TODO()
-            is C.VTerm.Intersection -> TODO()
+            is C.VTerm.Or -> TODO()
+            is C.VTerm.And -> TODO()
             is C.VTerm.Unit -> NbtType.BYTE
             is C.VTerm.Bool -> NbtType.BYTE
             is C.VTerm.Byte -> NbtType.BYTE

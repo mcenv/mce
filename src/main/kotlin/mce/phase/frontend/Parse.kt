@@ -219,16 +219,16 @@ class Parse private constructor(
             "false" -> S.Term.BoolOf(false, id)
             "true" -> S.Term.BoolOf(true, id)
             "refl" -> S.Term.Refl(id)
-            "union" -> {
+            "or" -> {
                 val variants = parseList('{', '}') { parseTerm() }
-                S.Term.Union(variants, id)
+                S.Term.Or(variants, id)
             }
-            "end" -> S.Term.Union(emptyList(), id)
-            "intersection" -> {
+            "end" -> S.Term.Or(emptyList(), id)
+            "and" -> {
                 val variants = parseList('{', '}') { parseTerm() }
-                S.Term.Intersection(variants, id)
+                S.Term.And(variants, id)
             }
-            "any" -> S.Term.Intersection(emptyList(), id)
+            "any" -> S.Term.And(emptyList(), id)
             "unit" -> S.Term.Unit(id)
             "bool" -> S.Term.Bool(id)
             "byte" -> S.Term.Byte(id)

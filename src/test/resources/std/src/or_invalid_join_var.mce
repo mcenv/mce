@@ -1,0 +1,1 @@
+def or_invalid_join_var [a : or {bool, int}] : or {bool, int} ≔ (#0-0-0-0-0 a)

@@ -1,0 +1,1 @@
+def or_join_var [a : or {bool, bool}] : or {bool, bool} ≔ a
