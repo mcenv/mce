@@ -12,8 +12,6 @@ sealed class Diagnostic {
     data class VarNotFound(val name: String, override val id: Id) : Diagnostic()
     data class DefNotFound(val name: String, override val id: Id) : Diagnostic()
     data class ModNotFound(val name: String, override val id: Id) : Diagnostic()
-    data class FunctionExpected(override val id: Id) : Diagnostic()
-    data class CodeExpected(override val id: Id) : Diagnostic()
     data class SizeMismatch(val expected: Int, val actual: Int, override val id: Id) : Diagnostic()
     data class TermMismatch(val expected: S.Term, val actual: S.Term, override val id: Id) : Diagnostic()
     data class ModuleMismatch(override val id: Id) : Diagnostic()

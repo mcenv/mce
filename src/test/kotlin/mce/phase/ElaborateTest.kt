@@ -1,6 +1,7 @@
 package mce.phase
 
 import mce.fetch
+import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.Elaborate
 import mce.server.Key
 import java.util.*

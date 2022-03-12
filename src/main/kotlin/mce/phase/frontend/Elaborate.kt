@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import mce.ast.Id
+import mce.ast.freshId
 import mce.phase.Normalizer
 import mce.phase.frontend.Diagnostic.Companion.serializeEffect
 import mce.phase.frontend.Diagnostic.Companion.serializeTerm
@@ -252,8 +253,9 @@ class Elaborate private constructor(
             val element = down().inferTerm(term.element)
             val type = when (val type = normalizer.force(element.type)) {
                 is C.VTerm.Code -> type.element.value
-                // TODO: unify flex elim
-                else -> diagnose(Diagnostic.CodeExpected(term.id))
+                else -> type.also {
+                    normalizer.unifyTerms(it, C.VTerm.Code(lazyOf(normalizer.fresh(freshId()))))
+                }
             }
             Typing(C.Term.Splice(element.term, term.id), type)
         }
@@ -387,8 +389,28 @@ class Elaborate private constructor(
                     val resultant = context.normalizer.evalTerm(type.resultant)
                     Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
                 }
-                // TODO: unify flex elim
-                else -> Typing(C.Term.Apply(function.term, computation.arguments.map { checkTerm(it, ANY) }, computation.id), diagnose(Diagnostic.FunctionExpected(computation.function.id)), function.effects)
+                else -> {
+                    val parameters = computation.arguments.map {
+                        C.Parameter(true, "", null, null, normalizer.quoteTerm(normalizer.fresh(freshId())), freshId())
+                    } // TODO: bind?
+                    val vResultant = normalizer.fresh(freshId())
+                    val resultant = normalizer.quoteTerm(vResultant)
+                    val effects = emptySet<C.Effect>() // TODO
+                    normalizer.unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null))
+                    val (_, arguments) = (computation.arguments zip parameters).foldMap(this) { context, (argument, parameter) ->
+                        val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
+                        val vArgument = context.normalizer.evalTerm(tArgument)
+                        val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
+                            if (!context.subtypeTerms(lower, vArgument)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
+                        }
+                        val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
+                            if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
+                        }
+                        val type = context.normalizer.evalTerm(parameter.type)
+                        context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
+                    }
+                    Typing(C.Term.Apply(function.term, arguments, computation.id), vResultant, function.effects)
+                }
             }
         }
         is S.Term.Fun -> {
