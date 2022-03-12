@@ -1,6 +1,5 @@
 package mce.phase.frontend
 
-import mce.Diagnostic
 import mce.ast.Id
 import mce.phase.Normalizer
 import mce.phase.map

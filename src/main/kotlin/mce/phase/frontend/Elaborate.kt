@@ -3,11 +3,10 @@ package mce.phase.frontend
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
-import mce.Diagnostic
-import mce.Diagnostic.Companion.serializeEffect
-import mce.Diagnostic.Companion.serializeTerm
 import mce.ast.Id
 import mce.phase.Normalizer
+import mce.phase.frontend.Diagnostic.Companion.serializeEffect
+import mce.phase.frontend.Diagnostic.Companion.serializeTerm
 import mce.util.*
 import mce.ast.Core as C
 import mce.ast.Surface as S

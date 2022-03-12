@@ -3,11 +3,11 @@ package mce.server
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import mce.Diagnostic.Companion.serializeTerm
 import mce.ast.Id
 import mce.phase.backend.Defunctionalize
 import mce.phase.backend.Pack
 import mce.phase.backend.Stage
+import mce.phase.frontend.Diagnostic.Companion.serializeTerm
 import mce.phase.frontend.Elaborate
 import mce.phase.frontend.Parse
 import mce.phase.frontend.Zonk

@@ -1,6 +1,5 @@
 package mce.phase
 
-import mce.Diagnostic
 import mce.fetch
 import mce.phase.frontend.Elaborate
 import mce.server.Key

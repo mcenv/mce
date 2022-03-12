@@ -1,4 +1,4 @@
-package mce
+package mce.phase.frontend
 
 import mce.ast.Id
 import mce.ast.freshId
@@ -74,9 +74,9 @@ sealed class Diagnostic {
             is C.Term.Ref -> S.Term.Ref(serializeTerm(term.element), term.id ?: freshId())
             is C.Term.Eq -> S.Term.Eq(serializeTerm(term.left), serializeTerm(term.right), term.id ?: freshId())
             is C.Term.Fun -> S.Term.Fun(
-                term.parameters.map { S.Parameter(it.relevant, it.name, it.lower?.let(::serializeTerm), it.upper?.let(::serializeTerm), serializeTerm(it.type), it.id) },
+                term.parameters.map { S.Parameter(it.relevant, it.name, it.lower?.let(Companion::serializeTerm), it.upper?.let(Companion::serializeTerm), serializeTerm(it.type), it.id) },
                 serializeTerm(term.resultant),
-                term.effects.map(::serializeEffect),
+                term.effects.map(Companion::serializeEffect),
                 term.id ?: freshId()
             )
             is C.Term.Code -> S.Term.Code(serializeTerm(term.element), term.id ?: freshId())
