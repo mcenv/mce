@@ -1,4 +1,4 @@
-package mce.interpreter
+package mce.emulator
 
 import mce.ast.Packed.Nbt
 import mce.ast.Packed.NbtType

@@ -1,4 +1,4 @@
-package mce.interpreter
+package mce.emulator
 
 fun floor(a: Float): Int = a.toInt().let { if (a < it.toFloat()) it - 1 else it }
 
