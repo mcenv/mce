@@ -1,7 +1,7 @@
 package mce.builtin.list
 
 import mce.ast.Core
-import mce.phase.frontend.Normalizer
+import mce.phase.Normalizer
 
 fun Normalizer.size(): Core.VTerm {
     return when (val `as` = lookup(size - 1)) {

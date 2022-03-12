@@ -1,7 +1,7 @@
 package mce.builtin
 
 import mce.ast.Core
-import mce.phase.frontend.Normalizer
+import mce.phase.Normalizer
 import mce.builtin.byte_array.size as byte_array_size
 import mce.builtin.int.add as int_add
 import mce.builtin.int.div as int_div

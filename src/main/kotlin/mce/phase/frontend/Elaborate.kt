@@ -7,6 +7,7 @@ import mce.Diagnostic
 import mce.Diagnostic.Companion.serializeEffect
 import mce.Diagnostic.Companion.serializeTerm
 import mce.ast.Id
+import mce.phase.Normalizer
 import mce.util.*
 import mce.ast.Core as C
 import mce.ast.Surface as S

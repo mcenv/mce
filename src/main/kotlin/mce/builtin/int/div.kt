@@ -1,7 +1,7 @@
 package mce.builtin.int
 
 import mce.ast.Core
-import mce.phase.frontend.Normalizer
+import mce.phase.Normalizer
 
 fun Normalizer.div(): Core.VTerm {
     val a = lookup(size - 2)
