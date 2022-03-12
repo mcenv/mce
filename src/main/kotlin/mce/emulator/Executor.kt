@@ -6,6 +6,7 @@ import mce.ast.Packed.Execute
 import mce.ast.Packed.Function
 import mce.ast.Packed.NbtPath
 import mce.ast.Packed.Objective
+import mce.ast.Packed.Operation
 import mce.ast.Packed.ResourceLocation
 import mce.ast.Packed.ScoreHolder
 import mce.ast.Packed.SourceComparator
@@ -15,6 +16,8 @@ import mce.emulator.NbtLens.countMatching
 import mce.emulator.NbtLens.get
 import mce.emulator.NbtLens.remove
 import mce.emulator.NbtLens.set
+import kotlin.math.max
+import kotlin.math.min
 
 class Executor(
     private val storage: NbtStorage = NbtStorage(),
@@ -37,6 +40,13 @@ class Executor(
         is Command.SetData -> setData(command.target, command.path, command.source)
         is Command.MergeData -> mergeData(command.target, command.path, command.source)
         is Command.RunFunction -> runFunction(command.name)
+        is Command.SetScore -> setScore(command.targets, command.objective, command.score)
+        is Command.GetScore -> getScore(command.target, command.objective)
+        is Command.AddScore -> addScore(command.targets, command.objective, command.score)
+        is Command.RemoveScore -> removeScore(command.targets, command.objective, command.score)
+        is Command.ResetScores -> resetScores(command.targets)
+        is Command.ResetScore -> resetScore(command.targets, command.objective)
+        is Command.PerformOperation -> performOperation(command.targets, command.targetObjective, command.operation, command.source, command.sourceObjective)
     }
 
     private fun runExecute(execute: Execute): Int = when (execute) {
@@ -151,5 +161,70 @@ class Executor(
 
     private fun runFunction(name: ResourceLocation): Int {
         TODO()
+    }
+
+    // TODO: support wildcard
+    private fun setScore(targets: ScoreHolder, objective: Objective, value: Int): Int {
+        scoreboard[targets, objective] = value
+        return value
+    }
+
+    private fun getScore(target: ScoreHolder, objective: Objective): Int {
+        if (scoreboard.hasScore(target, objective)) {
+            return scoreboard[target, objective]
+        } else {
+            throw Exception()
+        }
+    }
+
+    private fun addScore(targets: ScoreHolder, objective: Objective, value: Int): Int {
+        val result = scoreboard[targets, objective] + value
+        scoreboard[targets, objective] = result
+        return result
+    }
+
+    private fun removeScore(targets: ScoreHolder, objective: Objective, value: Int): Int {
+        val result = scoreboard[targets, objective] - value
+        scoreboard[targets, objective] = result
+        return result
+    }
+
+    private fun resetScores(targets: ScoreHolder): Int {
+        scoreboard.resetScores(targets)
+        return 1
+    }
+
+    private fun resetScore(targets: ScoreHolder, objective: Objective): Int {
+        scoreboard.resetScore(targets, objective)
+        return 1
+    }
+
+    private fun performOperation(targets: ScoreHolder, targetObjective: Objective, operation: Operation, source: ScoreHolder, sourceObjective: Objective): Int {
+        return when (operation) {
+            Operation.SWAP -> {
+                val result = scoreboard[source, sourceObjective]
+                scoreboard[source, sourceObjective] = scoreboard[targets, targetObjective]
+                scoreboard[targets, targetObjective] = result
+                result
+            }
+            else -> {
+                val apply = { a: Int, b: Int ->
+                    when (operation) {
+                        Operation.ASSIGN -> b
+                        Operation.PLUS_ASSIGN -> a + b
+                        Operation.MINUS_ASSIGN -> a - b
+                        Operation.TIMES_ASSIGN -> a * b
+                        Operation.DIV_ASSIGN -> Math.floorDiv(a, b)
+                        Operation.MOD_ASSIGN -> Math.floorMod(a, b)
+                        Operation.MIN_ASSIGN -> min(a, b)
+                        Operation.MAX_ASSIGN -> max(a, b)
+                        else -> throw Error()
+                    }
+                }
+                val result = apply(scoreboard[targets, targetObjective], scoreboard[source, sourceObjective])
+                scoreboard[targets, targetObjective] = result
+                result
+            }
+        }
     }
 }

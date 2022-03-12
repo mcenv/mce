@@ -30,6 +30,13 @@ object Packed {
         data class SetData(val target: ResourceLocation, val path: NbtPath, val source: SourceProvider) : Command()
         data class MergeData(val target: ResourceLocation, val path: NbtPath, val source: SourceProvider) : Command()
         data class RunFunction(val name: ResourceLocation) : Command()
+        data class SetScore(val targets: ScoreHolder, val objective: Objective, val score: KInt) : Command()
+        data class GetScore(val target: ScoreHolder, val objective: Objective) : Command()
+        data class AddScore(val targets: ScoreHolder, val objective: Objective, val score: KInt) : Command()
+        data class RemoveScore(val targets: ScoreHolder, val objective: Objective, val score: KInt) : Command()
+        data class ResetScores(val targets: ScoreHolder) : Command()
+        data class ResetScore(val targets: ScoreHolder, val objective: Objective) : Command()
+        data class PerformOperation(val targets: ScoreHolder, val targetObjective: Objective, val operation: Operation, val source: ScoreHolder, val sourceObjective: Objective) : Command()
     }
 
     sealed class Execute {

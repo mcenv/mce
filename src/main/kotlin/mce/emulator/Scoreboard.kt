@@ -17,4 +17,17 @@ class Scoreboard(
         this[holder, objective]
         scores[holder]!![objective] = score
     }
+
+    fun resetScores(holder: ScoreHolder) {
+        scores -= holder
+    }
+
+    fun resetScore(holder: ScoreHolder, objective: Objective) {
+        scores[holder]?.let {
+            it -= objective
+            if (it.isEmpty()) {
+                resetScores(holder)
+            }
+        }
+    }
 }
