@@ -2,7 +2,6 @@ package mce.interpreter
 
 import mce.ast.Packed.Nbt
 import mce.ast.Packed.NbtType
-import kotlin.math.floor
 
 sealed class MutableNbt {
     abstract val type: NbtType
@@ -59,9 +58,9 @@ data class LongNbt(val data: Long) : NumericNbt() {
 
 data class FloatNbt(val data: Float) : NumericNbt() {
     override val type: NbtType = NbtType.FLOAT
-    override fun toByte(): Byte = Math.floor(data).and(0xff).toByte()
-    override fun toShort(): Short = Math.floor(data).and(0xffff).toShort()
-    override fun toInt(): Int = Math.floor(data)
+    override fun toByte(): Byte = floor(data).and(0xff).toByte()
+    override fun toShort(): Short = floor(data).and(0xffff).toShort()
+    override fun toInt(): Int = floor(data)
     override fun toLong(): Long = data.toLong()
     override fun toFloat(): Float = data
     override fun toDouble(): Double = data.toDouble()
@@ -69,10 +68,10 @@ data class FloatNbt(val data: Float) : NumericNbt() {
 
 data class DoubleNbt(val data: Double) : NumericNbt() {
     override val type: NbtType = NbtType.DOUBLE
-    override fun toByte(): Byte = Math.floor(data).and(0xff).toByte()
-    override fun toShort(): Short = Math.floor(data).and(0xffff).toShort()
-    override fun toInt(): Int = Math.floor(data)
-    override fun toLong(): Long = floor(data).toLong()
+    override fun toByte(): Byte = floor(data).and(0xff).toByte()
+    override fun toShort(): Short = floor(data).and(0xffff).toShort()
+    override fun toInt(): Int = floor(data)
+    override fun toLong(): Long = kotlin.math.floor(data).toLong()
     override fun toFloat(): Float = data.toFloat()
     override fun toDouble(): Double = data
 }
