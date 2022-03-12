@@ -41,12 +41,12 @@ object Packed {
     }
 
     enum class StoreType {
-        INT,
-        FLOAT,
-        SHORT,
-        LONG,
-        DOUBLE,
         BYTE,
+        SHORT,
+        INT,
+        LONG,
+        FLOAT,
+        DOUBLE,
     }
 
     sealed class SourceProvider {
