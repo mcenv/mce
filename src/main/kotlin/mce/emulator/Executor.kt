@@ -14,19 +14,24 @@ import mce.ast.Packed.SourceProvider
 import mce.ast.Packed.StoreType
 import mce.emulator.NbtLens.countMatching
 import mce.emulator.NbtLens.get
+import mce.emulator.NbtLens.getOrCreate
 import mce.emulator.NbtLens.remove
 import mce.emulator.NbtLens.set
 import kotlin.math.max
 import kotlin.math.min
 
 class Executor(
-    private val storage: NbtStorage = NbtStorage(),
+    private val functions: Map<ResourceLocation, Function>,
     private val scoreboard: Scoreboard = Scoreboard(),
+    private val storage: NbtStorage = NbtStorage(),
 ) {
     private val queue: ArrayDeque<Command> = ArrayDeque()
 
     fun runFunction(function: Function) {
-        TODO()
+        queue += function.commands
+        while (queue.isNotEmpty()) {
+            runCommand(queue.removeFirst())
+        }
     }
 
     private fun runCommand(command: Command): Int = when (command) {
@@ -148,7 +153,30 @@ class Executor(
     }
 
     private fun insertAtIndex(target: ResourceLocation, path: NbtPath, index: Int, source: SourceProvider): Int {
-        TODO()
+        val targets = path.getOrCreate(storage[target], lazy { ListNbt(mutableListOf(), null) })
+        val sources: List<MutableNbt> = when (source) {
+            is SourceProvider.Value -> listOf(source.value.toMutableNbt())
+            is SourceProvider.From -> when (val p = source.path) {
+                null -> listOf(storage[source.source])
+                else -> p.get(storage[source.source])
+            }
+        }
+        var result = 0
+        for (t in targets) {
+            if (t !is CollectionNbt<*>) {
+                throw Exception()
+            }
+            var r = 0
+            var i = if (index < 0) t.size + 1 else index
+            for (s in sources) {
+                if (t.addNbt(index, s.clone())) {
+                    ++i
+                    r = 1
+                }
+            }
+            result += r
+        }
+        return result
     }
 
     private fun setData(target: ResourceLocation, path: NbtPath, source: SourceProvider): Int {
@@ -160,7 +188,10 @@ class Executor(
     }
 
     private fun runFunction(name: ResourceLocation): Int {
-        TODO()
+        functions[name]!!.commands.asReversed().forEach {
+            queue.addFirst(it)
+        }
+        return 0
     }
 
     // TODO: support wildcard
