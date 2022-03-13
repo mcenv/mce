@@ -369,49 +369,36 @@ class Elaborate private constructor(
         }
         is S.Term.Apply -> {
             val function = inferComputation(computation.function)
-            when (val type = normalizer.force(function.type)) {
-                is C.VTerm.Fun -> {
-                    if (type.parameters.size != computation.arguments.size) {
-                        diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.arguments.size, computation.id))
-                    }
-                    val (context, arguments) = (computation.arguments zip type.parameters).foldMap(this) { context, (argument, parameter) ->
-                        val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
-                        val vArgument = context.normalizer.evalTerm(tArgument)
-                        val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
-                            if (!context.subtypeTerms(lower, vArgument)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
-                        }
-                        val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
-                            if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
-                        }
-                        val type = context.normalizer.evalTerm(parameter.type)
-                        context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
-                    }
-                    val resultant = context.normalizer.evalTerm(type.resultant)
-                    Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
-                }
+            val type = when (val type = normalizer.force(function.type)) {
+                is C.VTerm.Fun -> type
                 else -> {
                     val parameters = computation.arguments.map {
                         C.Parameter(true, "", null, null, normalizer.quoteTerm(normalizer.fresh(freshId())), freshId())
-                    } // TODO: bind?
+                    }
                     val vResultant = normalizer.fresh(freshId())
                     val resultant = normalizer.quoteTerm(vResultant)
                     val effects = emptySet<C.Effect>() // TODO
                     normalizer.unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null))
-                    val (_, arguments) = (computation.arguments zip parameters).foldMap(this) { context, (argument, parameter) ->
-                        val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
-                        val vArgument = context.normalizer.evalTerm(tArgument)
-                        val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
-                            if (!context.subtypeTerms(lower, vArgument)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
-                        }
-                        val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
-                            if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
-                        }
-                        val type = context.normalizer.evalTerm(parameter.type)
-                        context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
-                    }
-                    Typing(C.Term.Apply(function.term, arguments, computation.id), vResultant, function.effects)
+                    C.VTerm.Fun(parameters, resultant, effects, type.id)
                 }
             }
+            if (type.parameters.size != computation.arguments.size) {
+                diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.arguments.size, computation.id))
+            }
+            val (context, arguments) = (computation.arguments zip type.parameters).foldMap(this) { context, (argument, parameter) ->
+                val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
+                val vArgument = context.normalizer.evalTerm(tArgument)
+                val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
+                    if (!context.subtypeTerms(lower, vArgument)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
+                }
+                val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
+                    if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
+                }
+                val type = context.normalizer.evalTerm(parameter.type)
+                context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
+            }
+            val resultant = context.normalizer.evalTerm(type.resultant)
+            Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
         }
         is S.Term.Fun -> {
             val (context, parameters) = bindParameters(computation.parameters) with this
