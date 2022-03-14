@@ -355,7 +355,7 @@ class Elaborate private constructor(
             val type = normalizer.fresh(computation.id) // TODO: use union of element types
             val scrutinee = inferTerm(computation.scrutinee)
             val clauses = computation.clauses.map { (pattern, body) ->
-                val (context, pattern) = checkPattern(pattern, scrutinee.type)
+                val (context, pattern) = checkPattern(pattern, scrutinee.type) with this
                 val body = context.checkTerm(body, type) // TODO
                 (pattern to body)
             }
@@ -467,7 +467,7 @@ class Elaborate private constructor(
             computation is S.Term.Match -> {
                 val scrutinee = inferTerm(computation.scrutinee)
                 val clauses = computation.clauses.map { (pattern, body) ->
-                    val (context, pattern) = checkPattern(pattern, scrutinee.type)
+                    val (context, pattern) = checkPattern(pattern, scrutinee.type) with this
                     val body = context.checkComputation(body, type, effects)
                     pattern to body
                 }
@@ -631,133 +631,170 @@ class Elaborate private constructor(
     }
 
     /**
-     * Infers the type of the [pattern] under this context.
+     * Infers the type of the [pattern] under the context.
      */
-    private fun Context.inferPattern(pattern: S.Pattern): Triple<Context, C.Pattern, C.VTerm> = when (pattern) {
-        is S.Pattern.Var -> {
-            val type = normalizer.fresh(pattern.id)
-            val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
-            Triple(context, C.Pattern.Var(pattern.name, pattern.id), type)
-        }
-        is S.Pattern.UnitOf -> Triple(this, C.Pattern.UnitOf(pattern.id), UNIT)
-        is S.Pattern.BoolOf -> Triple(this, C.Pattern.BoolOf(pattern.value, pattern.id), BOOL)
-        is S.Pattern.ByteOf -> Triple(this, C.Pattern.ByteOf(pattern.value, pattern.id), BYTE)
-        is S.Pattern.ShortOf -> Triple(this, C.Pattern.ShortOf(pattern.value, pattern.id), SHORT)
-        is S.Pattern.IntOf -> Triple(this, C.Pattern.IntOf(pattern.value, pattern.id), INT)
-        is S.Pattern.LongOf -> Triple(this, C.Pattern.LongOf(pattern.value, pattern.id), LONG)
-        is S.Pattern.FloatOf -> Triple(this, C.Pattern.FloatOf(pattern.value, pattern.id), FLOAT)
-        is S.Pattern.DoubleOf -> Triple(this, C.Pattern.DoubleOf(pattern.value, pattern.id), DOUBLE)
-        is S.Pattern.StringOf -> Triple(this, C.Pattern.StringOf(pattern.value, pattern.id), STRING)
-        is S.Pattern.ByteArrayOf -> {
-            val (context, elements) = pattern.elements.foldMap(this) { context, element -> context.checkPattern(element, BYTE) }
-            Triple(context, C.Pattern.ByteArrayOf(elements, pattern.id), BYTE_ARRAY)
-        }
-        is S.Pattern.IntArrayOf -> {
-            val (context, elements) = pattern.elements.foldMap(this) { context, element -> context.checkPattern(element, INT) }
-            Triple(context, C.Pattern.IntArrayOf(elements, pattern.id), INT_ARRAY)
-        }
-        is S.Pattern.LongArrayOf -> {
-            val (context, elements) = pattern.elements.foldMap(this) { context, element -> context.checkPattern(element, LONG) }
-            Triple(context, C.Pattern.LongArrayOf(elements, pattern.id), LONG_ARRAY)
-        }
-        is S.Pattern.ListOf -> if (pattern.elements.isEmpty()) {
-            Triple(this, C.Pattern.ListOf(emptyList(), pattern.id), END)
-        } else { // TODO: use union of element types
-            val (context1, head, headType) = inferPattern(pattern.elements.first())
-            val (context2, elements) = pattern.elements.drop(1).foldMap(context1) { context, element -> context.checkPattern(element, headType) }
-            val size = C.VTerm.IntOf(elements.size)
-            Triple(context2, C.Pattern.ListOf(listOf(head) + elements, pattern.id), C.VTerm.List(lazyOf(headType), lazyOf(size)))
-        }
-        is S.Pattern.CompoundOf -> {
-            val (context, elements) = pattern.elements.foldMap(this) { context, (name, element) ->
-                val (context, element, elementType) = context.inferPattern(element)
-                context to Triple(name, element, elementType)
+    private fun inferPattern(pattern: S.Pattern): State<Context, Pair<C.Pattern, C.VTerm>> = when (pattern) {
+        is S.Pattern.Var ->
+            gets<Context, C.VTerm> {
+                normalizer.fresh(pattern.id)
+            } % { type ->
+                modify<Context> {
+                    bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
+                } / {
+                    C.Pattern.Var(pattern.name, pattern.id) to type
+                }
             }
-            Triple(
-                context,
-                C.Pattern.CompoundOf(elements.map { (name, element, _) -> name to element }.toLinkedHashMap(), pattern.id),
-                C.VTerm.Compound(elements.map { (name, _, type) -> name to context.normalizer.quoteTerm(type) }.toLinkedHashMap())
-            )
-        }
-        is S.Pattern.BoxOf -> {
-            val (context1, tag) = checkPattern(pattern.tag, TYPE)
-            val vTag = tag.toType() ?: context1.normalizer.fresh(pattern.id)
-            val (context2, content) = context1.checkPattern(pattern.content, vTag)
-            Triple(context2, C.Pattern.BoxOf(content, tag, pattern.id), C.VTerm.Box(lazyOf(vTag)))
-        }
-        is S.Pattern.RefOf -> {
-            val (context, element, elementType) = inferPattern(pattern.element)
-            Triple(context, C.Pattern.RefOf(element, pattern.id), C.VTerm.Ref(lazyOf(elementType)))
-        }
-        is S.Pattern.Refl -> {
-            val left = lazy { normalizer.fresh(pattern.id) }
-            Triple(this, C.Pattern.Refl(pattern.id), C.VTerm.Eq(left, left))
-        }
-        is S.Pattern.Unit -> Triple(this, C.Pattern.Unit(pattern.id), UNIT)
-        is S.Pattern.Bool -> Triple(this, C.Pattern.Bool(pattern.id), TYPE)
-        is S.Pattern.Byte -> Triple(this, C.Pattern.Byte(pattern.id), TYPE)
-        is S.Pattern.Short -> Triple(this, C.Pattern.Short(pattern.id), TYPE)
-        is S.Pattern.Int -> Triple(this, C.Pattern.Int(pattern.id), TYPE)
-        is S.Pattern.Long -> Triple(this, C.Pattern.Long(pattern.id), TYPE)
-        is S.Pattern.Float -> Triple(this, C.Pattern.Float(pattern.id), TYPE)
-        is S.Pattern.Double -> Triple(this, C.Pattern.Double(pattern.id), TYPE)
-        is S.Pattern.String -> Triple(this, C.Pattern.String(pattern.id), TYPE)
-        is S.Pattern.ByteArray -> Triple(this, C.Pattern.ByteArray(pattern.id), TYPE)
-        is S.Pattern.IntArray -> Triple(this, C.Pattern.IntArray(pattern.id), TYPE)
-        is S.Pattern.LongArray -> Triple(this, C.Pattern.LongArray(pattern.id), TYPE)
-    }.also { (_, _, type) ->
-        types[pattern.id] = type
+        is S.Pattern.UnitOf -> pure(C.Pattern.UnitOf(pattern.id) to UNIT)
+        is S.Pattern.BoolOf -> pure(C.Pattern.BoolOf(pattern.value, pattern.id) to BOOL)
+        is S.Pattern.ByteOf -> pure(C.Pattern.ByteOf(pattern.value, pattern.id) to BYTE)
+        is S.Pattern.ShortOf -> pure(C.Pattern.ShortOf(pattern.value, pattern.id) to SHORT)
+        is S.Pattern.IntOf -> pure(C.Pattern.IntOf(pattern.value, pattern.id) to INT)
+        is S.Pattern.LongOf -> pure(C.Pattern.LongOf(pattern.value, pattern.id) to LONG)
+        is S.Pattern.FloatOf -> pure(C.Pattern.FloatOf(pattern.value, pattern.id) to FLOAT)
+        is S.Pattern.DoubleOf -> pure(C.Pattern.DoubleOf(pattern.value, pattern.id) to DOUBLE)
+        is S.Pattern.StringOf -> pure(C.Pattern.StringOf(pattern.value, pattern.id) to STRING)
+        is S.Pattern.ByteArrayOf ->
+            pattern.elements.map { element -> checkPattern(element, BYTE) }.fold() / { elements ->
+                C.Pattern.ByteArrayOf(elements, pattern.id) to BYTE_ARRAY
+            }
+        is S.Pattern.IntArrayOf ->
+            pattern.elements.map { element -> checkPattern(element, INT) }.fold() / { elements ->
+                C.Pattern.IntArrayOf(elements, pattern.id) to INT_ARRAY
+            }
+        is S.Pattern.LongArrayOf ->
+            pattern.elements.map { element -> checkPattern(element, LONG) }.fold() / { elements ->
+                C.Pattern.LongArrayOf(elements, pattern.id) to LONG_ARRAY
+            }
+        is S.Pattern.ListOf ->
+            if (pattern.elements.isEmpty()) {
+                pure(C.Pattern.ListOf(emptyList(), pattern.id) to END)
+            } else { // TODO: use union of element types
+                inferPattern(pattern.elements.first()) % { (head, headType) ->
+                    pattern.elements.drop(1).map { element -> checkPattern(element, headType) }.fold() / { elements ->
+                        val size = C.VTerm.IntOf(elements.size)
+                        C.Pattern.ListOf(listOf(head) + elements, pattern.id) to C.VTerm.List(lazyOf(headType), lazyOf(size))
+                    }
+                }
+            }
+        is S.Pattern.CompoundOf ->
+            pattern.elements.map { (name, element) ->
+                inferPattern(element) / { (element, elementType) ->
+                    Triple(name, element, elementType)
+                }
+            }.fold() % { elements ->
+                gets {
+                    val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
+                    val elementTypes = elements.map { (name, _, type) -> name to normalizer.quoteTerm(type) }.toLinkedHashMap()
+                    C.Pattern.CompoundOf(elementTerms, pattern.id) to C.VTerm.Compound(elementTypes)
+                }
+            }
+        is S.Pattern.BoxOf ->
+            checkPattern(pattern.tag, TYPE) % { tag ->
+                gets<Context, C.VTerm> {
+                    tag.toType() ?: normalizer.fresh(pattern.id)
+                } % { vTag ->
+                    checkPattern(pattern.content, vTag) / { content ->
+                        C.Pattern.BoxOf(content, tag, pattern.id) to C.VTerm.Box(lazyOf(vTag))
+                    }
+                }
+            }
+        is S.Pattern.RefOf ->
+            inferPattern(pattern.element) / { (element, elementType) ->
+                C.Pattern.RefOf(element, pattern.id) to C.VTerm.Ref(lazyOf(elementType))
+            }
+        is S.Pattern.Refl ->
+            gets {
+                val left = lazy { normalizer.fresh(pattern.id) }
+                C.Pattern.Refl(pattern.id) to C.VTerm.Eq(left, left)
+            }
+        is S.Pattern.Unit -> pure(C.Pattern.Unit(pattern.id) to UNIT)
+        is S.Pattern.Bool -> pure(C.Pattern.Bool(pattern.id) to TYPE)
+        is S.Pattern.Byte -> pure(C.Pattern.Byte(pattern.id) to TYPE)
+        is S.Pattern.Short -> pure(C.Pattern.Short(pattern.id) to TYPE)
+        is S.Pattern.Int -> pure(C.Pattern.Int(pattern.id) to TYPE)
+        is S.Pattern.Long -> pure(C.Pattern.Long(pattern.id) to TYPE)
+        is S.Pattern.Float -> pure(C.Pattern.Float(pattern.id) to TYPE)
+        is S.Pattern.Double -> pure(C.Pattern.Double(pattern.id) to TYPE)
+        is S.Pattern.String -> pure(C.Pattern.String(pattern.id) to TYPE)
+        is S.Pattern.ByteArray -> pure(C.Pattern.ByteArray(pattern.id) to TYPE)
+        is S.Pattern.IntArray -> pure(C.Pattern.IntArray(pattern.id) to TYPE)
+        is S.Pattern.LongArray -> pure(C.Pattern.LongArray(pattern.id) to TYPE)
+    } / {
+        types[pattern.id] = it.second
+        it
     }
 
     /**
-     * Checks the [pattern] against the [type] under this context.
+     * Checks the [pattern] against the [type] under the context.
      */
-    private fun Context.checkPattern(pattern: S.Pattern, type: C.VTerm): Pair<Context, C.Pattern> {
-        val type = normalizer.force(type)
-        types[pattern.id] = type
-        return when {
-            pattern is S.Pattern.Var -> {
-                val context = bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
-                context to C.Pattern.Var(pattern.name, pattern.id)
+    private fun checkPattern(pattern: S.Pattern, type: C.VTerm): State<Context, C.Pattern> =
+        gets<Context, C.VTerm> {
+            normalizer.force(type).also {
+                types[pattern.id] = it
             }
-            pattern is S.Pattern.ListOf && type is C.VTerm.List -> {
-                val (context, elements) = pattern.elements.foldMap(this) { context, element -> context.checkPattern(element, type.element.value) }
-                when (val size = context.normalizer.force(type.size.value)) {
-                    is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
-                    else -> {}
-                }
-                context to C.Pattern.ListOf(elements, pattern.id)
-            }
-            pattern is S.Pattern.CompoundOf && type is C.VTerm.Compound -> {
-                val (context, elements) = (pattern.elements zip type.elements.entries).foldMap(this) { context, (element, type) ->
-                    context.checkPattern(element.second, context.normalizer.evalTerm(type.value)).mapSecond { element.first to it }
-                }
-                context to C.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
-            }
-            pattern is S.Pattern.BoxOf && type is C.VTerm.Box -> {
-                val (context1, tag) = checkPattern(pattern.tag, TYPE)
-                val vTag = tag.toType() ?: type.content.value
-                val (context2, content) = context1.checkPattern(pattern.content, vTag)
-                context2 to C.Pattern.BoxOf(content, tag, pattern.id)
-            }
-            pattern is S.Pattern.RefOf && type is C.VTerm.Ref -> {
-                val (context, element) = checkPattern(pattern.element, type.element.value)
-                context to C.Pattern.RefOf(element, pattern.id)
-            }
-            pattern is S.Pattern.Refl && type is C.VTerm.Eq -> {
-                val (normalizer, _) = match(type.left.value, type.right.value) with normalizer
-                withNormalizer(normalizer) to C.Pattern.Refl(pattern.id)
-            }
-            else -> {
-                val (context, inferred, inferredType) = inferPattern(pattern)
-                if (!context.subtypeTerms(inferredType, type)) {
-                    types[pattern.id] = END
-                    diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(type)), serializeTerm(context.normalizer.quoteTerm(inferredType)), pattern.id))
-                }
-                context to inferred
+        } % { type ->
+            when {
+                pattern is S.Pattern.Var ->
+                    modify<Context> {
+                        bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
+                    } / {
+                        C.Pattern.Var(pattern.name, pattern.id)
+                    }
+                pattern is S.Pattern.ListOf && type is C.VTerm.List ->
+                    pattern.elements.map { element -> checkPattern(element, type.element.value) }.fold() % { elements ->
+                        gets {
+                            when (val size = normalizer.force(type.size.value)) {
+                                is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
+                                else -> {}
+                            }
+                            C.Pattern.ListOf(elements, pattern.id)
+                        }
+                    }
+                pattern is S.Pattern.CompoundOf && type is C.VTerm.Compound ->
+                    (pattern.elements zip type.elements.entries).map { (element, type) ->
+                        gets<Context, C.VTerm> {
+                            normalizer.evalTerm(type.value)
+                        } % { type ->
+                            checkPattern(element.second, type) / {
+                                element.first to it
+                            }
+                        }
+                    }.fold() / { elements ->
+                        C.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
+                    }
+                pattern is S.Pattern.BoxOf && type is C.VTerm.Box ->
+                    checkPattern(pattern.tag, TYPE) % { tag ->
+                        val vTag = tag.toType() ?: type.content.value
+                        checkPattern(pattern.content, vTag) / { content ->
+                            C.Pattern.BoxOf(content, tag, pattern.id)
+                        }
+                    }
+                pattern is S.Pattern.RefOf && type is C.VTerm.Ref ->
+                    checkPattern(pattern.element, type.element.value) / { element ->
+                        C.Pattern.RefOf(element, pattern.id)
+                    }
+                pattern is S.Pattern.Refl && type is C.VTerm.Eq ->
+                    gets<Context, Normalizer> {
+                        match(type.left.value, type.right.value) with normalizer
+                    } % { normalizer ->
+                        modify<Context> {
+                            withNormalizer(normalizer)
+                        } / {
+                            C.Pattern.Refl(pattern.id)
+                        }
+                    }
+                else ->
+                    inferPattern(pattern) % { (inferred, inferredType) ->
+                        gets {
+                            if (!subtypeTerms(inferredType, type)) {
+                                types[pattern.id] = END
+                                diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(type)), serializeTerm(normalizer.quoteTerm(inferredType)), pattern.id))
+                            }
+                            inferred
+                        }
+                    }
             }
         }
-    }
 
     /**
      * Converts this pattern to a semantic term.

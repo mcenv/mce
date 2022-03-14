@@ -8,6 +8,8 @@ fun interface State<S, out A> {
 
 inline infix fun <S, A> State<S, A>.with(s: S): Pair<S, A> = s.run()
 
+inline infix fun <S> State<S, Unit>.with(s: S): S = s.run().first
+
 inline fun <S, A> pure(a: A): State<S, A> = State { this to a }
 
 inline fun <S> get(): State<S, S> = State { this to this }
@@ -29,7 +31,7 @@ inline operator fun <S, A, B> State<S, A>.rem(crossinline transform: (A) -> Stat
 inline fun <S> Iterable<State<S, Unit>>.forEach(): State<S, Unit> = State {
     var accumulator = this
     for (state in this@forEach) {
-        val (s, _) = state with accumulator
+        val s = state with accumulator
         accumulator = s
     }
     accumulator to Unit
