@@ -1,4 +1,4 @@
-package mce.builtin.int
+package mce.builtin.src.int
 
 import mce.ast.Core
 import mce.builtin.commuter

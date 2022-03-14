@@ -1,4 +1,4 @@
-package mce.builtin.int_array
+package mce.builtin.src.int_array
 
 import mce.ast.Core
 import mce.phase.Normalizer

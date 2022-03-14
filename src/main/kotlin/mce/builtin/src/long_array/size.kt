@@ -1,4 +1,4 @@
-package mce.builtin.long_array
+package mce.builtin.src.long_array
 
 import mce.ast.Core
 import mce.phase.Normalizer

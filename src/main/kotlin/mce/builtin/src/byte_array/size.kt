@@ -1,4 +1,4 @@
-package mce.builtin.byte_array
+package mce.builtin.src.byte_array
 
 import mce.ast.Core
 import mce.phase.Normalizer

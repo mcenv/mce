@@ -1,4 +1,4 @@
-package mce.builtin.list
+package mce.builtin.src.list
 
 import mce.ast.Core
 import mce.phase.Normalizer

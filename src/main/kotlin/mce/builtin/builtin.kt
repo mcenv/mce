@@ -2,17 +2,17 @@ package mce.builtin
 
 import mce.ast.Core
 import mce.phase.Normalizer
-import mce.builtin.byte_array.size as byte_array_size
-import mce.builtin.int.add as int_add
-import mce.builtin.int.div as int_div
-import mce.builtin.int.eq as int_eq
-import mce.builtin.int.mod as int_mod
-import mce.builtin.int.mul as int_mul
-import mce.builtin.int.ne as int_ne
-import mce.builtin.int.sub as int_sub
-import mce.builtin.int_array.size as int_array_size
-import mce.builtin.list.size as list_size
-import mce.builtin.long_array.size as long_array_size
+import mce.builtin.src.byte_array.size as byte_array_size
+import mce.builtin.src.int.add as int_add
+import mce.builtin.src.int.div as int_div
+import mce.builtin.src.int.eq as int_eq
+import mce.builtin.src.int.mod as int_mod
+import mce.builtin.src.int.mul as int_mul
+import mce.builtin.src.int.ne as int_ne
+import mce.builtin.src.int.sub as int_sub
+import mce.builtin.src.int_array.size as int_array_size
+import mce.builtin.src.list.size as list_size
+import mce.builtin.src.long_array.size as long_array_size
 
 val builtins: Map<String, Normalizer.() -> Core.VTerm> = mapOf(
     "int/eq" to { int_eq() },
