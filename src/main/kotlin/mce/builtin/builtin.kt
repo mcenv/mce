@@ -1,6 +1,7 @@
 package mce.builtin
 
 import mce.ast.Core
+import mce.builtin.src.identity
 import mce.phase.Normalizer
 import mce.builtin.src.byte_array.size as byte_array_size
 import mce.builtin.src.int.add as int_add
@@ -15,6 +16,7 @@ import mce.builtin.src.list.size as list_size
 import mce.builtin.src.long_array.size as long_array_size
 
 val builtins: Map<String, Normalizer.() -> Core.VTerm> = mapOf(
+    "identity" to { identity() },
     "int/eq" to { int_eq() },
     "int/ne" to { int_ne() },
     "int/add" to { int_add() },

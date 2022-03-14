@@ -1,0 +1,3 @@
+import {identity}
+
+def identity_test [] : (true = (identity [bool, true])) ≔ refl

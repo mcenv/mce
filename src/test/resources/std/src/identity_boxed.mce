@@ -1,0 +1,1 @@
+def identity_boxed [α : type, a : box α] : box α ≔ a

@@ -324,7 +324,7 @@ class Elaborate private constructor(
                 if (item.parameters.size != computation.arguments.size) {
                     diagnose(Diagnostic.SizeMismatch(item.parameters.size, computation.arguments.size, computation.id))
                 }
-                val (_, arguments) = (computation.arguments zip item.parameters).foldMap(this) { context, (argument, parameter) ->
+                val (context, arguments) = (computation.arguments zip item.parameters).foldMap(this) { context, (argument, parameter) ->
                     val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
                     val vArgument = context.normalizer.evalTerm(tArgument)
                     val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
@@ -336,7 +336,7 @@ class Elaborate private constructor(
                     val type = context.normalizer.evalTerm(parameter.type)
                     context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
                 }
-                val resultant = item.parameters.fold(this) { context, parameter ->
+                val resultant = item.parameters.fold(context) { context, parameter ->
                     val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }
                     val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }
                     val type = context.normalizer.evalTerm(parameter.type)

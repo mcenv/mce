@@ -463,4 +463,9 @@ class ElaborateTest {
         val result = elaborate("test_ill_typed")
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun identityTest() {
+        elaborate("identity_test").success()
+    }
 }
