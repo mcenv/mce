@@ -1,1 +1,1 @@
-def builtin {builtin} [] : bool ≔ _
+{builtin} def builtin [] : bool ≔ _

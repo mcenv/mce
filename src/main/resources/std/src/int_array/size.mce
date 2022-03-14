@@ -1,1 +1,1 @@
-def int_array/size {builtin} [is : int_array] : int ≔ _
+{builtin} def int_array/size [is : int_array] : int ≔ _

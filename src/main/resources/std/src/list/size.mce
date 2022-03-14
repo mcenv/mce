@@ -1,1 +1,1 @@
-def list/size {builtin} [0 α : type, 0 n : int, as : list α n] : int ≔ _
+{builtin} def list/size [0 α : type, 0 n : int, as : list α n] : int ≔ _

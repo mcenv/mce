@@ -1,1 +1,1 @@
-def int/mod {builtin} [a : int, b : int] : int ≔ _
+{builtin} def int/mod [a : int, b : int] : int ≔ _

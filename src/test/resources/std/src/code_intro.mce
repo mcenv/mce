@@ -1,1 +1,1 @@
-def code_intro {meta} [] : code bool ≔ `false
+{meta} def code_intro [] : code bool ≔ `false

@@ -12,13 +12,13 @@ class Parse private constructor(
     private var cursor: Int = 0
 
     private fun parseItem(id: Id = freshId()): S.Item {
+        val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
         var word = readWord()
         val imports = if (word == "import") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
         val exports = if (word == "export") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
         return when (word) {
             "def" -> {
                 val name = readWord()
-                val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
                 val parameters = parseList('[', ']') { parseParameter() }
                 val resultant = run {
                     expect(':')
@@ -36,7 +36,6 @@ class Parse private constructor(
             }
             "mod" -> {
                 val name = readWord()
-                val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
                 expect(':')
                 val type = parseModule()
                 expectString("≔")
@@ -45,7 +44,6 @@ class Parse private constructor(
             }
             "test" -> {
                 val name = readWord()
-                val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
                 val body = run {
                     expectString("≔")
                     parseTerm()

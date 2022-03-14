@@ -1,1 +1,1 @@
-def int/add {builtin} [a : int, b : int] : int ≔ _
+{builtin} def int/add [a : int, b : int] : int ≔ _

@@ -1,1 +1,1 @@
-def builtin_ill_typed {builtin} [] : false ≔ _
+{builtin} def builtin_ill_typed [] : false ≔ _

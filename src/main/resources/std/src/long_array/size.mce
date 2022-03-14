@@ -1,1 +1,1 @@
-def long_array/size {builtin} [ls : long_array] : int ≔ _
+{builtin} def long_array/size [ls : long_array] : int ≔ _

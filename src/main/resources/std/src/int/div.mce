@@ -1,1 +1,1 @@
-def int/div {builtin} [a : int, b : int] : int ≔ _
+{builtin} def int/div [a : int, b : int] : int ≔ _
