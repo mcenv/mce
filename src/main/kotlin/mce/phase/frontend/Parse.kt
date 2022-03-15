@@ -6,6 +6,7 @@ import mce.ast.freshId
 import java.util.*
 import mce.ast.Surface as S
 
+@Deprecated("Use decoder")
 class Parse private constructor(
     private val source: String
 ) {
