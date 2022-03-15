@@ -328,10 +328,10 @@ class Elaborate private constructor(
                     val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
                     val vArgument = context.normalizer.evalTerm(tArgument)
                     val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
-                        if (!context.subtypeTerms(lower, vArgument)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
+                        if (!(subtypeTerms(lower, vArgument) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
                     }
                     val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
-                        if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
+                        if (!(subtypeTerms(vArgument, upper) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
                     }
                     val type = context.normalizer.evalTerm(parameter.type)
                     context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
@@ -389,10 +389,10 @@ class Elaborate private constructor(
                 val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
                 val vArgument = context.normalizer.evalTerm(tArgument)
                 val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
-                    if (!context.subtypeTerms(lower, vArgument)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
+                    if (!(subtypeTerms(lower, vArgument) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
                 }
                 val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
-                    if (!context.subtypeTerms(vArgument, upper)) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
+                    if (!(subtypeTerms(vArgument, upper) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
                 }
                 val type = context.normalizer.evalTerm(parameter.type)
                 context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
@@ -490,7 +490,7 @@ class Elaborate private constructor(
             else -> {
                 val id = computation.id
                 val computation = inferComputation(computation)
-                if (!subtypeTerms(computation.type, type)) {
+                if (!(subtypeTerms(computation.type, type) with this).second) {
                     types[id] = END
                     diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(type)), serializeTerm(normalizer.quoteTerm(computation.type)), id))
                 }
@@ -587,48 +587,62 @@ class Elaborate private constructor(
     }
 
     /**
-     * Checks if the [term1] is a subtype of the [term2] under [this] context.
+     * Checks if the [term1] is a subtype of the [term2] under the context.
      */
-    private fun Context.subtypeTerms(term1: C.VTerm, term2: C.VTerm): Boolean {
-        val value1 = normalizer.force(term1)
-        val value2 = normalizer.force(term2)
-        return when {
-            value1 is C.VTerm.Var && value2 is C.VTerm.Var && value1.level == value2.level -> true
-            value1 is C.VTerm.Var && entries[value1.level].upper != null -> subtypeTerms(entries[value1.level].upper!!, value2)
-            value2 is C.VTerm.Var && entries[value2.level].lower != null -> subtypeTerms(value1, entries[value2.level].lower!!)
-            value1 is C.VTerm.Apply && value2 is C.VTerm.Apply -> subtypeTerms(value1.function, value2.function) && (value1.arguments zip value2.arguments).all {
-                normalizer.unifyTerms(
-                    it.first.value,
-                    it.second.value
-                ) /* pointwise subtyping */
+    private fun subtypeTerms(term1: C.VTerm, term2: C.VTerm): State<Context, Boolean> =
+        gets<Context, Pair<C.VTerm, C.VTerm>> {
+            val term1 = normalizer.force(term1)
+            val term2 = normalizer.force(term2)
+            term1 to term2
+        } % { (term1, term2) ->
+            when {
+                term1 is C.VTerm.Var && term2 is C.VTerm.Var && term1.level == term2.level -> pure(true)
+                term1 is C.VTerm.Var && entries[term1.level].upper != null -> subtypeTerms(entries[term1.level].upper!!, term2)
+                term2 is C.VTerm.Var && entries[term2.level].lower != null -> subtypeTerms(term1, entries[term2.level].lower!!)
+                term1 is C.VTerm.Apply && term2 is C.VTerm.Apply ->
+                    subtypeTerms(term1.function, term2.function) and
+                            pure((term1.arguments zip term2.arguments).all { (argument1, argument2) ->
+                                normalizer.unifyTerms(argument1.value, argument2.value) // pointwise subtyping
+                            })
+                term1 is C.VTerm.Or -> term1.variants.map { subtypeTerms(it.value, term2) }.all()
+                term2 is C.VTerm.Or -> term2.variants.map { subtypeTerms(term1, it.value) }.any()
+                term2 is C.VTerm.And -> term2.variants.map { subtypeTerms(term1, it.value) }.all()
+                term1 is C.VTerm.And -> term1.variants.map { subtypeTerms(it.value, term2) }.any()
+                term1 is C.VTerm.List && term2 is C.VTerm.List ->
+                    subtypeTerms(term1.element.value, term2.element.value) and
+                            pure(normalizer.unifyTerms(term1.size.value, term2.size.value))
+                term1 is C.VTerm.Compound && term2 is C.VTerm.Compound ->
+                    term2.elements.entries.map { entry2 ->
+                        val element1 = term1.elements[entry2.key]
+                        if (element1 != null) {
+                            gets<Context, C.VTerm> {
+                                normalizer.evalTerm(element1)
+                            } % { upper1 ->
+                                modify<Context> {
+                                    bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))
+                                } % {
+                                    subtypeTerms(upper1, normalizer.evalTerm(entry2.value))
+                                }
+                            }
+                        } else pure(false)
+                    }.all()
+                term1 is C.VTerm.Box && term2 is C.VTerm.Box -> subtypeTerms(term1.content.value, term2.content.value)
+                term1 is C.VTerm.Ref && term2 is C.VTerm.Ref -> subtypeTerms(term1.element.value, term2.element.value)
+                term1 is C.VTerm.Fun && term2 is C.VTerm.Fun ->
+                    pure<Context, Boolean>(term1.parameters.size == term2.parameters.size) and
+                            (term1.parameters zip term2.parameters).map { (parameter1, parameter2) ->
+                                modify<Context> {
+                                    bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage))
+                                } % {
+                                    pure<Context, Boolean>(parameter1.relevant == parameter2.relevant) and subtypeTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
+                                }
+                            }.all() and
+                            subtypeTerms(normalizer.evalTerm(term1.resultant), normalizer.evalTerm(term2.resultant)) and
+                            pure(term2.effects.containsAll(term1.effects))
+                term1 is C.VTerm.Code && term2 is C.VTerm.Code -> subtypeTerms(term1.element.value, term2.element.value)
+                else -> pure(normalizer.unifyTerms(term1, term2))
             }
-            value1 is C.VTerm.Or -> value1.variants.all { subtypeTerms(it.value, value2) }
-            value2 is C.VTerm.Or -> value2.variants.any { subtypeTerms(value1, it.value) }
-            value2 is C.VTerm.And -> value2.variants.all { subtypeTerms(value1, it.value) }
-            value1 is C.VTerm.And -> value1.variants.any { subtypeTerms(it.value, value2) }
-            value1 is C.VTerm.List && value2 is C.VTerm.List -> subtypeTerms(value1.element.value, value2.element.value) && normalizer.unifyTerms(value1.size.value, value2.size.value)
-            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound -> value2.elements.entries.foldAll(this) { context, entry2 ->
-                val element1 = value1.elements[entry2.key]
-                if (element1 != null) {
-                    val upper1 = context.normalizer.evalTerm(element1)
-                    context.bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage)) to context.subtypeTerms(upper1, context.normalizer.evalTerm(entry2.value))
-                } else context to false
-            }.second
-            value1 is C.VTerm.Box && value2 is C.VTerm.Box -> subtypeTerms(value1.content.value, value2.content.value)
-            value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> subtypeTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Fun && value2 is C.VTerm.Fun -> value1.parameters.size == value2.parameters.size && run {
-                val (context, success) = (value1.parameters zip value2.parameters).foldAll(this) { context, (parameter1, parameter2) ->
-                    context.bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage)) to (parameter1.relevant == parameter2.relevant && context.subtypeTerms(
-                        context.normalizer.evalTerm(parameter2.type),
-                        context.normalizer.evalTerm(parameter1.type)
-                    ))
-                }
-                success && context.subtypeTerms(context.normalizer.evalTerm(value1.resultant), context.normalizer.evalTerm(value2.resultant))
-            } && value2.effects.containsAll(value1.effects)
-            value1 is C.VTerm.Code && value2 is C.VTerm.Code -> subtypeTerms(value1.element.value, value2.element.value)
-            else -> normalizer.unifyTerms(value1, value2)
         }
-    }
 
     /**
      * Infers the type of the [pattern] under the context.
@@ -785,8 +799,8 @@ class Elaborate private constructor(
                     }
                 else ->
                     inferPattern(pattern) % { (inferred, inferredType) ->
-                        gets {
-                            if (!subtypeTerms(inferredType, type)) {
+                        subtypeTerms(inferredType, type) / { isSubtype ->
+                            if (!isSubtype) {
                                 types[pattern.id] = END
                                 diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(type)), serializeTerm(normalizer.quoteTerm(inferredType)), pattern.id))
                             }

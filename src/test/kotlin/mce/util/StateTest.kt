@@ -29,17 +29,4 @@ class StateTest {
             listOf(eval(0), eval(0), eval(2)).fold() with persistentListOf(),
         )
     }
-
-    @Test
-    fun all() {
-        fun eval(level: Int): State<PersistentList<String>, String> =
-            modify<PersistentList<String>> { add(size.toString()) } % {
-                gets { this[level] }
-            }
-
-        assertEquals(
-            persistentListOf("0") to false,
-            listOf(eval(0), eval(1), eval(2)).all { gets { it == "0" } } with persistentListOf()
-        )
-    }
 }
