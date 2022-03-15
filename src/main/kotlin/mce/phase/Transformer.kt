@@ -46,7 +46,7 @@ inline fun C.Term.map(transform: (C.Term) -> C.Term): C.Term = when (this) {
     is C.Term.IntArray -> C.Term.IntArray(id)
     is C.Term.LongArray -> C.Term.LongArray(id)
     is C.Term.List -> C.Term.List(transform(element), transform(size), id)
-    is C.Term.Compound -> C.Term.Compound(elements.map { (name, element) -> name to transform(element) }.toLinkedHashMap(), id)
+    is C.Term.Compound -> C.Term.Compound(elements.map { (name, element) -> name to C.Entry(element.relevant, transform(element.type), element.id) }.toLinkedHashMap(), id)
     is C.Term.Box -> C.Term.Box(transform(content), id)
     is C.Term.Ref -> C.Term.Ref(transform(element), id)
     is C.Term.Eq -> C.Term.Eq(transform(left), transform(right), id)

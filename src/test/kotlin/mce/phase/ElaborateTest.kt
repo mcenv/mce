@@ -468,4 +468,9 @@ class ElaborateTest {
     fun identityTest() {
         elaborate("identity_test").success()
     }
+
+    @Test
+    fun irrelevantCompoundEntries() {
+        elaborate("irrelevant_compound_entries").success()
+    }
 }

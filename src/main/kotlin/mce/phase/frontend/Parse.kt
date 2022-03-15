@@ -260,13 +260,17 @@ class Parse private constructor(
             }
             "compound" -> {
                 val elements = parseList('{', '}') {
+                    val erased = if (peekChar() == '0') {
+                        skip()
+                        false
+                    } else true
                     val left = parseTerm()
                     if (peekChar() == ',' || peekChar() == '}') {
-                        Name("", freshId()) to left
+                        S.Entry(erased, Name("", freshId()), left, freshId())
                     } else {
                         expect(':')
                         val right = parseTerm()
-                        Name((left as? S.Term.Var)?.name ?: error("name expected"), freshId()) to right
+                        S.Entry(erased, Name((left as? S.Term.Var)?.name ?: error("name expected"), freshId()), right, freshId())
                     }
                 }
                 S.Term.Compound(elements, id)

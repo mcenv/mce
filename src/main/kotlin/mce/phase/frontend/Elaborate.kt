@@ -226,7 +226,10 @@ class Elaborate private constructor(
         }
         is S.Term.CompoundOf -> {
             val elements = term.elements.map { (name, element) -> name to inferTerm(element) }
-            Typing(C.Term.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id), C.VTerm.Compound(elements.map { (name, element) -> name to normalizer.quoteTerm(element.type) }.toLinkedHashMap()))
+            Typing(
+                C.Term.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
+                C.VTerm.Compound(elements.map { (name, element) -> name to C.Entry(true, normalizer.quoteTerm(element.type), null) }.toLinkedHashMap())
+            )
         }
         is S.Term.BoxOf -> {
             val tTag = checkTerm(term.tag, TYPE)
@@ -282,9 +285,9 @@ class Elaborate private constructor(
             Typing(C.Term.List(element, size, term.id), TYPE)
         }
         is S.Term.Compound -> {
-            val (_, elements) = term.elements.foldMap(this) { context, (name, element) ->
-                val element = context.checkTerm(element, TYPE)
-                context.bind(name.id, Entry(false, name.text, END, ANY, context.normalizer.evalTerm(element), stage)) to (name to element)
+            val (_, elements) = term.elements.foldMap(this) { context, entry ->
+                val element = context.checkTerm(entry.type, TYPE)
+                context.bind(entry.id, Entry(false, entry.name.text, END, ANY, context.normalizer.evalTerm(element), stage)) to (entry.name to C.Entry(entry.relevant, element, entry.id))
             }
             Typing(C.Term.Compound(elements.toLinkedHashMap(), term.id), TYPE)
         }
@@ -428,11 +431,11 @@ class Elaborate private constructor(
                 C.Term.ListOf(elements, term.id)
             }
             term is S.Term.CompoundOf && type is C.VTerm.Compound -> {
-                val (_, elements) = (term.elements zip type.elements.values).foldMap(this) { context, (element, type) ->
-                    val vType = context.normalizer.evalTerm(type)
+                val (_, elements) = (term.elements zip type.elements.values).foldMap(this) { context, (element, entry) ->
+                    val vType = context.normalizer.evalTerm(entry.type)
                     val tElement = context.checkTerm(element.second, vType)
                     val vElement = context.normalizer.evalTerm(tElement)
-                    context.bind(element.first.id, Entry(true /* TODO */, element.first.text, END, ANY, vType, context.stage), vElement) to (element.first to tElement)
+                    context.bind(element.first.id, Entry(entry.relevant, element.first.text, END, ANY, vType, context.stage), vElement) to (element.first to tElement)
                 }
                 C.Term.CompoundOf(elements.toLinkedHashMap(), term.id)
             }
@@ -583,7 +586,8 @@ class Elaborate private constructor(
                         (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
                             put(bind(lazyOf(C.VTerm.Var(entry1.key.text, size)))) % {
                                 pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
-                                        unifyTerms(evalTerm(entry1.value), evalTerm(entry2.value))
+                                        pure(entry1.value.relevant == entry2.value.relevant) andM
+                                        unifyTerms(evalTerm(entry1.value.type), evalTerm(entry2.value.type))
                             }
                         }
             value1 is C.VTerm.Box && value2 is C.VTerm.Box -> unifyTerms(value1.content.value, value2.content.value)
@@ -631,9 +635,11 @@ class Elaborate private constructor(
                     term2.elements.entries.allM { entry2 ->
                         val element1 = term1.elements[entry2.key]
                         if (element1 != null) {
-                            val upper1 = normalizer.evalTerm(element1)
-                            put(bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))) % {
-                                subtypeTerms(upper1, normalizer.evalTerm(entry2.value))
+                            pure<Context, Boolean>(element1.relevant == entry2.value.relevant) andM run {
+                                val upper1 = normalizer.evalTerm(element1.type)
+                                put(bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))) % {
+                                    subtypeTerms(upper1, normalizer.evalTerm(entry2.value.type))
+                                }
                             }
                         } else pure(false)
                     }
@@ -705,7 +711,7 @@ class Elaborate private constructor(
                 }
             } / { elements ->
                 val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
-                val elementTypes = elements.map { (name, _, type) -> name to normalizer.quoteTerm(type) }.toLinkedHashMap()
+                val elementTypes = elements.map { (name, _, type) -> name to C.Entry(true, normalizer.quoteTerm(type), null) }.toLinkedHashMap()
                 C.Pattern.CompoundOf(elementTerms, pattern.id) to C.VTerm.Compound(elementTypes)
             }
         is S.Pattern.BoxOf ->
@@ -766,8 +772,8 @@ class Elaborate private constructor(
                         C.Pattern.ListOf(elements, pattern.id)
                     }
                 pattern is S.Pattern.CompoundOf && type is C.VTerm.Compound ->
-                    (pattern.elements zip type.elements.entries).mapM<Context, Pair<Pair<Name, S.Pattern>, Map.Entry<Name, C.Term>>, Pair<Name, C.Pattern>> { (element, type) ->
-                        val type = normalizer.evalTerm(type.value)
+                    (pattern.elements zip type.elements.entries).mapM<Context, Pair<Pair<Name, S.Pattern>, Map.Entry<Name, C.Entry>>, Pair<Name, C.Pattern>> { (element, entry) ->
+                        val type = normalizer.evalTerm(entry.value.type)
                         checkPattern(element.second, type) / {
                             element.first to it
                         }

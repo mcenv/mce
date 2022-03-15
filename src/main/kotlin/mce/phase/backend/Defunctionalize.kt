@@ -153,7 +153,7 @@ class Defunctionalize private constructor() {
             D.Term.List(element, size, term.id!!)
         }
         is C.Term.Compound -> {
-            val elements = term.elements.map { (name, element) -> name to defunctionalizeTerm(element) }
+            val elements = term.elements.map { (name, element) -> name to D.Entry(element.relevant, defunctionalizeTerm(element.type), element.id!!) }
             D.Term.Compound(elements.toLinkedHashMap(), term.id!!)
         }
         is C.Term.Box -> {
