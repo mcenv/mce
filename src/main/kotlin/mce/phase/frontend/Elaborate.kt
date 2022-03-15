@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import mce.ast.Id
+import mce.ast.Name
 import mce.ast.freshId
 import mce.phase.Normalizer
 import mce.phase.frontend.Diagnostic.Companion.serializeEffect
@@ -74,17 +75,17 @@ class Elaborate private constructor(
      * Binds the [parameters] to the context.
      */
     private fun bindParameters(parameters: List<S.Parameter>): State<Context, List<C.Parameter>> =
-        parameters.map { parameter ->
-            State<Context, C.Parameter> {
-                val type = checkTerm(parameter.type, TYPE)
-                val vType = normalizer.evalTerm(type)
-                val lower = parameter.lower?.let { checkTerm(it, vType) }
-                val vLower = lower?.let { normalizer.evalTerm(it) }
-                val upper = parameter.upper?.let { checkTerm(it, vType) }
-                val vUpper = upper?.let { normalizer.evalTerm(it) }
-                bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) to C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+        parameters.mapM { parameter ->
+            val type = checkTerm(parameter.type, TYPE)
+            val vType = normalizer.evalTerm(type)
+            val lower = parameter.lower?.let { checkTerm(it, vType) }
+            val vLower = lower?.let { normalizer.evalTerm(it) }
+            val upper = parameter.upper?.let { checkTerm(it, vType) }
+            val vUpper = upper?.let { normalizer.evalTerm(it) }
+            put(bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage))) / {
+                C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
             }
-        }.fold()
+        }
 
     /**
      * Infers the type of the [module] under the context.
@@ -101,7 +102,7 @@ class Elaborate private constructor(
             val (items, signatures) = module.items.map { inferItem(it) }.unzip()
             pure(C.Module.Str(items, module.id) to C.VModule.Sig(signatures, null))
         }
-        is S.Module.Sig -> module.signatures.map { elaborateSignature(it) }.fold() / { signatures ->
+        is S.Module.Sig -> module.signatures.mapM<Context, S.Signature, C.Signature> { elaborateSignature(it) } / { signatures ->
             C.Module.Sig(signatures, module.id) to C.VModule.Type(null)
         }
         is S.Module.Type -> pure(C.Module.Type(module.id) to C.VModule.Type(null))
@@ -115,13 +116,11 @@ class Elaborate private constructor(
             val items = (module.items zip type.signatures).map { (item, signature) -> checkItem(item, signature) }
             pure(C.Module.Str(items, module.id))
         }
-        else -> inferModule(module) % { (inferred, inferredType) ->
-            gets {
-                if (!normalizer.unifyModules(inferredType, type)) {
-                    diagnose(Diagnostic.ModuleMismatch(module.id))
-                }
-                inferred
+        else -> inferModule(module) / { (inferred, inferredType) ->
+            if (!normalizer.unifyModules(inferredType, type)) {
+                diagnose(Diagnostic.ModuleMismatch(module.id))
             }
+            inferred
         }
     }
 
@@ -154,11 +153,9 @@ class Elaborate private constructor(
      */
     private fun elaborateSignature(signature: S.Signature): State<Context, C.Signature> = when (signature) {
         is S.Signature.Def -> modify<Context> { irrelevant() } % {
-            bindParameters(signature.parameters) % { parameters ->
-                gets {
-                    val resultant = checkTerm(signature.resultant, TYPE)
-                    C.Signature.Def(signature.name, parameters, resultant, signature.id)
-                }
+            bindParameters(signature.parameters) / { parameters ->
+                val resultant = checkTerm(signature.resultant, TYPE)
+                C.Signature.Def(signature.name, parameters, resultant, signature.id)
             }
         }
         is S.Signature.Mod -> checkModule(signature.type, C.VModule.Type(null)) / { type ->
@@ -600,44 +597,38 @@ class Elaborate private constructor(
                 term1 is C.VTerm.Var && entries[term1.level].upper != null -> subtypeTerms(entries[term1.level].upper!!, term2)
                 term2 is C.VTerm.Var && entries[term2.level].lower != null -> subtypeTerms(term1, entries[term2.level].lower!!)
                 term1 is C.VTerm.Apply && term2 is C.VTerm.Apply ->
-                    subtypeTerms(term1.function, term2.function) and
+                    subtypeTerms(term1.function, term2.function) andM
                             pure((term1.arguments zip term2.arguments).all { (argument1, argument2) ->
                                 normalizer.unifyTerms(argument1.value, argument2.value) // pointwise subtyping
                             })
-                term1 is C.VTerm.Or -> term1.variants.map { subtypeTerms(it.value, term2) }.all()
-                term2 is C.VTerm.Or -> term2.variants.map { subtypeTerms(term1, it.value) }.any()
-                term2 is C.VTerm.And -> term2.variants.map { subtypeTerms(term1, it.value) }.all()
-                term1 is C.VTerm.And -> term1.variants.map { subtypeTerms(it.value, term2) }.any()
+                term1 is C.VTerm.Or -> term1.variants.allM { subtypeTerms(it.value, term2) }
+                term2 is C.VTerm.Or -> term2.variants.anyM { subtypeTerms(term1, it.value) }
+                term2 is C.VTerm.And -> term2.variants.allM { subtypeTerms(term1, it.value) }
+                term1 is C.VTerm.And -> term1.variants.anyM { subtypeTerms(it.value, term2) }
                 term1 is C.VTerm.List && term2 is C.VTerm.List ->
-                    subtypeTerms(term1.element.value, term2.element.value) and
+                    subtypeTerms(term1.element.value, term2.element.value) andM
                             pure(normalizer.unifyTerms(term1.size.value, term2.size.value))
                 term1 is C.VTerm.Compound && term2 is C.VTerm.Compound ->
-                    term2.elements.entries.map { entry2 ->
+                    term2.elements.entries.allM { entry2 ->
                         val element1 = term1.elements[entry2.key]
                         if (element1 != null) {
-                            gets<Context, C.VTerm> {
-                                normalizer.evalTerm(element1)
-                            } % { upper1 ->
-                                modify<Context> {
-                                    bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))
-                                } % {
-                                    subtypeTerms(upper1, normalizer.evalTerm(entry2.value))
-                                }
+                            val upper1 = normalizer.evalTerm(element1)
+                            put(bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))) % {
+                                subtypeTerms(upper1, normalizer.evalTerm(entry2.value))
                             }
                         } else pure(false)
-                    }.all()
+                    }
                 term1 is C.VTerm.Box && term2 is C.VTerm.Box -> subtypeTerms(term1.content.value, term2.content.value)
                 term1 is C.VTerm.Ref && term2 is C.VTerm.Ref -> subtypeTerms(term1.element.value, term2.element.value)
                 term1 is C.VTerm.Fun && term2 is C.VTerm.Fun ->
-                    pure<Context, Boolean>(term1.parameters.size == term2.parameters.size) and
-                            (term1.parameters zip term2.parameters).map { (parameter1, parameter2) ->
-                                modify<Context> {
-                                    bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage))
-                                } % {
-                                    pure<Context, Boolean>(parameter1.relevant == parameter2.relevant) and subtypeTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
+                    pure<Context, Boolean>(term1.parameters.size == term2.parameters.size) andM
+                            (term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
+                                put(bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage))) % {
+                                    pure<Context, Boolean>(parameter1.relevant == parameter2.relevant) andM
+                                            subtypeTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
                                 }
-                            }.all() and
-                            subtypeTerms(normalizer.evalTerm(term1.resultant), normalizer.evalTerm(term2.resultant)) and
+                            } andM
+                            subtypeTerms(normalizer.evalTerm(term1.resultant), normalizer.evalTerm(term2.resultant)) andM
                             pure(term2.effects.containsAll(term1.effects))
                 term1 is C.VTerm.Code && term2 is C.VTerm.Code -> subtypeTerms(term1.element.value, term2.element.value)
                 else -> pure(normalizer.unifyTerms(term1, term2))
@@ -652,9 +643,7 @@ class Elaborate private constructor(
             gets<Context, C.VTerm> {
                 normalizer.fresh(pattern.id)
             } % { type ->
-                modify<Context> {
-                    bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
-                } / {
+                put(bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))) / {
                     C.Pattern.Var(pattern.name, pattern.id) to type
                 }
             }
@@ -668,15 +657,15 @@ class Elaborate private constructor(
         is S.Pattern.DoubleOf -> pure(C.Pattern.DoubleOf(pattern.value, pattern.id) to DOUBLE)
         is S.Pattern.StringOf -> pure(C.Pattern.StringOf(pattern.value, pattern.id) to STRING)
         is S.Pattern.ByteArrayOf ->
-            pattern.elements.map { element -> checkPattern(element, BYTE) }.fold() / { elements ->
+            pattern.elements.mapM<Context, S.Pattern, C.Pattern> { element -> checkPattern(element, BYTE) } / { elements ->
                 C.Pattern.ByteArrayOf(elements, pattern.id) to BYTE_ARRAY
             }
         is S.Pattern.IntArrayOf ->
-            pattern.elements.map { element -> checkPattern(element, INT) }.fold() / { elements ->
+            pattern.elements.mapM<Context, S.Pattern, C.Pattern> { element -> checkPattern(element, INT) } / { elements ->
                 C.Pattern.IntArrayOf(elements, pattern.id) to INT_ARRAY
             }
         is S.Pattern.LongArrayOf ->
-            pattern.elements.map { element -> checkPattern(element, LONG) }.fold() / { elements ->
+            pattern.elements.mapM<Context, S.Pattern, C.Pattern> { element -> checkPattern(element, LONG) } / { elements ->
                 C.Pattern.LongArrayOf(elements, pattern.id) to LONG_ARRAY
             }
         is S.Pattern.ListOf ->
@@ -684,32 +673,27 @@ class Elaborate private constructor(
                 pure(C.Pattern.ListOf(emptyList(), pattern.id) to END)
             } else { // TODO: use union of element types
                 inferPattern(pattern.elements.first()) % { (head, headType) ->
-                    pattern.elements.drop(1).map { element -> checkPattern(element, headType) }.fold() / { elements ->
+                    pattern.elements.drop(1).mapM<Context, S.Pattern, C.Pattern> { element -> checkPattern(element, headType) } / { elements ->
                         val size = C.VTerm.IntOf(elements.size)
                         C.Pattern.ListOf(listOf(head) + elements, pattern.id) to C.VTerm.List(lazyOf(headType), lazyOf(size))
                     }
                 }
             }
         is S.Pattern.CompoundOf ->
-            pattern.elements.map { (name, element) ->
+            pattern.elements.mapM<Context, Pair<Name, S.Pattern>, Triple<Name, C.Pattern, C.VTerm>> { (name, element) ->
                 inferPattern(element) / { (element, elementType) ->
                     Triple(name, element, elementType)
                 }
-            }.fold() % { elements ->
-                gets {
-                    val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
-                    val elementTypes = elements.map { (name, _, type) -> name to normalizer.quoteTerm(type) }.toLinkedHashMap()
-                    C.Pattern.CompoundOf(elementTerms, pattern.id) to C.VTerm.Compound(elementTypes)
-                }
+            } / { elements ->
+                val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
+                val elementTypes = elements.map { (name, _, type) -> name to normalizer.quoteTerm(type) }.toLinkedHashMap()
+                C.Pattern.CompoundOf(elementTerms, pattern.id) to C.VTerm.Compound(elementTypes)
             }
         is S.Pattern.BoxOf ->
             checkPattern(pattern.tag, TYPE) % { tag ->
-                gets<Context, C.VTerm> {
-                    tag.toType() ?: normalizer.fresh(pattern.id)
-                } % { vTag ->
-                    checkPattern(pattern.content, vTag) / { content ->
-                        C.Pattern.BoxOf(content, tag, pattern.id) to C.VTerm.Box(lazyOf(vTag))
-                    }
+                val vTag = tag.toType() ?: normalizer.fresh(pattern.id)
+                checkPattern(pattern.content, vTag) / { content ->
+                    C.Pattern.BoxOf(content, tag, pattern.id) to C.VTerm.Box(lazyOf(vTag))
                 }
             }
         is S.Pattern.RefOf ->
@@ -749,31 +733,26 @@ class Elaborate private constructor(
         } % { type ->
             when {
                 pattern is S.Pattern.Var ->
-                    modify<Context> {
-                        bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))
-                    } / {
+                    put(bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage))) / {
                         C.Pattern.Var(pattern.name, pattern.id)
                     }
                 pattern is S.Pattern.ListOf && type is C.VTerm.List ->
-                    pattern.elements.map { element -> checkPattern(element, type.element.value) }.fold() % { elements ->
-                        gets {
-                            when (val size = normalizer.force(type.size.value)) {
-                                is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
-                                else -> {}
-                            }
-                            C.Pattern.ListOf(elements, pattern.id)
+                    pattern.elements.mapM<Context, S.Pattern, C.Pattern> { element ->
+                        checkPattern(element, type.element.value)
+                    } / { elements ->
+                        when (val size = normalizer.force(type.size.value)) {
+                            is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
+                            else -> {}
                         }
+                        C.Pattern.ListOf(elements, pattern.id)
                     }
                 pattern is S.Pattern.CompoundOf && type is C.VTerm.Compound ->
-                    (pattern.elements zip type.elements.entries).map { (element, type) ->
-                        gets<Context, C.VTerm> {
-                            normalizer.evalTerm(type.value)
-                        } % { type ->
-                            checkPattern(element.second, type) / {
-                                element.first to it
-                            }
+                    (pattern.elements zip type.elements.entries).mapM<Context, Pair<Pair<Name, S.Pattern>, Map.Entry<Name, C.Term>>, Pair<Name, C.Pattern>> { (element, type) ->
+                        val type = normalizer.evalTerm(type.value)
+                        checkPattern(element.second, type) / {
+                            element.first to it
                         }
-                    }.fold() / { elements ->
+                    } / { elements ->
                         C.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
                     }
                 pattern is S.Pattern.BoxOf && type is C.VTerm.Box ->
@@ -791,9 +770,7 @@ class Elaborate private constructor(
                     gets<Context, Normalizer> {
                         match(type.left.value, type.right.value) with normalizer
                     } % { normalizer ->
-                        modify<Context> {
-                            withNormalizer(normalizer)
-                        } / {
+                        put(withNormalizer(normalizer)) / {
                             C.Pattern.Refl(pattern.id)
                         }
                     }
@@ -833,17 +810,19 @@ class Elaborate private constructor(
      * Matches the [term1] and the [term2].
      */
     private fun match(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Unit> =
-        gets<Normalizer, Pair<C.VTerm, C.VTerm>> { force(term1) to force(term2) } % { (term1, term2) ->
+        gets<Normalizer, Pair<C.VTerm, C.VTerm>> {
+            force(term1) to force(term2)
+        } % { (term1, term2) ->
             when {
-                term2 is C.VTerm.Var -> modify { subst(term2.level, lazyOf(term1)) }
-                term1 is C.VTerm.Var -> modify { subst(term1.level, lazyOf(term2)) }
-                term1 is C.VTerm.ByteArrayOf && term2 is C.VTerm.ByteArrayOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
-                term1 is C.VTerm.IntArrayOf && term2 is C.VTerm.IntArrayOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
-                term1 is C.VTerm.LongArrayOf && term2 is C.VTerm.LongArrayOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
-                term1 is C.VTerm.ListOf && term2 is C.VTerm.ListOf -> (term1.elements zip term2.elements).map { (element1, element2) -> match(element1.value, element2.value) }.forEach()
-                term1 is C.VTerm.CompoundOf && term2 is C.VTerm.CompoundOf -> (term1.elements.entries zip term2.elements.entries).map { (entry1, entry2) ->
+                term2 is C.VTerm.Var -> put(subst(term2.level, lazyOf(term1)))
+                term1 is C.VTerm.Var -> put(subst(term1.level, lazyOf(term2)))
+                term1 is C.VTerm.ByteArrayOf && term2 is C.VTerm.ByteArrayOf -> (term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+                term1 is C.VTerm.IntArrayOf && term2 is C.VTerm.IntArrayOf -> (term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+                term1 is C.VTerm.LongArrayOf && term2 is C.VTerm.LongArrayOf -> (term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+                term1 is C.VTerm.ListOf && term2 is C.VTerm.ListOf -> (term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+                term1 is C.VTerm.CompoundOf && term2 is C.VTerm.CompoundOf -> (term1.elements.entries zip term2.elements.entries).forEachM { (entry1, entry2) ->
                     if (entry1.key == entry2.key) match(entry1.value.value, entry2.value.value) else pure(Unit)
-                }.forEach()
+                }
                 term1 is C.VTerm.BoxOf && term2 is C.VTerm.BoxOf -> match(term1.content.value, term2.content.value) % { match(term1.tag.value, term2.tag.value) }
                 term1 is C.VTerm.RefOf && term2 is C.VTerm.RefOf -> match(term1.element.value, term2.element.value)
                 else -> pure(Unit) // TODO

@@ -28,30 +28,30 @@ inline fun <S, A, B> State<S, A>.flatMap(crossinline transform: S.(A) -> State<S
 
 inline operator fun <S, A, B> State<S, A>.rem(crossinline transform: S.(A) -> State<S, B>): State<S, B> = flatMap(transform)
 
-inline fun <S> Iterable<State<S, Unit>>.forEach(): State<S, Unit> = State {
+inline fun <S, A> Iterable<A>.forEachM(crossinline transform: S.(A) -> State<S, Unit>): State<S, Unit> = State {
     var accumulator = this
-    for (state in this@forEach) {
-        val s = state with accumulator
+    for (a in this@forEachM) {
+        val s = accumulator.transform(a) with accumulator
         accumulator = s
     }
     accumulator to Unit
 }
 
-inline fun <S, A> Iterable<State<S, A>>.fold(): State<S, List<A>> = State {
+inline fun <S, A, B> Iterable<A>.mapM(crossinline action: S.(A) -> State<S, B>): State<S, List<B>> = State {
     var accumulator = this
-    val elements = mutableListOf<A>()
-    for (state in this@fold) {
-        val (s, element) = state with accumulator
-        elements += element
+    val bs = mutableListOf<B>()
+    for (a in this@mapM) {
+        val (s, b) = accumulator.action(a) with accumulator
+        bs += b
         accumulator = s
     }
-    accumulator to elements
+    accumulator to bs
 }
 
-inline fun <S> Iterable<State<S, Boolean>>.all(): State<S, Boolean> = State {
+inline fun <S, A> Iterable<A>.allM(crossinline predicate: S.(A) -> State<S, Boolean>): State<S, Boolean> = State {
     var accumulator = this
-    for (state in this@all) {
-        val (s, success) = state with accumulator
+    for (a in this@allM) {
+        val (s, success) = accumulator.predicate(a) with accumulator
         if (!success) {
             return@State accumulator to false
         }
@@ -60,10 +60,10 @@ inline fun <S> Iterable<State<S, Boolean>>.all(): State<S, Boolean> = State {
     accumulator to true
 }
 
-inline fun <S> Iterable<State<S, Boolean>>.any(): State<S, Boolean> = State {
+inline fun <S, A> Iterable<A>.anyM(crossinline predicate: S.(A) -> State<S, Boolean>): State<S, Boolean> = State {
     var accumulator = this
-    for (state in this@any) {
-        val (s, success) = state with accumulator
+    for (a in this@anyM) {
+        val (s, success) = accumulator.predicate(a) with accumulator
         if (success) {
             return@State accumulator to true
         }
@@ -72,8 +72,8 @@ inline fun <S> Iterable<State<S, Boolean>>.any(): State<S, Boolean> = State {
     accumulator to false
 }
 
-inline infix fun <S> State<S, Boolean>.and(other: State<S, Boolean>): State<S, Boolean> = State {
-    val (s, success) = this@and with this
+inline infix fun <S> State<S, Boolean>.andM(other: State<S, Boolean>): State<S, Boolean> = State {
+    val (s, success) = this@andM with this
     if (success) {
         other with s
     } else {
