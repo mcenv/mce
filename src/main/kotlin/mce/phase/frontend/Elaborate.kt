@@ -140,9 +140,9 @@ class Elaborate private constructor(
     private fun Normalizer.unifySignatures(signature1: C.VSignature, signature2: C.VSignature): Boolean = when (signature1) {
         is C.VSignature.Def -> signature2 is C.VSignature.Def && signature1.name == signature2.name && signature1.parameters.size == signature2.parameters.size && run {
             val (normalizer, success) = (signature1.parameters zip signature2.parameters).foldAll(this) { normalizer, (parameter1, parameter2) ->
-                normalizer.bind(lazyOf(C.VTerm.Var("", normalizer.size))) to normalizer.unifyTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
+                normalizer.bind(lazyOf(C.VTerm.Var("", normalizer.size))) to (unifyTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type)) with normalizer).second
             }
-            success && normalizer.unifyTerms(normalizer.evalTerm(signature1.resultant), normalizer.evalTerm(signature2.resultant))
+            success && (unifyTerms(normalizer.evalTerm(signature1.resultant), normalizer.evalTerm(signature2.resultant)) with normalizer).second
         }
         is C.VSignature.Mod -> signature2 is C.VSignature.Mod && signature1.name == signature2.name && unifyModules(signature1.type, signature2.type)
         is C.VSignature.Test -> signature2 is C.VSignature.Test && signature1.name == signature2.name
@@ -251,7 +251,7 @@ class Elaborate private constructor(
             val type = when (val type = normalizer.force(element.type)) {
                 is C.VTerm.Code -> type.element.value
                 else -> type.also {
-                    normalizer.unifyTerms(it, C.VTerm.Code(lazyOf(normalizer.fresh(freshId()))))
+                    unifyTerms(it, C.VTerm.Code(lazyOf(normalizer.fresh(freshId())))) with normalizer
                 }
             }
             Typing(C.Term.Splice(element.term, term.id), type)
@@ -375,7 +375,7 @@ class Elaborate private constructor(
                     val vResultant = normalizer.fresh(freshId())
                     val resultant = normalizer.quoteTerm(vResultant)
                     val effects = emptySet<C.Effect>() // TODO
-                    normalizer.unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null))
+                    unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null)) with normalizer
                     C.VTerm.Fun(parameters, resultant, effects, type.id)
                 }
             }
@@ -500,86 +500,108 @@ class Elaborate private constructor(
     }
 
     /**
-     * Checks if the [term1] and the [term2] can be unified under [this] normalizer.
+     * Checks if the [term1] and the [term2] can be unified under the normalizer.
      */
-    private fun Normalizer.unifyTerms(term1: C.VTerm, term2: C.VTerm): Boolean {
-        val value1 = force(term1)
-        val value2 = force(term2)
-        return when {
-            value1.id != null && value2.id != null && value1.id == value2.id -> true
-            value1 is C.VTerm.Meta && value2 is C.VTerm.Meta && value1.index == value2.index -> true
+    private fun unifyTerms(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Boolean> = gets<Normalizer, Pair<C.VTerm, C.VTerm>> {
+        force(term1) to force(term2)
+    } % { (value1, value2) ->
+        when {
+            value1.id != null && value2.id != null && value1.id == value2.id -> pure(true)
+            value1 is C.VTerm.Meta && value2 is C.VTerm.Meta && value1.index == value2.index -> pure(true)
             value1 is C.VTerm.Meta -> when (val solved1 = getSolution(value1.index)) {
                 null -> {
                     solve(value1.index, value2)
-                    true
+                    pure(true)
                 }
                 else -> unifyTerms(solved1, value2)
             }
             value2 is C.VTerm.Meta -> unifyTerms(value2, value1)
-            value1 is C.VTerm.Var && value2 is C.VTerm.Var -> value1.level == value2.level
-            value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> true
-            value1 is C.VTerm.Match && value2 is C.VTerm.Match -> false // TODO
-            value1 is C.VTerm.UnitOf && value2 is C.VTerm.UnitOf -> true
-            value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> value1.value == value2.value
-            value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> value1.value == value2.value
-            value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> value1.value == value2.value
-            value1 is C.VTerm.IntOf && value2 is C.VTerm.IntOf -> value1.value == value2.value
-            value1 is C.VTerm.LongOf && value2 is C.VTerm.LongOf -> value1.value == value2.value
-            value1 is C.VTerm.FloatOf && value2 is C.VTerm.FloatOf -> value1.value == value2.value
-            value1 is C.VTerm.DoubleOf && value2 is C.VTerm.DoubleOf -> value1.value == value2.value
-            value1 is C.VTerm.StringOf && value2 is C.VTerm.StringOf -> value1.value == value2.value
-            value1 is C.VTerm.ByteArrayOf && value2 is C.VTerm.ByteArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements zip value2.elements).all { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf -> value1.elements.size == value2.elements.size &&
-                    (value1.elements.entries zip value2.elements.entries).all { (entry1, entry2) -> entry1.key.text == entry2.key.text && unifyTerms(entry1.value.value, entry2.value.value) }
-            value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf -> unifyTerms(value1.content.value, value2.content.value) && unifyTerms(value1.tag.value, value2.tag.value)
+            value1 is C.VTerm.Var && value2 is C.VTerm.Var -> pure(value1.level == value2.level)
+            value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> pure(true)
+            value1 is C.VTerm.Match && value2 is C.VTerm.Match -> pure(false) // TODO
+            value1 is C.VTerm.UnitOf && value2 is C.VTerm.UnitOf -> pure(true)
+            value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.IntOf && value2 is C.VTerm.IntOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.LongOf && value2 is C.VTerm.LongOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.FloatOf && value2 is C.VTerm.FloatOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.DoubleOf && value2 is C.VTerm.DoubleOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.StringOf && value2 is C.VTerm.StringOf -> pure(value1.value == value2.value)
+            value1 is C.VTerm.ByteArrayOf && value2 is C.VTerm.ByteArrayOf ->
+                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf ->
+                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf ->
+                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf ->
+                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf ->
+                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                        (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
+                            pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
+                                    unifyTerms(entry1.value.value, entry2.value.value)
+                        }
+            value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf ->
+                unifyTerms(value1.content.value, value2.content.value) andM
+                        unifyTerms(value1.tag.value, value2.tag.value)
             value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> true
-            value1 is C.VTerm.FunOf && value2 is C.VTerm.FunOf -> value1.parameters.size == value2.parameters.size &&
-                    value1.parameters.fold(this) { normalizer, parameter -> normalizer.bind(lazyOf(C.VTerm.Var(parameter.text, normalizer.size))) }.run { unifyTerms(evalTerm(value1.body), evalTerm(value2.body)) }
-            value1 is C.VTerm.Apply && value2 is C.VTerm.Apply -> unifyTerms(value1.function, value2.function) &&
-                    (value1.arguments zip value2.arguments).all { unifyTerms(it.first.value, it.second.value) }
+            value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> pure(true)
+            value1 is C.VTerm.FunOf && value2 is C.VTerm.FunOf ->
+                pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
+                        value1.parameters.forEachM<Normalizer, Name> { parameter ->
+                            put(bind(lazyOf(C.VTerm.Var(parameter.text, size))))
+                        } % {
+                    unifyTerms(evalTerm(value1.body), evalTerm(value2.body))
+                }
+            value1 is C.VTerm.Apply && value2 is C.VTerm.Apply ->
+                unifyTerms(value1.function, value2.function) andM
+                        (value1.arguments zip value2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
             value1 is C.VTerm.CodeOf && value2 is C.VTerm.CodeOf -> unifyTerms(value1.element.value, value2.element.value)
             value1 is C.VTerm.Splice && value2 is C.VTerm.Splice -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Or && value1.variants.isEmpty() && value2 is C.VTerm.Or && value2.variants.isEmpty() -> true
-            value1 is C.VTerm.And && value1.variants.isEmpty() && value2 is C.VTerm.And && value2.variants.isEmpty() -> true
-            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> true
-            value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> true
-            value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> true
-            value1 is C.VTerm.Short && value2 is C.VTerm.Short -> true
-            value1 is C.VTerm.Int && value2 is C.VTerm.Int -> true
-            value1 is C.VTerm.Long && value2 is C.VTerm.Long -> true
-            value1 is C.VTerm.Float && value2 is C.VTerm.Float -> true
-            value1 is C.VTerm.Double && value2 is C.VTerm.Double -> true
-            value1 is C.VTerm.String && value2 is C.VTerm.String -> true
-            value1 is C.VTerm.ByteArray && value2 is C.VTerm.ByteArray -> true
-            value1 is C.VTerm.IntArray && value2 is C.VTerm.IntArray -> true
-            value1 is C.VTerm.LongArray && value2 is C.VTerm.LongArray -> true
-            value1 is C.VTerm.List && value2 is C.VTerm.List -> unifyTerms(value1.element.value, value2.element.value) && unifyTerms(value1.size.value, value2.size.value)
-            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound -> value1.elements.size == value2.elements.size &&
-                    (value1.elements.entries zip value2.elements.entries).foldAll(this) { normalizer, (entry1, entry2) ->
-                        (normalizer.bind(lazyOf(C.VTerm.Var(entry1.key.text, normalizer.size))) to normalizer.unifyTerms(normalizer.evalTerm(entry1.value), normalizer.evalTerm(entry2.value))).mapSecond {
-                            it && entry1.key.text == entry2.key.text
+            value1 is C.VTerm.Or && value1.variants.isEmpty() && value2 is C.VTerm.Or && value2.variants.isEmpty() -> pure(true)
+            value1 is C.VTerm.And && value1.variants.isEmpty() && value2 is C.VTerm.And && value2.variants.isEmpty() -> pure(true)
+            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> pure(true)
+            value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> pure(true)
+            value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> pure(true)
+            value1 is C.VTerm.Short && value2 is C.VTerm.Short -> pure(true)
+            value1 is C.VTerm.Int && value2 is C.VTerm.Int -> pure(true)
+            value1 is C.VTerm.Long && value2 is C.VTerm.Long -> pure(true)
+            value1 is C.VTerm.Float && value2 is C.VTerm.Float -> pure(true)
+            value1 is C.VTerm.Double && value2 is C.VTerm.Double -> pure(true)
+            value1 is C.VTerm.String && value2 is C.VTerm.String -> pure(true)
+            value1 is C.VTerm.ByteArray && value2 is C.VTerm.ByteArray -> pure(true)
+            value1 is C.VTerm.IntArray && value2 is C.VTerm.IntArray -> pure(true)
+            value1 is C.VTerm.LongArray && value2 is C.VTerm.LongArray -> pure(true)
+            value1 is C.VTerm.List && value2 is C.VTerm.List ->
+                unifyTerms(value1.element.value, value2.element.value) andM
+                        unifyTerms(value1.size.value, value2.size.value)
+            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound ->
+                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                        (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
+                            put(bind(lazyOf(C.VTerm.Var(entry1.key.text, size)))) % {
+                                unifyTerms(evalTerm(entry1.value), evalTerm(entry2.value)) // TODO: compare keys
+                            }
                         }
-                    }.second
             value1 is C.VTerm.Box && value2 is C.VTerm.Box -> unifyTerms(value1.content.value, value2.content.value)
             value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Eq && value2 is C.VTerm.Eq -> unifyTerms(value1.left.value, value2.left.value) && unifyTerms(value1.right.value, value2.right.value)
-            value1 is C.VTerm.Fun && value2 is C.VTerm.Fun -> value1.parameters.size == value2.parameters.size && run {
-                val (normalizer, success) = (value1.parameters zip value2.parameters).foldAll(this) { normalizer, (parameter1, parameter2) ->
-                    normalizer.bind(lazyOf(C.VTerm.Var("", normalizer.size))) to normalizer.unifyTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
-                }
-                success && normalizer.unifyTerms(normalizer.evalTerm(value1.resultant), normalizer.evalTerm(value2.resultant))
-            } && value1.effects == value2.effects
+            value1 is C.VTerm.Eq && value2 is C.VTerm.Eq ->
+                unifyTerms(value1.left.value, value2.left.value) andM
+                        unifyTerms(value1.right.value, value2.right.value)
+            value1 is C.VTerm.Fun && value2 is C.VTerm.Fun ->
+                pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
+                        (value1.parameters zip value2.parameters).allM<Normalizer, Pair<C.Parameter, C.Parameter>> { (parameter1, parameter2) ->
+                            put(bind(lazyOf(C.VTerm.Var("", size)))) % {
+                                unifyTerms(evalTerm(parameter2.type), evalTerm(parameter1.type))
+                            }
+                        } andM unifyTerms(evalTerm(value1.resultant), evalTerm(value2.resultant)) andM pure(value1.effects == value2.effects)
             value1 is C.VTerm.Code && value2 is C.VTerm.Code -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Type && value2 is C.VTerm.Type -> true
-            else -> false
+            value1 is C.VTerm.Type && value2 is C.VTerm.Type -> pure(true)
+            else -> pure(false)
         }
     }
 
@@ -598,16 +620,16 @@ class Elaborate private constructor(
                 term2 is C.VTerm.Var && entries[term2.level].lower != null -> subtypeTerms(term1, entries[term2.level].lower!!)
                 term1 is C.VTerm.Apply && term2 is C.VTerm.Apply ->
                     subtypeTerms(term1.function, term2.function) andM
-                            pure((term1.arguments zip term2.arguments).all { (argument1, argument2) ->
-                                normalizer.unifyTerms(argument1.value, argument2.value) // pointwise subtyping
-                            })
+                            (term1.arguments zip term2.arguments).allM { (argument1, argument2) ->
+                                unifyTerms(argument1.value, argument2.value).lift(normalizer) { withNormalizer(it) } // pointwise subtyping
+                            }
                 term1 is C.VTerm.Or -> term1.variants.allM { subtypeTerms(it.value, term2) }
                 term2 is C.VTerm.Or -> term2.variants.anyM { subtypeTerms(term1, it.value) }
                 term2 is C.VTerm.And -> term2.variants.allM { subtypeTerms(term1, it.value) }
                 term1 is C.VTerm.And -> term1.variants.anyM { subtypeTerms(it.value, term2) }
                 term1 is C.VTerm.List && term2 is C.VTerm.List ->
                     subtypeTerms(term1.element.value, term2.element.value) andM
-                            pure(normalizer.unifyTerms(term1.size.value, term2.size.value))
+                            unifyTerms(term1.size.value, term2.size.value).lift(normalizer) { withNormalizer(it) }
                 term1 is C.VTerm.Compound && term2 is C.VTerm.Compound ->
                     term2.elements.entries.allM { entry2 ->
                         val element1 = term1.elements[entry2.key]
@@ -631,7 +653,7 @@ class Elaborate private constructor(
                             subtypeTerms(normalizer.evalTerm(term1.resultant), normalizer.evalTerm(term2.resultant)) andM
                             pure(term2.effects.containsAll(term1.effects))
                 term1 is C.VTerm.Code && term2 is C.VTerm.Code -> subtypeTerms(term1.element.value, term2.element.value)
-                else -> pure(normalizer.unifyTerms(term1, term2))
+                else -> unifyTerms(term1, term2).lift(normalizer) { withNormalizer(it) }
             }
         }
 

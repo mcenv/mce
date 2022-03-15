@@ -28,6 +28,8 @@ inline fun <S, A, B> State<S, A>.flatMap(crossinline transform: S.(A) -> State<S
 
 inline operator fun <S, A, B> State<S, A>.rem(crossinline transform: S.(A) -> State<S, B>): State<S, B> = flatMap(transform)
 
+inline fun <S, T, A> State<S, A>.lift(s: S, crossinline transform: (S) -> T): State<T, A> = State { (this@lift with s).let { (s, a) -> transform(s) to a } }
+
 inline fun <S, A> Iterable<A>.forEachM(crossinline transform: S.(A) -> State<S, Unit>): State<S, Unit> = State {
     var accumulator = this
     for (a in this@forEachM) {
