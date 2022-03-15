@@ -205,7 +205,6 @@ class ElaborateTest {
     @Test
     fun builtinIllTyped() {
         val result = elaborate("builtin_ill_typed")
-        println(result.diagnostics)
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 

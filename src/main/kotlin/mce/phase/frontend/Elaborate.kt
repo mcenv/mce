@@ -25,32 +25,42 @@ class Elaborate private constructor(
     /**
      * Infers the signature of the [item].
      */
-    private fun inferItem(item: S.Item): Pair<C.Item, C.VSignature> {
-        val context = Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), false, 0, true)
-        val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
-        return when (item) {
-            is S.Item.Def -> {
-                val context1 = context.meta(item.modifiers.contains(S.Modifier.META))
-                val (context2, parameters) = bindParameters(item.parameters) with context1.irrelevant()
-                val resultant = context2.checkTerm(item.resultant, TYPE)
-                val vResultant = context2.normalizer.evalTerm(resultant)
-                val effects = item.effects.map { elaborateEffect(it) }.toSet()
-                val body = if (item.modifiers.contains(S.Modifier.BUILTIN)) C.Term.Hole(item.body.id) else context2.relevant().checkTerm(item.body, vResultant)
-                context2.checkPhase(item.body.id, vResultant)
-                C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to C.VSignature.Def(item.name, parameters, resultant, null)
+    private fun inferItem(item: S.Item): Pair<C.Item, C.VSignature> =
+        (run {
+            val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
+            when (item) {
+                is S.Item.Def ->
+                    modify<Context> { meta(item.modifiers.contains(S.Modifier.META)).irrelevant() } % {
+                        bindParameters(item.parameters) % { parameters ->
+                            checkTerm(item.resultant, TYPE) % { resultant ->
+                                val vResultant = normalizer.evalTerm(resultant)
+                                val effects = item.effects.map { elaborateEffect(it) }.toSet()
+                                (if (item.modifiers.contains(S.Modifier.BUILTIN)) {
+                                    pure(C.Term.Hole(item.body.id))
+                                } else {
+                                    put(relevant()) % {
+                                        checkTerm(item.body, vResultant)
+                                    }
+                                }) / { body ->
+                                    checkPhase(item.body.id, vResultant)
+                                    C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to C.VSignature.Def(item.name, parameters, resultant, null)
+                                }
+                            }
+                        }
+                    }
+                is S.Item.Mod ->
+                    checkModule(item.type, C.VModule.Type(null)) % { type ->
+                        val vType = normalizer.evalModule(type)
+                        checkModule(item.body, vType) / { body ->
+                            C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to C.VSignature.Mod(item.name, vType, null)
+                        }
+                    }
+                is S.Item.Test ->
+                    checkTerm(item.body, BOOL) / { body ->
+                        C.Item.Test(item.imports, item.exports, modifiers, item.name, body, item.id) to C.VSignature.Test(item.name, null)
+                    }
             }
-            is S.Item.Mod -> {
-                val (context, type) = checkModule(item.type, C.VModule.Type(null)) with context
-                val vType = context.normalizer.evalModule(type)
-                val (_, body) = checkModule(item.body, vType) with context
-                C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to C.VSignature.Mod(item.name, vType, null)
-            }
-            is S.Item.Test -> {
-                val body = context.checkTerm(item.body, BOOL)
-                C.Item.Test(item.imports, item.exports, modifiers, item.name, body, item.id) to C.VSignature.Test(item.name, null)
-            }
-        }
-    }
+        } with Context(persistentListOf(), Normalizer(persistentListOf(), items, solutions), false, 0, true)).second
 
     /**
      * Checks the [item] against the [signature] under this context.
@@ -76,14 +86,15 @@ class Elaborate private constructor(
      */
     private fun bindParameters(parameters: List<S.Parameter>): State<Context, List<C.Parameter>> =
         parameters.mapM { parameter ->
-            val type = checkTerm(parameter.type, TYPE)
-            val vType = normalizer.evalTerm(type)
-            val lower = parameter.lower?.let { checkTerm(it, vType) }
-            val vLower = lower?.let { normalizer.evalTerm(it) }
-            val upper = parameter.upper?.let { checkTerm(it, vType) }
-            val vUpper = upper?.let { normalizer.evalTerm(it) }
-            put(bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage))) / {
-                C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+            checkTerm(parameter.type, TYPE) % { type ->
+                val vType = normalizer.evalTerm(type)
+                val lower = parameter.lower?.let { (checkTerm(it, vType) with this).second }
+                val vLower = lower?.let { normalizer.evalTerm(it) }
+                val upper = parameter.upper?.let { (checkTerm(it, vType) with this).second }
+                val vUpper = upper?.let { normalizer.evalTerm(it) }
+                put(bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage))) / {
+                    C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+                }
             }
         }
 
@@ -152,12 +163,16 @@ class Elaborate private constructor(
      * Elaborates the [signature] under the context.
      */
     private fun elaborateSignature(signature: S.Signature): State<Context, C.Signature> = when (signature) {
-        is S.Signature.Def -> modify<Context> { irrelevant() } % {
-            bindParameters(signature.parameters) / { parameters ->
-                val resultant = checkTerm(signature.resultant, TYPE)
-                C.Signature.Def(signature.name, parameters, resultant, signature.id)
+        is S.Signature.Def ->
+            scope {
+                modify<Context> { irrelevant() } % {
+                    bindParameters(signature.parameters) % { parameters ->
+                        checkTerm(signature.resultant, TYPE) / { resultant ->
+                            C.Signature.Def(signature.name, parameters, resultant, signature.id)
+                        }
+                    }
+                }
             }
-        }
         is S.Signature.Mod -> checkModule(signature.type, C.VModule.Type(null)) / { type ->
             C.Signature.Mod(signature.name, type, signature.id)
         }
@@ -165,498 +180,611 @@ class Elaborate private constructor(
     }
 
     /**
-     * Infers the type of the [term] under this context.
+     * Infers the type of the [term] under the context.
      */
-    private fun Context.inferTerm(term: S.Term): Typing = when (term) {
-        is S.Term.Hole -> {
-            completions[term.id] = entries.map { it.name to it.type }
-            Typing(C.Term.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quoteTerm(END)), term.id)))
-        }
-        is S.Term.Meta -> {
-            val type = normalizer.fresh(term.id)
-            Typing(checkTerm(term, type), type)
-        }
-        is S.Term.Anno -> {
-            val type = normalizer.evalTerm(irrelevant().checkTerm(term.type, TYPE))
-            Typing(checkTerm(term.element, type), type)
-        }
-        is S.Term.Var -> {
-            val level = lookup(term.name)
-            val type = when (level) {
-                -1 -> diagnose(Diagnostic.VarNotFound(term.name, term.id))
-                else -> {
-                    val entry = entries[level]
-                    var type = entry.type
-                    if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
-                    if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
-                    normalizer.checkRepresentation(term.id, type)
-                    type
+    private fun inferTerm(term: S.Term): State<Context, Typing> = when (term) {
+        is S.Term.Hole ->
+            gets {
+                completions[term.id] = entries.map { it.name to it.type }
+                Typing(C.Term.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quoteTerm(END)), term.id)))
+            }
+        is S.Term.Meta ->
+            gets<Context, C.VTerm> {
+                normalizer.fresh(term.id)
+            } % { type ->
+                checkTerm(term, type) / { term ->
+                    Typing(term, type)
                 }
             }
-            Typing(C.Term.Var(term.name, level, term.id), type)
-        }
-        is S.Term.UnitOf -> Typing(C.Term.UnitOf(term.id), UNIT)
-        is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value, term.id), BOOL)
-        is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value, term.id), BYTE)
-        is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value, term.id), SHORT)
-        is S.Term.IntOf -> Typing(C.Term.IntOf(term.value, term.id), INT)
-        is S.Term.LongOf -> Typing(C.Term.LongOf(term.value, term.id), LONG)
-        is S.Term.FloatOf -> Typing(C.Term.FloatOf(term.value, term.id), FLOAT)
-        is S.Term.DoubleOf -> Typing(C.Term.DoubleOf(term.value, term.id), DOUBLE)
-        is S.Term.StringOf -> Typing(C.Term.StringOf(term.value, term.id), STRING)
-        is S.Term.ByteArrayOf -> {
-            val elements = term.elements.map { checkTerm(it, BYTE) }
-            Typing(C.Term.ByteArrayOf(elements, term.id), BYTE_ARRAY)
-        }
-        is S.Term.IntArrayOf -> {
-            val elements = term.elements.map { checkTerm(it, INT) }
-            Typing(C.Term.IntArrayOf(elements, term.id), INT_ARRAY)
-        }
-        is S.Term.LongArrayOf -> {
-            val elements = term.elements.map { checkTerm(it, LONG) }
-            Typing(C.Term.LongArrayOf(elements, term.id), LONG_ARRAY)
-        }
+        is S.Term.Anno ->
+            modify<Context> {
+                irrelevant()
+            } % {
+                checkTerm(term.type, TYPE) % { type ->
+                    val type = normalizer.evalTerm(type)
+                    checkTerm(term.element, type) / { term ->
+                        Typing(term, type)
+                    }
+                }
+            }
+        is S.Term.Var ->
+            gets {
+                val level = lookup(term.name)
+                val type = when (level) {
+                    -1 -> diagnose(Diagnostic.VarNotFound(term.name, term.id))
+                    else -> {
+                        val entry = entries[level]
+                        var type = entry.type
+                        if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
+                        if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
+                        normalizer.checkRepresentation(term.id, type)
+                        type
+                    }
+                }
+                Typing(C.Term.Var(term.name, level, term.id), type)
+            }
+        is S.Term.UnitOf -> pure(Typing(C.Term.UnitOf(term.id), UNIT))
+        is S.Term.BoolOf -> pure(Typing(C.Term.BoolOf(term.value, term.id), BOOL))
+        is S.Term.ByteOf -> pure(Typing(C.Term.ByteOf(term.value, term.id), BYTE))
+        is S.Term.ShortOf -> pure(Typing(C.Term.ShortOf(term.value, term.id), SHORT))
+        is S.Term.IntOf -> pure(Typing(C.Term.IntOf(term.value, term.id), INT))
+        is S.Term.LongOf -> pure(Typing(C.Term.LongOf(term.value, term.id), LONG))
+        is S.Term.FloatOf -> pure(Typing(C.Term.FloatOf(term.value, term.id), FLOAT))
+        is S.Term.DoubleOf -> pure(Typing(C.Term.DoubleOf(term.value, term.id), DOUBLE))
+        is S.Term.StringOf -> pure(Typing(C.Term.StringOf(term.value, term.id), STRING))
+        is S.Term.ByteArrayOf ->
+            term.elements.mapM<Context, S.Term, C.Term> { checkTerm(it, BYTE) } / { elements ->
+                Typing(C.Term.ByteArrayOf(elements, term.id), BYTE_ARRAY)
+            }
+        is S.Term.IntArrayOf ->
+            term.elements.mapM<Context, S.Term, C.Term> { checkTerm(it, INT) } / { elements ->
+                Typing(C.Term.IntArrayOf(elements, term.id), INT_ARRAY)
+            }
+        is S.Term.LongArrayOf ->
+            term.elements.mapM<Context, S.Term, C.Term> { checkTerm(it, LONG) } / { elements ->
+                Typing(C.Term.LongArrayOf(elements, term.id), LONG_ARRAY)
+            }
         is S.Term.ListOf -> if (term.elements.isEmpty()) {
-            Typing(C.Term.ListOf(emptyList(), term.id), C.VTerm.List(lazyOf(END), lazyOf(C.VTerm.IntOf(0))))
+            pure(Typing(C.Term.ListOf(emptyList(), term.id), C.VTerm.List(lazyOf(END), lazyOf(C.VTerm.IntOf(0)))))
         } else { // TODO: use union of element types
-            val first = inferTerm(term.elements.first())
-            val elements = listOf(first.term) + term.elements.drop(1).map { checkTerm(it, first.type) }
-            val size = C.VTerm.IntOf(elements.size)
-            Typing(C.Term.ListOf(elements, term.id), C.VTerm.List(lazyOf(first.type), lazyOf(size)))
-        }
-        is S.Term.CompoundOf -> {
-            val elements = term.elements.map { (name, element) -> name to inferTerm(element) }
-            Typing(
-                C.Term.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
-                C.VTerm.Compound(elements.map { (name, element) -> name to C.Entry(true, normalizer.quoteTerm(element.type), null) }.toLinkedHashMap())
-            )
-        }
-        is S.Term.BoxOf -> {
-            val tTag = checkTerm(term.tag, TYPE)
-            val vTag = normalizer.evalTerm(tTag)
-            val content = checkTerm(term.content, vTag)
-            Typing(C.Term.BoxOf(content, tTag, term.id), C.VTerm.Box(lazyOf(vTag)))
-        }
-        is S.Term.RefOf -> {
-            val element = inferTerm(term.element)
-            Typing(C.Term.RefOf(element.term, term.id), C.VTerm.Ref(lazyOf(element.type)))
-        }
-        is S.Term.Refl -> {
-            val left = lazy { normalizer.fresh(term.id) }
-            Typing(C.Term.Refl(term.id), C.VTerm.Eq(left, left))
-        }
-        is S.Term.CodeOf -> {
-            val element = up().inferTerm(term.element)
-            Typing(C.Term.CodeOf(element.term, term.id), C.VTerm.Code(lazyOf(element.type)))
-        }
-        is S.Term.Splice -> {
-            val element = down().inferTerm(term.element)
-            val type = when (val type = normalizer.force(element.type)) {
-                is C.VTerm.Code -> type.element.value
-                else -> type.also {
-                    unifyTerms(it, C.VTerm.Code(lazyOf(normalizer.fresh(freshId())))) with normalizer
+            inferTerm(term.elements.first()) % { head ->
+                term.elements.drop(1).mapM<Context, S.Term, C.Term> { checkTerm(it, head.type) } / { tail ->
+                    val elements = listOf(head.term) + tail
+                    val size = C.VTerm.IntOf(elements.size)
+                    Typing(C.Term.ListOf(elements, term.id), C.VTerm.List(lazyOf(head.type), lazyOf(size)))
                 }
             }
-            Typing(C.Term.Splice(element.term, term.id), type)
         }
-        is S.Term.Or -> {
-            val variants = term.variants.map { checkTerm(it, TYPE) }
-            Typing(C.Term.Or(variants, term.id), TYPE)
-        }
-        is S.Term.And -> {
-            val variants = term.variants.map { checkTerm(it, TYPE) }
-            Typing(C.Term.And(variants, term.id), TYPE)
-        }
-        is S.Term.Unit -> Typing(C.Term.Unit(term.id), TYPE)
-        is S.Term.Bool -> Typing(C.Term.Bool(term.id), TYPE)
-        is S.Term.Byte -> Typing(C.Term.Byte(term.id), TYPE)
-        is S.Term.Short -> Typing(C.Term.Short(term.id), TYPE)
-        is S.Term.Int -> Typing(C.Term.Int(term.id), TYPE)
-        is S.Term.Long -> Typing(C.Term.Long(term.id), TYPE)
-        is S.Term.Float -> Typing(C.Term.Float(term.id), TYPE)
-        is S.Term.Double -> Typing(C.Term.Double(term.id), TYPE)
-        is S.Term.String -> Typing(C.Term.String(term.id), TYPE)
-        is S.Term.ByteArray -> Typing(C.Term.ByteArray(term.id), TYPE)
-        is S.Term.IntArray -> Typing(C.Term.IntArray(term.id), TYPE)
-        is S.Term.LongArray -> Typing(C.Term.LongArray(term.id), TYPE)
-        is S.Term.List -> {
-            val element = checkTerm(term.element, TYPE)
-            val size = irrelevant().checkTerm(term.size, INT)
-            Typing(C.Term.List(element, size, term.id), TYPE)
-        }
-        is S.Term.Compound -> {
-            val (_, elements) = term.elements.foldMap(this) { context, entry ->
-                val element = context.checkTerm(entry.type, TYPE)
-                context.bind(entry.id, Entry(false, entry.name.text, END, ANY, context.normalizer.evalTerm(element), stage)) to (entry.name to C.Entry(entry.relevant, element, entry.id))
+        is S.Term.CompoundOf ->
+            term.elements.mapM<Context, Pair<Name, S.Term>, Pair<Name, Typing>> { (name, element) ->
+                inferTerm(element) / { element ->
+                    name to element
+                }
+            } / { elements ->
+                Typing(
+                    C.Term.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
+                    C.VTerm.Compound(elements.map { (name, element) -> name to C.Entry(true, normalizer.quoteTerm(element.type), null) }.toLinkedHashMap())
+                )
             }
-            Typing(C.Term.Compound(elements.toLinkedHashMap(), term.id), TYPE)
-        }
-        is S.Term.Box -> {
-            val content = checkTerm(term.content, TYPE)
-            Typing(C.Term.Box(content, term.id), TYPE)
-        }
-        is S.Term.Ref -> {
-            val element = checkTerm(term.element, TYPE)
-            Typing(C.Term.Ref(element, term.id), TYPE)
-        }
-        is S.Term.Eq -> {
-            val left = inferTerm(term.left)
-            val right = checkTerm(term.right, left.type)
-            Typing(C.Term.Eq(left.term, right, term.id), TYPE)
-        }
-        is S.Term.Code -> Typing(C.Term.Code(checkTerm(term.element, TYPE), term.id), TYPE)
-        is S.Term.Type -> Typing(C.Term.Type(term.id), TYPE)
-        else -> inferComputation(term).also { computation ->
-            if (computation.effects.isNotEmpty()) {
-                diagnose(Diagnostic.EffectMismatch(emptyList(), computation.effects.map { serializeEffect(it) }, term.id))
+        is S.Term.BoxOf ->
+            checkTerm(term.tag, TYPE) % { tTag ->
+                val vTag = normalizer.evalTerm(tTag)
+                checkTerm(term.content, vTag) / { content ->
+                    Typing(C.Term.BoxOf(content, tTag, term.id), C.VTerm.Box(lazyOf(vTag)))
+                }
             }
-        }
-    }.also {
+        is S.Term.RefOf ->
+            inferTerm(term.element) / { element ->
+                Typing(C.Term.RefOf(element.term, term.id), C.VTerm.Ref(lazyOf(element.type)))
+            }
+        is S.Term.Refl ->
+            gets {
+                val left = lazy { normalizer.fresh(term.id) }
+                Typing(C.Term.Refl(term.id), C.VTerm.Eq(left, left))
+            }
+        is S.Term.CodeOf ->
+            modify<Context> { up() } % {
+                inferTerm(term.element) / { element ->
+                    Typing(C.Term.CodeOf(element.term, term.id), C.VTerm.Code(lazyOf(element.type)))
+                }
+            }
+        is S.Term.Splice ->
+            modify<Context> { down() } % {
+                inferTerm(term.element) / { element ->
+                    val type = when (val type = normalizer.force(element.type)) {
+                        is C.VTerm.Code -> type.element.value
+                        else -> type.also {
+                            unifyTerms(it, C.VTerm.Code(lazyOf(normalizer.fresh(freshId())))) with normalizer
+                        }
+                    }
+                    Typing(C.Term.Splice(element.term, term.id), type)
+                }
+            }
+        is S.Term.Or ->
+            term.variants.mapM<Context, S.Term, C.Term> { checkTerm(it, TYPE) } / { variants ->
+                Typing(C.Term.Or(variants, term.id), TYPE)
+            }
+        is S.Term.And ->
+            term.variants.mapM<Context, S.Term, C.Term> { checkTerm(it, TYPE) } / { variants ->
+                Typing(C.Term.And(variants, term.id), TYPE)
+            }
+        is S.Term.Unit -> pure(Typing(C.Term.Unit(term.id), TYPE))
+        is S.Term.Bool -> pure(Typing(C.Term.Bool(term.id), TYPE))
+        is S.Term.Byte -> pure(Typing(C.Term.Byte(term.id), TYPE))
+        is S.Term.Short -> pure(Typing(C.Term.Short(term.id), TYPE))
+        is S.Term.Int -> pure(Typing(C.Term.Int(term.id), TYPE))
+        is S.Term.Long -> pure(Typing(C.Term.Long(term.id), TYPE))
+        is S.Term.Float -> pure(Typing(C.Term.Float(term.id), TYPE))
+        is S.Term.Double -> pure(Typing(C.Term.Double(term.id), TYPE))
+        is S.Term.String -> pure(Typing(C.Term.String(term.id), TYPE))
+        is S.Term.ByteArray -> pure(Typing(C.Term.ByteArray(term.id), TYPE))
+        is S.Term.IntArray -> pure(Typing(C.Term.IntArray(term.id), TYPE))
+        is S.Term.LongArray -> pure(Typing(C.Term.LongArray(term.id), TYPE))
+        is S.Term.List ->
+            checkTerm(term.element, TYPE) % { element ->
+                put(irrelevant()) % {
+                    checkTerm(term.size, INT) / { size ->
+                        Typing(C.Term.List(element, size, term.id), TYPE)
+                    }
+                }
+            }
+        is S.Term.Compound ->
+            scope {
+                term.elements.mapM<Context, S.Entry, Pair<Name, C.Entry>> { entry ->
+                    checkTerm(entry.type, TYPE) % { element ->
+                        put(bind(entry.id, Entry(false, entry.name.text, END, ANY, normalizer.evalTerm(element), stage))) / {
+                            entry.name to C.Entry(entry.relevant, element, entry.id)
+                        }
+                    }
+                } / { elements ->
+                    Typing(C.Term.Compound(elements.toLinkedHashMap(), term.id), TYPE)
+                }
+            }
+        is S.Term.Box ->
+            checkTerm(term.content, TYPE) / { content ->
+                Typing(C.Term.Box(content, term.id), TYPE)
+            }
+        is S.Term.Ref ->
+            checkTerm(term.element, TYPE) / { element ->
+                Typing(C.Term.Ref(element, term.id), TYPE)
+            }
+        is S.Term.Eq ->
+            inferTerm(term.left) % { left ->
+                checkTerm(term.right, left.type) / { right ->
+                    Typing(C.Term.Eq(left.term, right, term.id), TYPE)
+                }
+            }
+        is S.Term.Code ->
+            checkTerm(term.element, TYPE) / { element ->
+                Typing(C.Term.Code(element, term.id), TYPE)
+            }
+        is S.Term.Type -> pure(Typing(C.Term.Type(term.id), TYPE))
+        else ->
+            inferComputation(term) / { computation ->
+                if (computation.effects.isNotEmpty()) {
+                    diagnose(Diagnostic.EffectMismatch(emptyList(), computation.effects.map { serializeEffect(it) }, term.id))
+                }
+                computation
+            }
+    } / {
         types[term.id] = it.type
+        it
     }
 
     /**
-     * Infers the type of the [computation] under this context.
+     * Infers the type of the [computation] under the context.
      */
-    private fun Context.inferComputation(computation: S.Term): Typing = when (computation) {
+    private fun inferComputation(computation: S.Term): State<Context, Typing> = when (computation) {
         is S.Term.Def -> when (val item = items[computation.name]) {
             is C.Item.Def -> {
                 if (item.parameters.size != computation.arguments.size) {
                     diagnose(Diagnostic.SizeMismatch(item.parameters.size, computation.arguments.size, computation.id))
                 }
-                val (context, arguments) = (computation.arguments zip item.parameters).foldMap(this) { context, (argument, parameter) ->
-                    val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
-                    val vArgument = context.normalizer.evalTerm(tArgument)
-                    val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
-                        if (!(subtypeTerms(lower, vArgument) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
+                scope s@{
+                    (computation.arguments zip item.parameters).mapM<Context, Pair<S.Term, C.Parameter>, C.Term> { (argument, parameter) ->
+                        val (_, tArgument) = checkTerm(argument, normalizer.evalTerm(parameter.type)) with this@s
+                        val vArgument = normalizer.evalTerm(tArgument)
+                        val lower = parameter.lower?.let { normalizer.evalTerm(it) }?.also { lower ->
+                            if (!(subtypeTerms(lower, vArgument) with this).second) diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(vArgument)), serializeTerm(normalizer.quoteTerm(lower)), argument.id))
+                        }
+                        val upper = parameter.upper?.let { normalizer.evalTerm(it) }?.also { upper ->
+                            if (!(subtypeTerms(vArgument, upper) with this).second) diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(upper)), serializeTerm(normalizer.quoteTerm(vArgument)), argument.id))
+                        }
+                        val type = normalizer.evalTerm(parameter.type)
+                        put(bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument)) / {
+                            tArgument
+                        }
+                    } / { arguments ->
+                        val resultant = normalizer.evalTerm(item.resultant)
+                        Typing(C.Term.Def(computation.name, arguments, computation.id), resultant, item.effects)
                     }
-                    val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
-                        if (!(subtypeTerms(vArgument, upper) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
+                }
+            }
+            else -> pure(Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id))))
+        }
+        is S.Term.Let ->
+            scope {
+                inferComputation(computation.init) % { init ->
+                    put(bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage))) % {
+                        inferComputation(computation.body) / { body ->
+                            Typing(C.Term.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
+                        }
                     }
-                    val type = context.normalizer.evalTerm(parameter.type)
-                    context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
                 }
-                val resultant = item.parameters.fold(context) { context, parameter ->
-                    val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }
-                    val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }
-                    val type = context.normalizer.evalTerm(parameter.type)
-                    context.bind(parameter.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage))
-                }.normalizer.evalTerm(item.resultant)
-                Typing(C.Term.Def(computation.name, arguments, computation.id), resultant, item.effects)
             }
-            else -> Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
-        }
-        is S.Term.Let -> {
-            val init = inferComputation(computation.init)
-            val body = bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)).inferComputation(computation.body)
-            Typing(C.Term.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
-        }
-        is S.Term.Match -> {
-            val type = normalizer.fresh(computation.id) // TODO: use union of element types
-            val scrutinee = inferTerm(computation.scrutinee)
-            val clauses = computation.clauses.map { (pattern, body) ->
-                val (context, pattern) = checkPattern(pattern, scrutinee.type) with this
-                val body = context.checkTerm(body, type) // TODO
-                (pattern to body)
-            }
-            Typing(C.Term.Match(scrutinee.term, clauses, computation.id), type)
-        }
-        is S.Term.FunOf -> {
-            val types = computation.parameters.map { normalizer.fresh(computation.id) }
-            val body = (computation.parameters zip types).fold(empty()) { context, (parameter, type) -> context.bind(parameter.id, Entry(true /* TODO */, parameter.text, END, ANY, type, stage)) }.inferComputation(computation.body)
-            val parameters = (computation.parameters zip types).map { (parameter, type) -> C.Parameter(true /* TODO */, parameter.text, normalizer.quoteTerm(END), normalizer.quoteTerm(ANY), normalizer.quoteTerm(type), parameter.id) }
-            Typing(C.Term.FunOf(computation.parameters, body.term, computation.id), C.VTerm.Fun(parameters, normalizer.quoteTerm(body.type), body.effects))
-        }
-        is S.Term.Apply -> {
-            val function = inferComputation(computation.function)
-            val type = when (val type = normalizer.force(function.type)) {
-                is C.VTerm.Fun -> type
-                else -> {
-                    val parameters = computation.arguments.map {
-                        C.Parameter(true, "", null, null, normalizer.quoteTerm(normalizer.fresh(freshId())), freshId())
+        is S.Term.Match ->
+            gets<Context, C.VTerm> {
+                normalizer.fresh(computation.id) // TODO: use union of element types
+            } % { type ->
+                inferTerm(computation.scrutinee) % { scrutinee ->
+                    computation.clauses.mapM<Context, Pair<S.Pattern, S.Term>, Pair<C.Pattern, C.Term>> { (pattern, body) ->
+                        scope {
+                            checkPattern(pattern, scrutinee.type) % { pattern ->
+                                checkTerm(body, type) /* TODO: effect */ / { body ->
+                                    pattern to body
+                                }
+                            }
+                        }
+                    } / { clauses ->
+                        Typing(C.Term.Match(scrutinee.term, clauses, computation.id), type)
                     }
-                    val vResultant = normalizer.fresh(freshId())
-                    val resultant = normalizer.quoteTerm(vResultant)
-                    val effects = emptySet<C.Effect>() // TODO
-                    unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null)) with normalizer
-                    C.VTerm.Fun(parameters, resultant, effects, type.id)
                 }
             }
-            if (type.parameters.size != computation.arguments.size) {
-                diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.arguments.size, computation.id))
-            }
-            val (context, arguments) = (computation.arguments zip type.parameters).foldMap(this) { context, (argument, parameter) ->
-                val tArgument = checkTerm(argument, context.normalizer.evalTerm(parameter.type))
-                val vArgument = context.normalizer.evalTerm(tArgument)
-                val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }?.also { lower ->
-                    if (!(subtypeTerms(lower, vArgument) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(vArgument)), serializeTerm(context.normalizer.quoteTerm(lower)), argument.id))
+        is S.Term.FunOf ->
+            scope {
+                gets<Context, List<C.VTerm>> {
+                    computation.parameters.map { normalizer.fresh(computation.id) }
+                } % { types ->
+                    (computation.parameters zip types).forEachM<Context, Pair<Name, C.VTerm>> { (parameter, type) ->
+                        put(bind(parameter.id, Entry(true /* TODO */, parameter.text, END, ANY, type, stage)))
+                    } % {
+                        inferComputation(computation.body) / { body ->
+                            val parameters =
+                                (computation.parameters zip types).map { (parameter, type) -> C.Parameter(true /* TODO */, parameter.text, normalizer.quoteTerm(END), normalizer.quoteTerm(ANY), normalizer.quoteTerm(type), parameter.id) }
+                            Typing(C.Term.FunOf(computation.parameters, body.term, computation.id), C.VTerm.Fun(parameters, normalizer.quoteTerm(body.type), body.effects))
+                        }
+                    }
                 }
-                val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }?.also { upper ->
-                    if (!(subtypeTerms(vArgument, upper) with context).second) diagnose(Diagnostic.TermMismatch(serializeTerm(context.normalizer.quoteTerm(upper)), serializeTerm(context.normalizer.quoteTerm(vArgument)), argument.id))
-                }
-                val type = context.normalizer.evalTerm(parameter.type)
-                context.bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument) to tArgument
             }
-            val resultant = context.normalizer.evalTerm(type.resultant)
-            Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
-        }
-        is S.Term.Fun -> {
-            val (context, parameters) = bindParameters(computation.parameters) with this
-            val resultant = context.checkTerm(computation.resultant, TYPE) /* TODO: check effects */
-            val effects = computation.effects.map { elaborateEffect(it) }.toSet()
-            Typing(C.Term.Fun(parameters, resultant, effects, computation.id), TYPE)
-        }
+        is S.Term.Apply ->
+            scope {
+                inferComputation(computation.function) % { function ->
+                    val type = when (val type = normalizer.force(function.type)) {
+                        is C.VTerm.Fun -> type
+                        else -> {
+                            val parameters = computation.arguments.map {
+                                C.Parameter(true, "", null, null, normalizer.quoteTerm(normalizer.fresh(freshId())), freshId())
+                            }
+                            val vResultant = normalizer.fresh(freshId())
+                            val resultant = normalizer.quoteTerm(vResultant)
+                            val effects = emptySet<C.Effect>() // TODO
+                            unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null)) with normalizer
+                            C.VTerm.Fun(parameters, resultant, effects, type.id)
+                        }
+                    }
+                    if (type.parameters.size != computation.arguments.size) {
+                        diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.arguments.size, computation.id))
+                    }
+                    (computation.arguments zip type.parameters).mapM<Context, Pair<S.Term, C.Parameter>, C.Term> { (argument, parameter) ->
+                        checkTerm(argument, normalizer.evalTerm(parameter.type)) % { tArgument ->
+                            val vArgument = normalizer.evalTerm(tArgument)
+                            val lower = parameter.lower?.let { normalizer.evalTerm(it) }?.also { lower ->
+                                if (!(subtypeTerms(lower, vArgument) with this).second) diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(vArgument)), serializeTerm(normalizer.quoteTerm(lower)), argument.id))
+                            }
+                            val upper = parameter.upper?.let { normalizer.evalTerm(it) }?.also { upper ->
+                                if (!(subtypeTerms(vArgument, upper) with this).second) diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(upper)), serializeTerm(normalizer.quoteTerm(vArgument)), argument.id))
+                            }
+                            val type = normalizer.evalTerm(parameter.type)
+                            put(bind(argument.id, Entry(parameter.relevant, parameter.name, lower, upper, type, stage), vArgument)) / {
+                                tArgument
+                            }
+                        }
+                    } / { arguments ->
+                        val resultant = normalizer.evalTerm(type.resultant)
+                        Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
+                    }
+                }
+            }
+        is S.Term.Fun ->
+            scope {
+                bindParameters(computation.parameters) % { parameters ->
+                    checkTerm(computation.resultant, TYPE) /* TODO: check effects */ / { resultant ->
+                        val effects = computation.effects.map { elaborateEffect(it) }.toSet()
+                        Typing(C.Term.Fun(parameters, resultant, effects, computation.id), TYPE)
+                    }
+                }
+            }
         else -> inferTerm(computation)
     }
 
     /**
-     * Checks the [term] against the [type] under this context.
+     * Checks the [term] against the [type] under the context.
      */
-    private fun Context.checkTerm(term: S.Term, type: C.VTerm): C.Term {
-        val type = normalizer.force(type)
-        types[term.id] = type
-        return when {
-            term is S.Term.Hole -> {
-                completions[term.id] = entries.map { it.name to it.type }
-                diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quoteTerm(type)), term.id))
-                C.Term.Hole(term.id)
+    private fun checkTerm(term: S.Term, type: C.VTerm): State<Context, C.Term> =
+        gets<Context, C.VTerm> {
+            normalizer.force(type).also {
+                types[term.id] = it
             }
-            term is S.Term.Meta -> normalizer.quoteTerm(normalizer.fresh(term.id))
-            term is S.Term.ListOf && type is C.VTerm.List -> {
-                val elements = term.elements.map { checkTerm(it, type.element.value) }
-                when (val size = normalizer.force(type.size.value)) {
-                    is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
-                    else -> {}
+        } % { type ->
+            when {
+                term is S.Term.Hole -> {
+                    completions[term.id] = entries.map { it.name to it.type }
+                    diagnose(Diagnostic.TermExpected(serializeTerm(normalizer.quoteTerm(type)), term.id))
+                    pure(C.Term.Hole(term.id))
                 }
-                C.Term.ListOf(elements, term.id)
+                term is S.Term.Meta -> pure(normalizer.quoteTerm(normalizer.fresh(term.id)))
+                term is S.Term.ListOf && type is C.VTerm.List ->
+                    term.elements.mapM<Context, S.Term, C.Term> { checkTerm(it, type.element.value) } / { elements ->
+                        when (val size = normalizer.force(type.size.value)) {
+                            is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
+                            else -> {}
+                        }
+                        C.Term.ListOf(elements, term.id)
+                    }
+                term is S.Term.CompoundOf && type is C.VTerm.Compound ->
+                    scope {
+                        (term.elements zip type.elements.values).mapM<Context, Pair<Pair<Name, S.Term>, C.Entry>, Pair<Name, C.Term>> { (element, entry) ->
+                            val vType = normalizer.evalTerm(entry.type)
+                            checkTerm(element.second, vType) % { tElement ->
+                                val vElement = normalizer.evalTerm(tElement)
+                                put(bind(element.first.id, Entry(entry.relevant, element.first.text, END, ANY, vType, stage), vElement)) / {
+                                    element.first to tElement
+                                }
+                            }
+                        } / { elements ->
+                            C.Term.CompoundOf(elements.toLinkedHashMap(), term.id)
+                        }
+                    }
+                term is S.Term.RefOf && type is C.VTerm.Ref ->
+                    checkTerm(term.element, type.element.value) / { element ->
+                        C.Term.RefOf(element, term.id)
+                    }
+                term is S.Term.CodeOf && type is C.VTerm.Code ->
+                    put(up()) % {
+                        checkTerm(term.element, type.element.value) / { element ->
+                            C.Term.CodeOf(element, term.id)
+                        }
+                    }
+                else ->
+                    checkComputation(term, type, emptySet()) / {
+                        it.term
+                    }
             }
-            term is S.Term.CompoundOf && type is C.VTerm.Compound -> {
-                val (_, elements) = (term.elements zip type.elements.values).foldMap(this) { context, (element, entry) ->
-                    val vType = context.normalizer.evalTerm(entry.type)
-                    val tElement = context.checkTerm(element.second, vType)
-                    val vElement = context.normalizer.evalTerm(tElement)
-                    context.bind(element.first.id, Entry(entry.relevant, element.first.text, END, ANY, vType, context.stage), vElement) to (element.first to tElement)
-                }
-                C.Term.CompoundOf(elements.toLinkedHashMap(), term.id)
-            }
-            term is S.Term.RefOf && type is C.VTerm.Ref -> {
-                val element = checkTerm(term.element, type.element.value)
-                C.Term.RefOf(element, term.id)
-            }
-            term is S.Term.CodeOf && type is C.VTerm.Code -> {
-                val element = up().checkTerm(term.element, type.element.value)
-                C.Term.CodeOf(element, term.id)
-            }
-            else -> checkComputation(term, type, emptySet()).term
         }
-    }
 
     /**
-     * Checks the [computation] against the [type] and the [effects] under this context.
+     * Checks the [computation] against the [type] and the [effects] under the context.
      */
-    private fun Context.checkComputation(computation: S.Term, type: C.VTerm, effects: Set<C.Effect>): Effecting {
-        val type = normalizer.force(type)
-        types[computation.id] = type
-        return when {
-            computation is S.Term.Let -> {
-                val init = inferComputation(computation.init)
-                val body = bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)).checkComputation(computation.body, type, effects)
-                val effects = init.effects + body.effects
-                Effecting(C.Term.Let(computation.name, init.term, body.term, computation.id), effects)
+    private fun checkComputation(computation: S.Term, type: C.VTerm, effects: Set<C.Effect>): State<Context, Effecting> =
+        gets<Context, C.VTerm> {
+            normalizer.force(type).also {
+                types[computation.id] = it
             }
-            computation is S.Term.Match -> {
-                val scrutinee = inferTerm(computation.scrutinee)
-                val clauses = computation.clauses.map { (pattern, body) ->
-                    val (context, pattern) = checkPattern(pattern, scrutinee.type) with this
-                    val body = context.checkComputation(body, type, effects)
-                    pattern to body
+        } % { type ->
+            when {
+                computation is S.Term.Let ->
+                    scope {
+                        inferComputation(computation.init) % { init ->
+                            put(bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage))) % {
+                                checkComputation(computation.body, type, effects) / { body ->
+                                    val effects = init.effects + body.effects
+                                    Effecting(C.Term.Let(computation.name, init.term, body.term, computation.id), effects)
+                                }
+                            }
+                        }
+                    }
+                computation is S.Term.Match ->
+                    inferTerm(computation.scrutinee) % { scrutinee ->
+                        computation.clauses.mapM<Context, Pair<S.Pattern, S.Term>, Pair<C.Pattern, Effecting>> { (pattern, body) ->
+                            scope {
+                                checkPattern(pattern, scrutinee.type) % { pattern ->
+                                    checkComputation(body, type, effects) / { body ->
+                                        pattern to body
+                                    }
+                                }
+                            }
+                        } / { clauses ->
+                            val effects = clauses.flatMap { (_, body) -> body.effects }.toSet()
+                            Effecting(C.Term.Match(scrutinee.term, clauses.map { (pattern, body) -> pattern to body.term }, computation.id), effects)
+                        }
+                    }
+                computation is S.Term.FunOf && type is C.VTerm.Fun -> {
+                    if (type.parameters.size != computation.parameters.size) {
+                        diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.parameters.size, computation.id))
+                    }
+                    scope {
+                        put(empty()) % {
+                            (computation.parameters zip type.parameters).forEachM<Context, Pair<Name, C.Parameter>> { (name, parameter) ->
+                                val lower = parameter.lower?.let { normalizer.evalTerm(it) }
+                                val upper = parameter.upper?.let { normalizer.evalTerm(it) }
+                                val type = normalizer.evalTerm(parameter.type)
+                                put(bind(name.id, Entry(parameter.relevant, name.text, lower, upper, type, stage)))
+                            } % {
+                                checkComputation(computation.body, normalizer.evalTerm(type.resultant), effects) / { resultant ->
+                                    Effecting(C.Term.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
+                                }
+                            }
+                        }
+                    }
                 }
-                val effects = clauses.flatMap { (_, body) -> body.effects }.toSet()
-                Effecting(C.Term.Match(scrutinee.term, clauses.map { (pattern, body) -> pattern to body.term }, computation.id), effects)
-            }
-            computation is S.Term.FunOf && type is C.VTerm.Fun -> {
-                if (type.parameters.size != computation.parameters.size) {
-                    diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.parameters.size, computation.id))
+                else -> {
+                    val id = computation.id
+                    inferComputation(computation) % { computation ->
+                        subtypeTerms(computation.type, type) / { isSubtype ->
+                            if (!isSubtype) {
+                                types[id] = END
+                                diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(type)), serializeTerm(normalizer.quoteTerm(computation.type)), id))
+                            }
+                            if (!(effects.containsAll(computation.effects))) {
+                                diagnose(Diagnostic.EffectMismatch(effects.map { serializeEffect(it) }, computation.effects.map { serializeEffect(it) }, id))
+                            }
+                            Effecting(computation.term, computation.effects)
+                        }
+                    }
                 }
-                val context = (computation.parameters zip type.parameters).fold(empty()) { context, (name, parameter) ->
-                    val lower = parameter.lower?.let { context.normalizer.evalTerm(it) }
-                    val upper = parameter.upper?.let { context.normalizer.evalTerm(it) }
-                    val type = context.normalizer.evalTerm(parameter.type)
-                    context.bind(name.id, Entry(parameter.relevant, name.text, lower, upper, type, stage))
-                }
-                val resultant = context.checkComputation(computation.body, context.normalizer.evalTerm(type.resultant), effects)
-                Effecting(C.Term.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
-            }
-            else -> {
-                val id = computation.id
-                val computation = inferComputation(computation)
-                if (!(subtypeTerms(computation.type, type) with this).second) {
-                    types[id] = END
-                    diagnose(Diagnostic.TermMismatch(serializeTerm(normalizer.quoteTerm(type)), serializeTerm(normalizer.quoteTerm(computation.type)), id))
-                }
-                if (!(effects.containsAll(computation.effects))) {
-                    diagnose(Diagnostic.EffectMismatch(effects.map { serializeEffect(it) }, computation.effects.map { serializeEffect(it) }, id))
-                }
-                Effecting(computation.term, computation.effects)
             }
         }
-    }
 
     /**
      * Checks if the [term1] and the [term2] can be unified under the normalizer.
      */
-    private fun unifyTerms(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Boolean> = gets<Normalizer, Pair<C.VTerm, C.VTerm>> {
-        force(term1) to force(term2)
-    } % { (value1, value2) ->
-        when {
-            value1.id != null && value2.id != null && value1.id == value2.id -> pure(true)
-            value1 is C.VTerm.Meta && value2 is C.VTerm.Meta && value1.index == value2.index -> pure(true)
-            value1 is C.VTerm.Meta -> when (val solved1 = getSolution(value1.index)) {
-                null -> {
-                    solve(value1.index, value2)
-                    pure(true)
+    private fun unifyTerms(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Boolean> =
+        scope {
+            gets<Normalizer, Pair<C.VTerm, C.VTerm>> {
+                force(term1) to force(term2)
+            } % { (value1, value2) ->
+                when {
+                    value1.id != null && value2.id != null && value1.id == value2.id -> pure(true)
+                    value1 is C.VTerm.Meta && value2 is C.VTerm.Meta && value1.index == value2.index -> pure(true)
+                    value1 is C.VTerm.Meta -> when (val solved1 = getSolution(value1.index)) {
+                        null -> {
+                            solve(value1.index, value2)
+                            pure(true)
+                        }
+                        else -> unifyTerms(solved1, value2)
+                    }
+                    value2 is C.VTerm.Meta -> unifyTerms(value2, value1)
+                    value1 is C.VTerm.Var && value2 is C.VTerm.Var -> pure(value1.level == value2.level)
+                    value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> pure(true)
+                    value1 is C.VTerm.Match && value2 is C.VTerm.Match -> pure(false) // TODO
+                    value1 is C.VTerm.UnitOf && value2 is C.VTerm.UnitOf -> pure(true)
+                    value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.IntOf && value2 is C.VTerm.IntOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.LongOf && value2 is C.VTerm.LongOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.FloatOf && value2 is C.VTerm.FloatOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.DoubleOf && value2 is C.VTerm.DoubleOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.StringOf && value2 is C.VTerm.StringOf -> pure(value1.value == value2.value)
+                    value1 is C.VTerm.ByteArrayOf && value2 is C.VTerm.ByteArrayOf ->
+                        pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                                (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+                    value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf ->
+                        pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                                (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+                    value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf ->
+                        pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                                (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+                    value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf ->
+                        pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                                (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+                    value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf ->
+                        pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                                (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
+                                    pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
+                                            unifyTerms(entry1.value.value, entry2.value.value)
+                                }
+                    value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf ->
+                        unifyTerms(value1.content.value, value2.content.value) andM
+                                unifyTerms(value1.tag.value, value2.tag.value)
+                    value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> unifyTerms(value1.element.value, value2.element.value)
+                    value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> pure(true)
+                    value1 is C.VTerm.FunOf && value2 is C.VTerm.FunOf ->
+                        pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
+                                value1.parameters.forEachM<Normalizer, Name> { parameter ->
+                                    put(bind(lazyOf(C.VTerm.Var(parameter.text, size))))
+                                } % { unifyTerms(evalTerm(value1.body), evalTerm(value2.body)) }
+                    value1 is C.VTerm.Apply && value2 is C.VTerm.Apply ->
+                        unifyTerms(value1.function, value2.function) andM
+                                (value1.arguments zip value2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
+                    value1 is C.VTerm.CodeOf && value2 is C.VTerm.CodeOf -> unifyTerms(value1.element.value, value2.element.value)
+                    value1 is C.VTerm.Splice && value2 is C.VTerm.Splice -> unifyTerms(value1.element.value, value2.element.value)
+                    value1 is C.VTerm.Or && value1.variants.isEmpty() && value2 is C.VTerm.Or && value2.variants.isEmpty() -> pure(true)
+                    value1 is C.VTerm.And && value1.variants.isEmpty() && value2 is C.VTerm.And && value2.variants.isEmpty() -> pure(true)
+                    value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> pure(true)
+                    value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> pure(true)
+                    value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> pure(true)
+                    value1 is C.VTerm.Short && value2 is C.VTerm.Short -> pure(true)
+                    value1 is C.VTerm.Int && value2 is C.VTerm.Int -> pure(true)
+                    value1 is C.VTerm.Long && value2 is C.VTerm.Long -> pure(true)
+                    value1 is C.VTerm.Float && value2 is C.VTerm.Float -> pure(true)
+                    value1 is C.VTerm.Double && value2 is C.VTerm.Double -> pure(true)
+                    value1 is C.VTerm.String && value2 is C.VTerm.String -> pure(true)
+                    value1 is C.VTerm.ByteArray && value2 is C.VTerm.ByteArray -> pure(true)
+                    value1 is C.VTerm.IntArray && value2 is C.VTerm.IntArray -> pure(true)
+                    value1 is C.VTerm.LongArray && value2 is C.VTerm.LongArray -> pure(true)
+                    value1 is C.VTerm.List && value2 is C.VTerm.List ->
+                        unifyTerms(value1.element.value, value2.element.value) andM
+                                unifyTerms(value1.size.value, value2.size.value)
+                    value1 is C.VTerm.Compound && value2 is C.VTerm.Compound ->
+                        pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
+                                (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
+                                    put(bind(lazyOf(C.VTerm.Var(entry1.key.text, size)))) % {
+                                        pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
+                                                pure(entry1.value.relevant == entry2.value.relevant) andM
+                                                unifyTerms(evalTerm(entry1.value.type), evalTerm(entry2.value.type))
+                                    }
+                                }
+                    value1 is C.VTerm.Box && value2 is C.VTerm.Box -> unifyTerms(value1.content.value, value2.content.value)
+                    value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> unifyTerms(value1.element.value, value2.element.value)
+                    value1 is C.VTerm.Eq && value2 is C.VTerm.Eq ->
+                        unifyTerms(value1.left.value, value2.left.value) andM
+                                unifyTerms(value1.right.value, value2.right.value)
+                    value1 is C.VTerm.Fun && value2 is C.VTerm.Fun ->
+                        pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
+                                (value1.parameters zip value2.parameters).allM { (parameter1, parameter2) ->
+                                    put(bind(lazyOf(C.VTerm.Var("", size)))) % {
+                                        unifyTerms(evalTerm(parameter2.type), evalTerm(parameter1.type))
+                                    }
+                                } andM unifyTerms(evalTerm(value1.resultant), evalTerm(value2.resultant)) andM pure(value1.effects == value2.effects)
+                    value1 is C.VTerm.Code && value2 is C.VTerm.Code -> unifyTerms(value1.element.value, value2.element.value)
+                    value1 is C.VTerm.Type && value2 is C.VTerm.Type -> pure(true)
+                    else -> pure(false)
                 }
-                else -> unifyTerms(solved1, value2)
             }
-            value2 is C.VTerm.Meta -> unifyTerms(value2, value1)
-            value1 is C.VTerm.Var && value2 is C.VTerm.Var -> pure(value1.level == value2.level)
-            value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> pure(true)
-            value1 is C.VTerm.Match && value2 is C.VTerm.Match -> pure(false) // TODO
-            value1 is C.VTerm.UnitOf && value2 is C.VTerm.UnitOf -> pure(true)
-            value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.IntOf && value2 is C.VTerm.IntOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.LongOf && value2 is C.VTerm.LongOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.FloatOf && value2 is C.VTerm.FloatOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.DoubleOf && value2 is C.VTerm.DoubleOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.StringOf && value2 is C.VTerm.StringOf -> pure(value1.value == value2.value)
-            value1 is C.VTerm.ByteArrayOf && value2 is C.VTerm.ByteArrayOf ->
-                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
-                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf ->
-                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
-                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf ->
-                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
-                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf ->
-                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
-                        (value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf ->
-                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
-                        (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
-                            pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
-                                    unifyTerms(entry1.value.value, entry2.value.value)
-                        }
-            value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf ->
-                unifyTerms(value1.content.value, value2.content.value) andM
-                        unifyTerms(value1.tag.value, value2.tag.value)
-            value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> pure(true)
-            value1 is C.VTerm.FunOf && value2 is C.VTerm.FunOf ->
-                pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
-                        value1.parameters.forEachM<Normalizer, Name> { parameter ->
-                            put(bind(lazyOf(C.VTerm.Var(parameter.text, size))))
-                        } % { unifyTerms(evalTerm(value1.body), evalTerm(value2.body)) }
-            value1 is C.VTerm.Apply && value2 is C.VTerm.Apply ->
-                unifyTerms(value1.function, value2.function) andM
-                        (value1.arguments zip value2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.CodeOf && value2 is C.VTerm.CodeOf -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Splice && value2 is C.VTerm.Splice -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Or && value1.variants.isEmpty() && value2 is C.VTerm.Or && value2.variants.isEmpty() -> pure(true)
-            value1 is C.VTerm.And && value1.variants.isEmpty() && value2 is C.VTerm.And && value2.variants.isEmpty() -> pure(true)
-            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> pure(true)
-            value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> pure(true)
-            value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> pure(true)
-            value1 is C.VTerm.Short && value2 is C.VTerm.Short -> pure(true)
-            value1 is C.VTerm.Int && value2 is C.VTerm.Int -> pure(true)
-            value1 is C.VTerm.Long && value2 is C.VTerm.Long -> pure(true)
-            value1 is C.VTerm.Float && value2 is C.VTerm.Float -> pure(true)
-            value1 is C.VTerm.Double && value2 is C.VTerm.Double -> pure(true)
-            value1 is C.VTerm.String && value2 is C.VTerm.String -> pure(true)
-            value1 is C.VTerm.ByteArray && value2 is C.VTerm.ByteArray -> pure(true)
-            value1 is C.VTerm.IntArray && value2 is C.VTerm.IntArray -> pure(true)
-            value1 is C.VTerm.LongArray && value2 is C.VTerm.LongArray -> pure(true)
-            value1 is C.VTerm.List && value2 is C.VTerm.List ->
-                unifyTerms(value1.element.value, value2.element.value) andM
-                        unifyTerms(value1.size.value, value2.size.value)
-            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound ->
-                pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
-                        (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
-                            put(bind(lazyOf(C.VTerm.Var(entry1.key.text, size)))) % {
-                                pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
-                                        pure(entry1.value.relevant == entry2.value.relevant) andM
-                                        unifyTerms(evalTerm(entry1.value.type), evalTerm(entry2.value.type))
-                            }
-                        }
-            value1 is C.VTerm.Box && value2 is C.VTerm.Box -> unifyTerms(value1.content.value, value2.content.value)
-            value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Eq && value2 is C.VTerm.Eq ->
-                unifyTerms(value1.left.value, value2.left.value) andM
-                        unifyTerms(value1.right.value, value2.right.value)
-            value1 is C.VTerm.Fun && value2 is C.VTerm.Fun ->
-                pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
-                        (value1.parameters zip value2.parameters).allM { (parameter1, parameter2) ->
-                            put(bind(lazyOf(C.VTerm.Var("", size)))) % {
-                                unifyTerms(evalTerm(parameter2.type), evalTerm(parameter1.type))
-                            }
-                        } andM unifyTerms(evalTerm(value1.resultant), evalTerm(value2.resultant)) andM pure(value1.effects == value2.effects)
-            value1 is C.VTerm.Code && value2 is C.VTerm.Code -> unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Type && value2 is C.VTerm.Type -> pure(true)
-            else -> pure(false)
         }
-    }
 
     /**
      * Checks if the [term1] is a subtype of the [term2] under the context.
      */
     private fun subtypeTerms(term1: C.VTerm, term2: C.VTerm): State<Context, Boolean> =
-        gets<Context, Pair<C.VTerm, C.VTerm>> {
-            normalizer.force(term1) to normalizer.force(term2)
-        } % { (term1, term2) ->
-            when {
-                term1 is C.VTerm.Var && term2 is C.VTerm.Var && term1.level == term2.level -> pure(true)
-                term1 is C.VTerm.Var && entries[term1.level].upper != null -> subtypeTerms(entries[term1.level].upper!!, term2)
-                term2 is C.VTerm.Var && entries[term2.level].lower != null -> subtypeTerms(term1, entries[term2.level].lower!!)
-                term1 is C.VTerm.Apply && term2 is C.VTerm.Apply ->
-                    subtypeTerms(term1.function, term2.function) andM
-                            (term1.arguments zip term2.arguments).allM { (argument1, argument2) ->
-                                unifyTerms(argument1.value, argument2.value).lift(normalizer) { withNormalizer(it) } // pointwise subtyping
-                            }
-                term1 is C.VTerm.Or -> term1.variants.allM { subtypeTerms(it.value, term2) }
-                term2 is C.VTerm.Or -> term2.variants.anyM { subtypeTerms(term1, it.value) }
-                term2 is C.VTerm.And -> term2.variants.allM { subtypeTerms(term1, it.value) }
-                term1 is C.VTerm.And -> term1.variants.anyM { subtypeTerms(it.value, term2) }
-                term1 is C.VTerm.List && term2 is C.VTerm.List ->
-                    subtypeTerms(term1.element.value, term2.element.value) andM
-                            unifyTerms(term1.size.value, term2.size.value).lift(normalizer) { withNormalizer(it) }
-                term1 is C.VTerm.Compound && term2 is C.VTerm.Compound ->
-                    term2.elements.entries.allM { entry2 ->
-                        val element1 = term1.elements[entry2.key]
-                        if (element1 != null) {
-                            pure<Context, Boolean>(element1.relevant == entry2.value.relevant) andM run {
-                                val upper1 = normalizer.evalTerm(element1.type)
-                                put(bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))) % {
-                                    subtypeTerms(upper1, normalizer.evalTerm(entry2.value.type))
+        scope {
+            gets<Context, Pair<C.VTerm, C.VTerm>> {
+                normalizer.force(term1) to normalizer.force(term2)
+            } % { (term1, term2) ->
+                when {
+                    term1 is C.VTerm.Var && term2 is C.VTerm.Var && term1.level == term2.level -> pure(true)
+                    term1 is C.VTerm.Var && entries[term1.level].upper != null -> subtypeTerms(entries[term1.level].upper!!, term2)
+                    term2 is C.VTerm.Var && entries[term2.level].lower != null -> subtypeTerms(term1, entries[term2.level].lower!!)
+                    term1 is C.VTerm.Apply && term2 is C.VTerm.Apply ->
+                        subtypeTerms(term1.function, term2.function) andM
+                                (term1.arguments zip term2.arguments).allM { (argument1, argument2) ->
+                                    unifyTerms(argument1.value, argument2.value).lift(normalizer) { withNormalizer(it) } // pointwise subtyping
                                 }
-                            }
-                        } else pure(false)
-                    }
-                term1 is C.VTerm.Box && term2 is C.VTerm.Box -> subtypeTerms(term1.content.value, term2.content.value)
-                term1 is C.VTerm.Ref && term2 is C.VTerm.Ref -> subtypeTerms(term1.element.value, term2.element.value)
-                term1 is C.VTerm.Fun && term2 is C.VTerm.Fun ->
-                    pure<Context, Boolean>(term1.parameters.size == term2.parameters.size) andM
-                            (term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
-                                put(bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage))) % {
-                                    pure<Context, Boolean>(parameter1.relevant == parameter2.relevant) andM
-                                            subtypeTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
+                    term1 is C.VTerm.Or -> term1.variants.allM { subtypeTerms(it.value, term2) }
+                    term2 is C.VTerm.Or -> term2.variants.anyM { subtypeTerms(term1, it.value) }
+                    term2 is C.VTerm.And -> term2.variants.allM { subtypeTerms(term1, it.value) }
+                    term1 is C.VTerm.And -> term1.variants.anyM { subtypeTerms(it.value, term2) }
+                    term1 is C.VTerm.List && term2 is C.VTerm.List ->
+                        subtypeTerms(term1.element.value, term2.element.value) andM
+                                unifyTerms(term1.size.value, term2.size.value).lift(normalizer) { withNormalizer(it) }
+                    term1 is C.VTerm.Compound && term2 is C.VTerm.Compound ->
+                        term2.elements.entries.allM { entry2 ->
+                            val element1 = term1.elements[entry2.key]
+                            if (element1 != null) {
+                                pure<Context, Boolean>(element1.relevant == entry2.value.relevant) andM run {
+                                    val upper1 = normalizer.evalTerm(element1.type)
+                                    put(bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage))) % {
+                                        subtypeTerms(upper1, normalizer.evalTerm(entry2.value.type))
+                                    }
                                 }
-                            } andM
-                            subtypeTerms(normalizer.evalTerm(term1.resultant), normalizer.evalTerm(term2.resultant)) andM
-                            pure(term2.effects.containsAll(term1.effects))
-                term1 is C.VTerm.Code && term2 is C.VTerm.Code -> subtypeTerms(term1.element.value, term2.element.value)
-                else -> unifyTerms(term1, term2).lift(normalizer) { withNormalizer(it) }
+                            } else pure(false)
+                        }
+                    term1 is C.VTerm.Box && term2 is C.VTerm.Box -> subtypeTerms(term1.content.value, term2.content.value)
+                    term1 is C.VTerm.Ref && term2 is C.VTerm.Ref -> subtypeTerms(term1.element.value, term2.element.value)
+                    term1 is C.VTerm.Fun && term2 is C.VTerm.Fun ->
+                        pure<Context, Boolean>(term1.parameters.size == term2.parameters.size) andM
+                                (term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
+                                    put(bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage))) % {
+                                        pure<Context, Boolean>(parameter1.relevant == parameter2.relevant) andM
+                                                subtypeTerms(normalizer.evalTerm(parameter2.type), normalizer.evalTerm(parameter1.type))
+                                    }
+                                } andM
+                                subtypeTerms(normalizer.evalTerm(term1.resultant), normalizer.evalTerm(term2.resultant)) andM
+                                pure(term2.effects.containsAll(term1.effects))
+                    term1 is C.VTerm.Code && term2 is C.VTerm.Code -> subtypeTerms(term1.element.value, term2.element.value)
+                    else -> unifyTerms(term1, term2).lift(normalizer) { withNormalizer(it) }
+                }
             }
         }
 

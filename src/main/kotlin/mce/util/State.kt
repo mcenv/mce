@@ -30,6 +30,8 @@ inline operator fun <S, A, B> State<S, A>.rem(crossinline transform: S.(A) -> St
 
 inline fun <S, T, A> State<S, A>.lift(s: S, crossinline transform: (S) -> T): State<T, A> = State { (this@lift with s).let { (s, a) -> transform(s) to a } }
 
+inline fun <S, A> scope(crossinline block: S.() -> State<S, A>): State<S, A> = State { with(block()) { run().let { (_, a) -> this@State to a } } }
+
 inline fun <S, A> Iterable<A>.forEachM(crossinline transform: S.(A) -> State<S, Unit>): State<S, Unit> = State {
     var accumulator = this
     for (a in this@forEachM) {
