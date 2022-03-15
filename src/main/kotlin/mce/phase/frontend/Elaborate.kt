@@ -555,9 +555,7 @@ class Elaborate private constructor(
                 pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
                         value1.parameters.forEachM<Normalizer, Name> { parameter ->
                             put(bind(lazyOf(C.VTerm.Var(parameter.text, size))))
-                        } % {
-                    unifyTerms(evalTerm(value1.body), evalTerm(value2.body))
-                }
+                        } % { unifyTerms(evalTerm(value1.body), evalTerm(value2.body)) }
             value1 is C.VTerm.Apply && value2 is C.VTerm.Apply ->
                 unifyTerms(value1.function, value2.function) andM
                         (value1.arguments zip value2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
@@ -584,7 +582,8 @@ class Elaborate private constructor(
                 pure<Normalizer, Boolean>(value1.elements.size == value2.elements.size) andM
                         (value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
                             put(bind(lazyOf(C.VTerm.Var(entry1.key.text, size)))) % {
-                                unifyTerms(evalTerm(entry1.value), evalTerm(entry2.value)) // TODO: compare keys
+                                pure<Normalizer, Boolean>(entry1.key.text == entry2.key.text) andM
+                                        unifyTerms(evalTerm(entry1.value), evalTerm(entry2.value))
                             }
                         }
             value1 is C.VTerm.Box && value2 is C.VTerm.Box -> unifyTerms(value1.content.value, value2.content.value)
@@ -594,7 +593,7 @@ class Elaborate private constructor(
                         unifyTerms(value1.right.value, value2.right.value)
             value1 is C.VTerm.Fun && value2 is C.VTerm.Fun ->
                 pure<Normalizer, Boolean>(value1.parameters.size == value2.parameters.size) andM
-                        (value1.parameters zip value2.parameters).allM<Normalizer, Pair<C.Parameter, C.Parameter>> { (parameter1, parameter2) ->
+                        (value1.parameters zip value2.parameters).allM { (parameter1, parameter2) ->
                             put(bind(lazyOf(C.VTerm.Var("", size)))) % {
                                 unifyTerms(evalTerm(parameter2.type), evalTerm(parameter1.type))
                             }
@@ -610,9 +609,7 @@ class Elaborate private constructor(
      */
     private fun subtypeTerms(term1: C.VTerm, term2: C.VTerm): State<Context, Boolean> =
         gets<Context, Pair<C.VTerm, C.VTerm>> {
-            val term1 = normalizer.force(term1)
-            val term2 = normalizer.force(term2)
-            term1 to term2
+            normalizer.force(term1) to normalizer.force(term2)
         } % { (term1, term2) ->
             when {
                 term1 is C.VTerm.Var && term2 is C.VTerm.Var && term1.level == term2.level -> pure(true)
