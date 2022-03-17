@@ -21,16 +21,20 @@ import kotlin.math.max
 import kotlin.math.min
 
 class Executor(
-    private val functions: Map<ResourceLocation, Function>,
+    private val functions: Map<ResourceLocation, Function> = emptyMap(),
     private val scoreboard: Scoreboard = Scoreboard(),
     private val storage: NbtStorage = NbtStorage(),
 ) {
     private val queue: ArrayDeque<Command> = ArrayDeque()
 
-    fun runFunction(function: Function) {
-        queue += function.commands
-        while (queue.isNotEmpty()) {
-            runCommand(queue.removeFirst())
+    fun runTopFunction(name: ResourceLocation) {
+        queue += functions[name]!!.commands
+        try {
+            while (queue.isNotEmpty()) {
+                runCommand(queue.removeFirst())
+            }
+        } finally {
+            queue.clear()
         }
     }
 
@@ -152,24 +156,28 @@ class Executor(
         return modified
     }
 
-    private fun insertAtIndex(target: ResourceLocation, path: NbtPath, index: Int, source: SourceProvider): Int {
-        val targets = path.getOrCreate(storage[target], lazy { ListNbt(mutableListOf(), null) })
-        val sources: List<MutableNbt> = when (source) {
+    private fun getSources(source: SourceProvider): List<MutableNbt> {
+        return when (source) {
             is SourceProvider.Value -> listOf(source.value.toMutableNbt())
             is SourceProvider.From -> when (val p = source.path) {
                 null -> listOf(storage[source.source])
                 else -> p.get(storage[source.source])
             }
         }
+    }
+
+    private fun insertAtIndex(target: ResourceLocation, path: NbtPath, index: Int, source: SourceProvider): Int {
+        val targets = path.getOrCreate(storage[target], lazy { ListNbt(mutableListOf(), null) })
+        val sources = getSources(source)
         var result = 0
         for (t in targets) {
             if (t !is CollectionNbt<*>) {
                 throw Exception()
             }
             var r = 0
-            var i = if (index < 0) t.size + 1 else index
+            var i = if (index < 0) t.size + index + 1 else index
             for (s in sources) {
-                if (t.addNbt(index, s.clone())) {
+                if (t.addNbt(i, s.clone())) {
                     ++i
                     r = 1
                 }
@@ -180,7 +188,7 @@ class Executor(
     }
 
     private fun setData(target: ResourceLocation, path: NbtPath, source: SourceProvider): Int {
-        TODO()
+        return path.set(storage[target], lazy { getSources(source).last() })
     }
 
     private fun mergeData(target: ResourceLocation, path: NbtPath, source: SourceProvider): Int {
