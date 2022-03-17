@@ -186,6 +186,17 @@ data class StringNbt(val data: String) : MutableNbt() {
 data class CompoundNbt(val elements: MutableMap<String, MutableNbt>) : MutableNbt(), MutableMap<String, MutableNbt> by elements {
     override val type: NbtType = NbtType.COMPOUND
     override fun clone(): CompoundNbt = copy()
+
+    fun merge(other: CompoundNbt): CompoundNbt = apply {
+        other.forEach { (key, value) ->
+            val target = this[key]
+            if (value is CompoundNbt && target is CompoundNbt) {
+                target.merge(value)
+            } else {
+                this[key] = value.clone()
+            }
+        }
+    }
 }
 
 fun Nbt.toMutableNbt(): MutableNbt = when (this) {

@@ -192,7 +192,25 @@ class Executor(
     }
 
     private fun mergeData(target: ResourceLocation, path: NbtPath, source: SourceProvider): Int {
-        TODO()
+        val targets = path.getOrCreate(storage[target], lazy { CompoundNbt(mutableMapOf()) })
+        val sources = getSources(source)
+        var result = 0
+        for (t in targets) {
+            if (t !is CompoundNbt) {
+                throw Exception()
+            }
+            val before = t.clone()
+            for (s in sources) {
+                if (s !is CompoundNbt) {
+                    throw Exception()
+                }
+                t.merge(s)
+            }
+            if (before != t) {
+                ++result
+            }
+        }
+        return result
     }
 
     private fun runFunction(name: ResourceLocation): Int {
