@@ -12,8 +12,8 @@ class StateTest {
             gets { this[level] }
 
         assertEquals(
-            persistentListOf("a", "b", "c") to "a",
-            eval(0) with persistentListOf("a", "b", "c"),
+            "a",
+            eval(0).run(persistentListOf("a", "b", "c")),
         )
     }
 }

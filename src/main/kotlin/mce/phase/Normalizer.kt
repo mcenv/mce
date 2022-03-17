@@ -79,7 +79,9 @@ class Normalizer(
         is C.Term.Def -> {
             val item = items[term.name]!! as C.Item.Def
             if (item.modifiers.contains(C.Modifier.BUILTIN)) {
-                val normalizer = term.arguments.fold(this) { normalizer, argument -> normalizer.bind(lazy { normalizer.evalTerm(argument) }) }
+                val normalizer = term.arguments.fold(this) { normalizer, argument ->
+                    normalizer.bind(lazy { normalizer.evalTerm(argument) })
+                }
                 builtins[term.name]!!(normalizer)
             } else evalTerm(item.body)
         }
