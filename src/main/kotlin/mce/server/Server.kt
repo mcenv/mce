@@ -11,6 +11,8 @@ import mce.phase.frontend.Diagnostic.Companion.serializeTerm
 import mce.phase.frontend.Elaborate
 import mce.phase.frontend.Parse
 import mce.phase.frontend.Zonk
+import mce.phase.quoteTerm
+import mce.util.run
 import mce.ast.Surface as S
 
 class Server {
@@ -51,14 +53,14 @@ class Server {
 
     suspend fun hover(name: String, id: Id): HoverItem {
         val output = fetch(Key.ElaborateResult(name))
-        val type = serializeTerm(output.normalizer.quoteTerm(output.types[id]!!))
+        val type = serializeTerm(quoteTerm(output.types[id]!!).run(output.normalizer))
         return HoverItem(type)
     }
 
     suspend fun completion(name: String, id: Id): List<CompletionItem> {
         val output = fetch(Key.ElaborateResult(name))
         return output.completions[id]?.let { completions ->
-            completions.map { (name, type) -> CompletionItem(name, serializeTerm(output.normalizer.quoteTerm(type))) }
+            completions.map { (name, type) -> CompletionItem(name, serializeTerm(quoteTerm(type).run(output.normalizer))) }
         } ?: emptyList()
     }
 

@@ -3,6 +3,8 @@ package mce.phase.frontend
 import mce.ast.Id
 import mce.phase.Normalizer
 import mce.phase.map
+import mce.phase.quoteTerm
+import mce.util.run
 import mce.ast.Core as C
 
 /**
@@ -69,7 +71,7 @@ class Zonk private constructor(
                 diagnostics += Diagnostic.UnsolvedMeta(term.id!!)
                 term
             }
-            else -> normalizer.quoteTerm(solution)
+            else -> quoteTerm(solution).run(normalizer)
         }
         else -> term.map { zonkTerm(it) }
     }

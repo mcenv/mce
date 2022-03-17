@@ -4,6 +4,8 @@ import mce.ast.Id
 import mce.phase.Normalizer
 import mce.phase.frontend.Zonk
 import mce.phase.map
+import mce.phase.normTerm
+import mce.util.run
 import mce.ast.Core as C
 
 /**
@@ -67,7 +69,7 @@ class Stage private constructor(
         is C.Term.Meta -> throw Error()
         is C.Term.CodeOf -> throw Error()
         is C.Term.Splice -> {
-            val staged = normalizer.normTerm(term)
+            val staged = normTerm(term).run(normalizer)
             stageTerm(staged)
         }
         is C.Term.Code -> throw Error()

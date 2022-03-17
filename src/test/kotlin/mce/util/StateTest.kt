@@ -8,8 +8,9 @@ import kotlin.test.assertEquals
 class StateTest {
     @Test
     fun simple() {
-        fun eval(level: Int): State<PersistentList<String>, String> =
-            gets { this[level] }
+        fun eval(level: Int): State<PersistentList<String>, String> = {
+            !gets { this[level] }
+        }
 
         assertEquals(
             "a",
