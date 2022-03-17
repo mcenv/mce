@@ -36,7 +36,7 @@ class Zonk private constructor(
         val lower = parameter.lower?.let { zonkTerm(it) }
         val upper = parameter.upper?.let { zonkTerm(it) }
         val type = zonkTerm(parameter.type)
-        return C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+        return C.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
     }
 
     private fun zonkModule(module: C.Module): C.Module = when (module) {

@@ -30,7 +30,7 @@ class Elaborate private constructor(
         val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
         when (item) {
             is S.Item.Def -> {
-                !modify { meta(item.modifiers.contains(S.Modifier.META)).irrelevant() }
+                !modify { copy(meta = item.modifiers.contains(S.Modifier.META), termRelevant = false, typeRelevant = true) }
                 val parameters = !bindParameters(item.parameters)
                 val resultant = !checkTerm(item.resultant, TYPE)
                 val vResultant = !lift({ normalizer }, evalTerm(resultant))
@@ -39,7 +39,7 @@ class Elaborate private constructor(
                         if (item.modifiers.contains(S.Modifier.BUILTIN)) {
                             pure(C.Term.Hole(item.body.id))
                         } else {
-                            !modify { relevant() }
+                            !modify { copy(termRelevant = true, typeRelevant = false) }
                             checkTerm(item.body, vResultant)
                         }
                         )
@@ -90,8 +90,8 @@ class Elaborate private constructor(
                 val vLower = lower?.let { !lift({ normalizer }, evalTerm(it)) }
                 val upper = parameter.upper?.let { !checkTerm(it, vType) }
                 val vUpper = upper?.let { !lift({ normalizer }, evalTerm(it)) }
-                !modify { bind(parameter.id, Entry(parameter.relevant, parameter.name, vLower, vUpper, vType, stage)) }
-                C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+                !modify { bind(parameter.id, Entry(parameter.termRelevant, parameter.name, vLower, vUpper, parameter.typeRelevant, vType, stage)) }
+                C.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
             }
         }
     }
@@ -183,7 +183,7 @@ class Elaborate private constructor(
         when (signature) {
             is S.Signature.Def ->
                 !restore {
-                    !modify { irrelevant() }
+                    !modify { copy(termRelevant = false, typeRelevant = true) }
                     val parameters = !bindParameters(signature.parameters)
                     val resultant = !checkTerm(signature.resultant, TYPE)
                     C.Signature.Def(signature.name, parameters, resultant, signature.id)
@@ -212,7 +212,7 @@ class Elaborate private constructor(
             }
             is S.Term.Anno ->
                 !restore {
-                    !modify { irrelevant() }
+                    !modify { copy(termRelevant = false, typeRelevant = true) }
                     val type = !lift({ normalizer }, evalTerm(!checkTerm(term.type, TYPE)))
                     val term = !checkTerm(term.element, type)
                     Typing(term, type)
@@ -226,7 +226,8 @@ class Elaborate private constructor(
                             val entry = entries[level]
                             var type = entry.type
                             if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
-                            if (relevant && !entry.relevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
+                            if (termRelevant && !entry.termRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
+                            if (typeRelevant && !entry.typeRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
                             normalizer.checkRepresentation(term.id, type)
                             type
                         }
@@ -291,13 +292,13 @@ class Elaborate private constructor(
             }
             is S.Term.CodeOf ->
                 !restore {
-                    !modify { up() }
+                    !modify { copy(stage = stage + 1) }
                     val element = !inferTerm(term.element)
                     Typing(C.Term.CodeOf(element.term, term.id), C.VTerm.Code(lazyOf(element.type)))
                 }
             is S.Term.Splice ->
                 !restore {
-                    !modify { down() }
+                    !modify { copy(stage = stage - 1) }
                     val element = !inferTerm(term.element)
                     val type = when (val type = !gets { normalizer.force(element.type) }) {
                         is C.VTerm.Code -> type.element.value
@@ -330,7 +331,7 @@ class Elaborate private constructor(
             is S.Term.List -> {
                 val element = !checkTerm(term.element, TYPE)
                 !restore {
-                    !modify { irrelevant() }
+                    !modify { copy(termRelevant = false, typeRelevant = true) }
                     val size = !checkTerm(term.size, INT)
                     Typing(C.Term.List(element, size, term.id), TYPE)
                 }
@@ -340,7 +341,7 @@ class Elaborate private constructor(
                     val elements = !term.elements.mapM { entry ->
                         {
                             val element = !checkTerm(entry.type, TYPE)
-                            !modify { bind(entry.id, Entry(false, entry.name.text, END, ANY, !lift({ normalizer }, evalTerm(element)), stage)) }
+                            !modify { bind(entry.id, Entry(false, entry.name.text, END, ANY, true, !lift({ normalizer }, evalTerm(element)), stage)) }
                             entry.name to C.Entry(entry.relevant, element, entry.id)
                         }
                     }
@@ -411,7 +412,7 @@ class Elaborate private constructor(
             is S.Term.Let -> {
                 val init = !inferComputation(computation.init)
                 !restore {
-                    !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)) }
+                    !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
                     val body = !inferComputation(computation.body)
                     Typing(C.Term.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
                 }
@@ -432,12 +433,12 @@ class Elaborate private constructor(
                 val types = !lift({ normalizer }, { !computation.parameters.mapM { fresh(computation.id) } })
                 !restore {
                     !(computation.parameters zip types).forEachM { (parameter, type) ->
-                        modify { bind(parameter.id, Entry(true /* TODO */, parameter.text, END, ANY, type, stage)) }
+                        modify { bind(parameter.id, Entry(true /* TODO */, parameter.text, END, ANY, true, type, stage)) }
                     }
                     val body = !inferComputation(computation.body)
                     !lift({ normalizer }) {
                         val parameters = (computation.parameters zip types).map { (parameter, type) ->
-                            C.Parameter(true /* TODO */, parameter.text, !quoteTerm(END), !quoteTerm(ANY), !quoteTerm(type), parameter.id)
+                            C.Parameter(true /* TODO */, parameter.text, !quoteTerm(END), !quoteTerm(ANY), true, !quoteTerm(type), parameter.id)
                         }
                         Typing(C.Term.FunOf(computation.parameters, body.term, computation.id), C.VTerm.Fun(parameters, !quoteTerm(body.type), body.effects))
                     }
@@ -450,7 +451,7 @@ class Elaborate private constructor(
                         is C.VTerm.Fun -> type
                         else -> {
                             val parameters = computation.arguments.map {
-                                C.Parameter(true, "", null, null, !quoteTerm(!fresh(freshId())), freshId())
+                                C.Parameter(true, "", null, null, true, !quoteTerm(!fresh(freshId())), freshId())
                             }
                             val vResultant = !fresh(freshId())
                             val resultant = !quoteTerm(vResultant)
@@ -527,7 +528,7 @@ class Elaborate private constructor(
                             val vType = !lift({ normalizer }, evalTerm(entry.type))
                             val tElement = !checkTerm(element.second, vType)
                             val vElement = !lift({ normalizer }, evalTerm(tElement))
-                            !modify { bind(element.first.id, Entry(entry.relevant, element.first.text, END, ANY, vType, stage), vElement) }
+                            !modify { bind(element.first.id, Entry(entry.relevant, element.first.text, END, ANY, true, vType, stage), vElement) }
                             element.first to tElement
                         }
                     }
@@ -539,7 +540,7 @@ class Elaborate private constructor(
             }
             term is S.Term.CodeOf && type is C.VTerm.Code ->
                 !restore {
-                    !modify { up() }
+                    !modify { copy(stage = stage + 1) }
                     val element = !checkTerm(term.element, type.element.value)
                     C.Term.CodeOf(element, term.id)
                 }
@@ -563,7 +564,7 @@ class Elaborate private constructor(
             computation is S.Term.Let ->
                 !restore {
                     val init = !inferComputation(computation.init)
-                    !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, init.type, stage)) }
+                    !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
                     val body = !checkComputation(computation.body, type, effects)
                     val effects = init.effects + body.effects
                     Effecting(C.Term.Let(computation.name, init.term, body.term, computation.id), effects)
@@ -591,7 +592,7 @@ class Elaborate private constructor(
                             val lower = parameter.lower?.let { !lift({ normalizer }, evalTerm(it)) }
                             val upper = parameter.upper?.let { !lift({ normalizer }, evalTerm(it)) }
                             val type = !lift({ normalizer }, evalTerm(parameter.type))
-                            !modify { bind(name.id, Entry(parameter.relevant, name.text, lower, upper, type, stage)) }
+                            !modify { bind(name.id, Entry(parameter.termRelevant, name.text, lower, upper, parameter.typeRelevant, type, stage)) }
                         }
                     }
                     val resultant = !checkComputation(computation.body, !lift({ normalizer }, evalTerm(type.resultant)), effects)
@@ -765,7 +766,7 @@ class Elaborate private constructor(
                         if (element1 != null) {
                             element1.relevant == entry2.value.relevant && !restore {
                                 val upper1 = !lift({ normalizer }, evalTerm(element1.type))
-                                !modify { bindUnchecked(Entry(false, entry2.key.text, null, upper1, TYPE, stage)) }
+                                !modify { bindUnchecked(Entry(false, entry2.key.text, null, upper1, true, TYPE, stage)) }
                                 !subtypeTerms(upper1, !lift({ normalizer }, evalTerm(entry2.value.type)))
                             }
                         } else false
@@ -777,8 +778,9 @@ class Elaborate private constructor(
                 term1.parameters.size == term2.parameters.size &&
                         !(term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
                             restore {
-                                !modify { bindUnchecked(Entry(parameter1.relevant, "", null, null /* TODO */, TYPE, stage)) }
-                                parameter1.relevant == parameter2.relevant &&
+                                !modify { bindUnchecked(Entry(parameter1.termRelevant, "", null, null /* TODO */, parameter1.typeRelevant, TYPE, stage)) }
+                                parameter1.termRelevant == parameter2.termRelevant &&
+                                        parameter1.typeRelevant == parameter2.typeRelevant &&
                                         !subtypeTerms(!lift({ normalizer }, evalTerm(parameter2.type)), !lift({ normalizer }, evalTerm(parameter1.type)))
                             }
                         } &&
@@ -796,7 +798,7 @@ class Elaborate private constructor(
         when (pattern) {
             is S.Pattern.Var -> {
                 val type = !lift({ normalizer }, fresh(pattern.id))
-                !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage)) }
+                !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, true, type, stage)) }
                 C.Pattern.Var(pattern.name, pattern.id) to type
             }
             is S.Pattern.UnitOf -> C.Pattern.UnitOf(pattern.id) to UNIT
@@ -883,7 +885,7 @@ class Elaborate private constructor(
         }
         when {
             pattern is S.Pattern.Var -> {
-                !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, type, stage)) }
+                !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, true, type, stage)) }
                 C.Pattern.Var(pattern.name, pattern.id)
             }
             pattern is S.Pattern.ListOf && type is C.VTerm.List -> {
@@ -921,7 +923,7 @@ class Elaborate private constructor(
                     !match(type.left.value, type.right.value)
                     !get()
                 })
-                !modify { withNormalizer(normalizer) }
+                !modify { copy(normalizer = normalizer) }
                 C.Pattern.Refl(pattern.id)
             }
             else -> {
@@ -1061,10 +1063,11 @@ class Elaborate private constructor(
     )
 
     private data class Entry(
-        val relevant: Boolean,
+        val termRelevant: Boolean,
         val name: String,
         val lower: C.VTerm?,
         val upper: C.VTerm?,
+        val typeRelevant: Boolean,
         val type: C.VTerm,
         val stage: Int,
     )
@@ -1074,7 +1077,8 @@ class Elaborate private constructor(
         val normalizer: Normalizer,
         val meta: Boolean,
         val stage: Int,
-        val relevant: Boolean,
+        val termRelevant: Boolean,
+        val typeRelevant: Boolean,
     ) {
         val size: Int get() = entries.size
 
@@ -1082,21 +1086,18 @@ class Elaborate private constructor(
 
         fun bind(id: Id, entry: Entry, term: C.VTerm? = null): Context = bindUnchecked(entry, term).also { checkPhase(id, entry.type) }
 
-        fun bindUnchecked(entry: Entry, term: C.VTerm? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(term ?: C.VTerm.Var(entry.name, size))), meta, stage, relevant)
+        fun bindUnchecked(entry: Entry, term: C.VTerm? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(term ?: C.VTerm.Var(entry.name, size))), meta, stage, termRelevant, typeRelevant)
 
-        fun empty(): Context = Context(persistentListOf(), normalizer.empty(), meta, stage, relevant)
+        fun empty(): Context = Context(persistentListOf(), normalizer.empty(), meta, stage, termRelevant, typeRelevant)
 
-        fun withNormalizer(normalizer: Normalizer): Context = Context(entries, normalizer, meta, stage, relevant)
-
-        fun meta(meta: Boolean): Context = Context(entries, normalizer, meta, stage, relevant)
-
-        fun up(): Context = Context(entries, normalizer, meta, stage + 1, relevant)
-
-        fun down(): Context = Context(entries, normalizer, meta, stage - 1, relevant)
-
-        fun relevant(): Context = if (relevant) this else Context(entries, normalizer, meta, stage, true)
-
-        fun irrelevant(): Context = if (!relevant) this else Context(entries, normalizer, meta, stage, false)
+        fun copy(
+            entries: PersistentList<Entry> = this.entries,
+            normalizer: Normalizer = this.normalizer,
+            meta: Boolean = this.meta,
+            stage: Int = this.stage,
+            termRelevant: Boolean = this.termRelevant,
+            typeRelevant: Boolean = this.typeRelevant,
+        ): Context = Context(entries, normalizer, meta, stage, termRelevant, typeRelevant)
 
         fun checkPhase(id: Id, type: C.VTerm) {
             if (!meta && type is C.VTerm.Code) diagnose(Diagnostic.PhaseMismatch(id))
@@ -1122,7 +1123,7 @@ class Elaborate private constructor(
 
         operator fun invoke(item: S.Item, items: Map<String, C.Item>): Result = Elaborate(items).run {
             val normalizer = Normalizer(persistentListOf(), items, solutions)
-            val (item, _) = inferItem(item).run(Context(persistentListOf(), normalizer, false, 0, true))
+            val (item, _) = inferItem(item).run(Context(persistentListOf(), normalizer, false, 0, true, true))
             Result(item, types, normalizer, diagnostics, completions)
         }
     }

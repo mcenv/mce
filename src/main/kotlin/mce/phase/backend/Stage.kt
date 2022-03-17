@@ -35,7 +35,7 @@ class Stage private constructor(
         val lower = parameter.lower?.let { stageTerm(it) }
         val upper = parameter.upper?.let { stageTerm(it) }
         val type = stageTerm(parameter.type)
-        return C.Parameter(parameter.relevant, parameter.name, lower, upper, type, parameter.id)
+        return C.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
     }
 
     private fun stageModule(module: C.Module): C.Module = when (module) {

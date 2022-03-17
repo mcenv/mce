@@ -62,14 +62,9 @@ class Parse private constructor(
     }
 
     private fun parseParameter(id: Id = freshId()): S.Parameter {
-        val erased = if (peekChar() == '0') {
+        return if (peekChar() == '0') {
             skip()
-            false
-        } else true
-        val name = parseTerm()
-        return if (peekChar() == ',' || peekChar() == ']') {
-            S.Parameter(erased, "", null, null, name, id)
-        } else {
+            val name = readWord()
             val lower = if (peekChar() == '≥') {
                 skip()
                 parseTerm()
@@ -78,11 +73,36 @@ class Parse private constructor(
                 skip()
                 parseTerm()
             } else null
-            val type = run {
+            val (typeRelevant, type) = run {
                 expect(':')
-                parseTerm()
+                (if (peekChar() == '0') {
+                    skip()
+                    false
+                } else true) to parseTerm()
             }
-            S.Parameter(erased, (name as S.Term.Var).name, lower, upper, type, id)
+            S.Parameter(false, name, lower, upper, typeRelevant, type, id)
+        } else {
+            val term = parseTerm()
+            return if (peekChar() == ',' || peekChar() == ']') {
+                S.Parameter(true, "", null, null, true, term, id)
+            } else {
+                val lower = if (peekChar() == '≥') {
+                    skip()
+                    parseTerm()
+                } else null
+                val upper = if (peekChar() == '≤') {
+                    skip()
+                    parseTerm()
+                } else null
+                val (typeRelevant, type) = run {
+                    expect(':')
+                    (if (peekChar() == '0') {
+                        skip()
+                        false
+                    } else true) to parseTerm()
+                }
+                S.Parameter(true, (term as S.Term.Var).name, lower, upper, typeRelevant, type, id)
+            }
         }
     }
 

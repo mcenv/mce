@@ -55,7 +55,7 @@ object Surface {
         META,
     }
 
-    data class Parameter(val relevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val type: Term, val id: Id)
+    data class Parameter(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
 
     data class Entry(val relevant: KBoolean, val name: Name, val type: Term, val id: Id)
 

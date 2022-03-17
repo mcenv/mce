@@ -472,4 +472,10 @@ class ElaborateTest {
     fun irrelevantCompoundEntries() {
         elaborate("irrelevant_compound_entries").success()
     }
+
+    @Test
+    fun typeRelevanceMismatch() {
+        val result = elaborate("type_relevance_mismatch")
+        assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(UUID(0, 0)))
+    }
 }

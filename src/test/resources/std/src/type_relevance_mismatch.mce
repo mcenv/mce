@@ -1,0 +1,1 @@
+def type_relevance_mismatch [α : 0 type, a : (#0-0-0-0-0 α)] : int ≔ 0
