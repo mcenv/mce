@@ -3,245 +3,259 @@ package mce.phase.backend
 import mce.ast.Id
 import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import mce.ast.Core as C
-import mce.ast.Defunctionalized as D
+import mce.ast.core.Effect as CEffect
+import mce.ast.core.Item as CItem
+import mce.ast.core.Module as CModule
+import mce.ast.core.Parameter as CParameter
+import mce.ast.core.Pattern as CPattern
+import mce.ast.core.Signature as CSignature
+import mce.ast.core.Term as CTerm
+import mce.ast.core.VTerm as CVTerm
+import mce.ast.defun.Effect as DEffect
+import mce.ast.defun.Entry as DEntry
+import mce.ast.defun.Item as DItem
+import mce.ast.defun.Module as DModule
+import mce.ast.defun.Parameter as DParameter
+import mce.ast.defun.Pattern as DPattern
+import mce.ast.defun.Signature as DSignature
+import mce.ast.defun.Term as DTerm
 
 @Suppress("NAME_SHADOWING")
 class Defunctionalize private constructor() {
-    private val functions: MutableMap<Int, D.Term> = mutableMapOf()
+    private val functions: MutableMap<Int, DTerm> = mutableMapOf()
 
-    private fun defunctionalizeItem(item: C.Item): D.Item = when (item) {
-        is C.Item.Def -> {
+    private fun defunctionalizeItem(item: CItem): DItem = when (item) {
+        is CItem.Def -> {
             val parameters = item.parameters.map { defunctionalizeParameter(it) }
             val body = defunctionalizeTerm(item.body)
-            D.Item.Def(item.imports, item.exports, item.name, parameters, body, item.id)
+            DItem.Def(item.imports, item.exports, item.name, parameters, body, item.id)
         }
-        is C.Item.Mod -> {
+        is CItem.Mod -> {
             val body = defunctionalizeModule(item.body)
-            D.Item.Mod(item.imports, item.exports, item.name, body, item.id)
+            DItem.Mod(item.imports, item.exports, item.name, body, item.id)
         }
-        is C.Item.Test -> {
+        is CItem.Test -> {
             val body = defunctionalizeTerm(item.body)
-            D.Item.Test(item.imports, item.exports, item.name, body, item.id)
+            DItem.Test(item.imports, item.exports, item.name, body, item.id)
         }
     }
 
-    private fun defunctionalizeParameter(parameter: C.Parameter): D.Parameter {
+    private fun defunctionalizeParameter(parameter: CParameter): DParameter {
         val lower = parameter.lower?.let { defunctionalizeTerm(it) }
         val upper = parameter.upper?.let { defunctionalizeTerm(it) }
         val type = defunctionalizeTerm(parameter.type)
-        return D.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
+        return DParameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
     }
 
-    private fun defunctionalizeModule(module: C.Module): D.Module = when (module) {
-        is C.Module.Var -> D.Module.Var(module.name, module.id)
-        is C.Module.Str -> {
+    private fun defunctionalizeModule(module: CModule): DModule = when (module) {
+        is CModule.Var -> DModule.Var(module.name, module.id)
+        is CModule.Str -> {
             val items = module.items.map { defunctionalizeItem(it) }
-            D.Module.Str(items, module.id!!)
+            DModule.Str(items, module.id!!)
         }
-        is C.Module.Sig -> {
+        is CModule.Sig -> {
             val signatures = module.signatures.map { defunctionalizeSignature(it) }
-            D.Module.Sig(signatures, module.id!!)
+            DModule.Sig(signatures, module.id!!)
         }
-        is C.Module.Type -> D.Module.Type(module.id)
+        is CModule.Type -> DModule.Type(module.id)
     }
 
-    private fun defunctionalizeSignature(signature: C.Signature): D.Signature = when (signature) {
-        is C.Signature.Def -> {
+    private fun defunctionalizeSignature(signature: CSignature): DSignature = when (signature) {
+        is CSignature.Def -> {
             val parameters = signature.parameters.map { defunctionalizeParameter(it) }
             val resultant = defunctionalizeTerm(signature.resultant)
-            D.Signature.Def(signature.name, parameters, resultant, signature.id!!)
+            DSignature.Def(signature.name, parameters, resultant, signature.id!!)
         }
-        is C.Signature.Mod -> {
+        is CSignature.Mod -> {
             val type = defunctionalizeModule(signature.type)
-            D.Signature.Mod(signature.name, type, signature.id!!)
+            DSignature.Mod(signature.name, type, signature.id!!)
         }
-        is C.Signature.Test -> D.Signature.Test(signature.name, signature.id!!)
+        is CSignature.Test -> DSignature.Test(signature.name, signature.id!!)
     }
 
-    private fun defunctionalizeTerm(term: C.Term): D.Term = when (term) {
-        is C.Term.Hole -> throw Error()
-        is C.Term.Meta -> throw Error()
-        is C.Term.Var -> D.Term.Var(term.name, term.level, term.id!!)
-        is C.Term.Def -> D.Term.Def(term.name, term.arguments.map { defunctionalizeTerm(it) }, term.id!!)
-        is C.Term.Let -> {
+    private fun defunctionalizeTerm(term: CTerm): DTerm = when (term) {
+        is CTerm.Hole -> throw Error()
+        is CTerm.Meta -> throw Error()
+        is CTerm.Var -> DTerm.Var(term.name, term.level, term.id!!)
+        is CTerm.Def -> DTerm.Def(term.name, term.arguments.map { defunctionalizeTerm(it) }, term.id!!)
+        is CTerm.Let -> {
             val init = defunctionalizeTerm(term.init)
             val body = defunctionalizeTerm(term.body)
-            D.Term.Let(term.name, init, body, term.id!!)
+            DTerm.Let(term.name, init, body, term.id!!)
         }
-        is C.Term.Match -> {
+        is CTerm.Match -> {
             val scrutinee = defunctionalizeTerm(term.scrutinee)
             val clauses = term.clauses.map { defunctionalizePattern(it.first) to defunctionalizeTerm(it.second) }
-            D.Term.Match(scrutinee, clauses, term.id!!)
+            DTerm.Match(scrutinee, clauses, term.id!!)
         }
-        is C.Term.UnitOf -> D.Term.UnitOf(term.id!!)
-        is C.Term.BoolOf -> D.Term.BoolOf(term.value, term.id!!)
-        is C.Term.ByteOf -> D.Term.ByteOf(term.value, term.id!!)
-        is C.Term.ShortOf -> D.Term.ShortOf(term.value, term.id!!)
-        is C.Term.IntOf -> D.Term.IntOf(term.value, term.id!!)
-        is C.Term.LongOf -> D.Term.LongOf(term.value, term.id!!)
-        is C.Term.FloatOf -> D.Term.FloatOf(term.value, term.id!!)
-        is C.Term.DoubleOf -> D.Term.DoubleOf(term.value, term.id!!)
-        is C.Term.StringOf -> D.Term.StringOf(term.value, term.id!!)
-        is C.Term.ByteArrayOf -> {
+        is CTerm.UnitOf -> DTerm.UnitOf(term.id!!)
+        is CTerm.BoolOf -> DTerm.BoolOf(term.value, term.id!!)
+        is CTerm.ByteOf -> DTerm.ByteOf(term.value, term.id!!)
+        is CTerm.ShortOf -> DTerm.ShortOf(term.value, term.id!!)
+        is CTerm.IntOf -> DTerm.IntOf(term.value, term.id!!)
+        is CTerm.LongOf -> DTerm.LongOf(term.value, term.id!!)
+        is CTerm.FloatOf -> DTerm.FloatOf(term.value, term.id!!)
+        is CTerm.DoubleOf -> DTerm.DoubleOf(term.value, term.id!!)
+        is CTerm.StringOf -> DTerm.StringOf(term.value, term.id!!)
+        is CTerm.ByteArrayOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.ByteArrayOf(elements, term.id!!)
+            DTerm.ByteArrayOf(elements, term.id!!)
         }
-        is C.Term.IntArrayOf -> {
+        is CTerm.IntArrayOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.IntArrayOf(elements, term.id!!)
+            DTerm.IntArrayOf(elements, term.id!!)
         }
-        is C.Term.LongArrayOf -> {
+        is CTerm.LongArrayOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.LongArrayOf(elements, term.id!!)
+            DTerm.LongArrayOf(elements, term.id!!)
         }
-        is C.Term.ListOf -> {
+        is CTerm.ListOf -> {
             val elements = term.elements.map { defunctionalizeTerm(it) }
-            D.Term.ListOf(elements, term.id!!)
+            DTerm.ListOf(elements, term.id!!)
         }
-        is C.Term.CompoundOf -> {
+        is CTerm.CompoundOf -> {
             val elements = term.elements.map { (name, element) -> name to defunctionalizeTerm(element) }
-            D.Term.CompoundOf(elements.toLinkedHashMap(), term.id!!)
+            DTerm.CompoundOf(elements.toLinkedHashMap(), term.id!!)
         }
-        is C.Term.BoxOf -> {
+        is CTerm.BoxOf -> {
             val content = defunctionalizeTerm(term.content)
             val tag = defunctionalizeTerm(term.tag)
-            D.Term.BoxOf(content, tag, term.id!!)
+            DTerm.BoxOf(content, tag, term.id!!)
         }
-        is C.Term.RefOf -> {
+        is CTerm.RefOf -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.RefOf(element, term.id!!)
+            DTerm.RefOf(element, term.id!!)
         }
-        is C.Term.Refl -> D.Term.Refl(term.id!!)
-        is C.Term.FunOf -> {
+        is CTerm.Refl -> DTerm.Refl(term.id!!)
+        is CTerm.FunOf -> {
             val tag = freshTag()
-            D.Term.FunOf(tag, term.id!!).also {
+            DTerm.FunOf(tag, term.id!!).also {
                 val body = defunctionalizeTerm(term.body)
                 functions[tag] = body
             }
         }
-        is C.Term.Apply -> {
+        is CTerm.Apply -> {
             val function = defunctionalizeTerm(term.function)
             val arguments = term.arguments.map { defunctionalizeTerm(it) }
-            D.Term.Apply(function, arguments, term.id!!)
+            DTerm.Apply(function, arguments, term.id!!)
         }
-        is C.Term.CodeOf -> throw Error()
-        is C.Term.Splice -> throw Error()
-        is C.Term.Or -> {
+        is CTerm.CodeOf -> throw Error()
+        is CTerm.Splice -> throw Error()
+        is CTerm.Or -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
-            D.Term.Or(variants, term.id!!)
+            DTerm.Or(variants, term.id!!)
         }
-        is C.Term.And -> {
+        is CTerm.And -> {
             val variants = term.variants.map { defunctionalizeTerm(it) }
-            D.Term.And(variants, term.id!!)
+            DTerm.And(variants, term.id!!)
         }
-        is C.Term.Unit -> D.Term.Unit(term.id!!)
-        is C.Term.Bool -> D.Term.Bool(term.id!!)
-        is C.Term.Byte -> D.Term.Byte(term.id!!)
-        is C.Term.Short -> D.Term.Short(term.id!!)
-        is C.Term.Int -> D.Term.Int(term.id!!)
-        is C.Term.Long -> D.Term.Long(term.id!!)
-        is C.Term.Float -> D.Term.Float(term.id!!)
-        is C.Term.Double -> D.Term.Double(term.id!!)
-        is C.Term.String -> D.Term.String(term.id!!)
-        is C.Term.ByteArray -> D.Term.ByteArray(term.id!!)
-        is C.Term.IntArray -> D.Term.IntArray(term.id!!)
-        is C.Term.LongArray -> D.Term.LongArray(term.id!!)
-        is C.Term.List -> {
+        is CTerm.Unit -> DTerm.Unit(term.id!!)
+        is CTerm.Bool -> DTerm.Bool(term.id!!)
+        is CTerm.Byte -> DTerm.Byte(term.id!!)
+        is CTerm.Short -> DTerm.Short(term.id!!)
+        is CTerm.Int -> DTerm.Int(term.id!!)
+        is CTerm.Long -> DTerm.Long(term.id!!)
+        is CTerm.Float -> DTerm.Float(term.id!!)
+        is CTerm.Double -> DTerm.Double(term.id!!)
+        is CTerm.String -> DTerm.String(term.id!!)
+        is CTerm.ByteArray -> DTerm.ByteArray(term.id!!)
+        is CTerm.IntArray -> DTerm.IntArray(term.id!!)
+        is CTerm.LongArray -> DTerm.LongArray(term.id!!)
+        is CTerm.List -> {
             val element = defunctionalizeTerm(term.element)
             val size = defunctionalizeTerm(term.size)
-            D.Term.List(element, size, term.id!!)
+            DTerm.List(element, size, term.id!!)
         }
-        is C.Term.Compound -> {
-            val elements = term.elements.map { (name, element) -> name to D.Entry(element.relevant, defunctionalizeTerm(element.type), element.id!!) }
-            D.Term.Compound(elements.toLinkedHashMap(), term.id!!)
+        is CTerm.Compound -> {
+            val elements = term.elements.map { (name, element) -> name to DEntry(element.relevant, defunctionalizeTerm(element.type), element.id!!) }
+            DTerm.Compound(elements.toLinkedHashMap(), term.id!!)
         }
-        is C.Term.Box -> {
+        is CTerm.Box -> {
             val content = defunctionalizeTerm(term.content)
-            D.Term.Box(content, term.id!!)
+            DTerm.Box(content, term.id!!)
         }
-        is C.Term.Ref -> {
+        is CTerm.Ref -> {
             val element = defunctionalizeTerm(term.element)
-            D.Term.Ref(element, term.id!!)
+            DTerm.Ref(element, term.id!!)
         }
-        is C.Term.Eq -> {
+        is CTerm.Eq -> {
             val left = defunctionalizeTerm(term.left)
             val right = defunctionalizeTerm(term.right)
-            D.Term.Eq(left, right, term.id!!)
+            DTerm.Eq(left, right, term.id!!)
         }
-        is C.Term.Fun -> {
+        is CTerm.Fun -> {
             val parameters = term.parameters.map { defunctionalizeParameter(it) }
             val resultant = defunctionalizeTerm(term.resultant)
             val effects = term.effects.map { defunctionalizeEffect(it) }.toSet()
-            D.Term.Fun(parameters, resultant, effects, term.id!!)
+            DTerm.Fun(parameters, resultant, effects, term.id!!)
         }
-        is C.Term.Code -> throw Error()
-        is C.Term.Type -> D.Term.Type(term.id!!)
+        is CTerm.Code -> throw Error()
+        is CTerm.Type -> DTerm.Type(term.id!!)
     }
 
-    private fun defunctionalizePattern(pattern: C.Pattern): D.Pattern = when (pattern) {
-        is C.Pattern.Var -> D.Pattern.Var(pattern.name, pattern.id)
-        is C.Pattern.UnitOf -> D.Pattern.UnitOf(pattern.id)
-        is C.Pattern.BoolOf -> D.Pattern.BoolOf(pattern.value, pattern.id)
-        is C.Pattern.ByteOf -> D.Pattern.ByteOf(pattern.value, pattern.id)
-        is C.Pattern.ShortOf -> D.Pattern.ShortOf(pattern.value, pattern.id)
-        is C.Pattern.IntOf -> D.Pattern.IntOf(pattern.value, pattern.id)
-        is C.Pattern.LongOf -> D.Pattern.LongOf(pattern.value, pattern.id)
-        is C.Pattern.FloatOf -> D.Pattern.FloatOf(pattern.value, pattern.id)
-        is C.Pattern.DoubleOf -> D.Pattern.DoubleOf(pattern.value, pattern.id)
-        is C.Pattern.StringOf -> D.Pattern.StringOf(pattern.value, pattern.id)
-        is C.Pattern.ByteArrayOf -> {
+    private fun defunctionalizePattern(pattern: CPattern): DPattern = when (pattern) {
+        is CPattern.Var -> DPattern.Var(pattern.name, pattern.id)
+        is CPattern.UnitOf -> DPattern.UnitOf(pattern.id)
+        is CPattern.BoolOf -> DPattern.BoolOf(pattern.value, pattern.id)
+        is CPattern.ByteOf -> DPattern.ByteOf(pattern.value, pattern.id)
+        is CPattern.ShortOf -> DPattern.ShortOf(pattern.value, pattern.id)
+        is CPattern.IntOf -> DPattern.IntOf(pattern.value, pattern.id)
+        is CPattern.LongOf -> DPattern.LongOf(pattern.value, pattern.id)
+        is CPattern.FloatOf -> DPattern.FloatOf(pattern.value, pattern.id)
+        is CPattern.DoubleOf -> DPattern.DoubleOf(pattern.value, pattern.id)
+        is CPattern.StringOf -> DPattern.StringOf(pattern.value, pattern.id)
+        is CPattern.ByteArrayOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.ByteArrayOf(elements, pattern.id)
+            DPattern.ByteArrayOf(elements, pattern.id)
         }
-        is C.Pattern.IntArrayOf -> {
+        is CPattern.IntArrayOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.IntArrayOf(elements, pattern.id)
+            DPattern.IntArrayOf(elements, pattern.id)
         }
-        is C.Pattern.LongArrayOf -> {
+        is CPattern.LongArrayOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.LongArrayOf(elements, pattern.id)
+            DPattern.LongArrayOf(elements, pattern.id)
         }
-        is C.Pattern.ListOf -> {
+        is CPattern.ListOf -> {
             val elements = pattern.elements.map { defunctionalizePattern(it) }
-            D.Pattern.ListOf(elements, pattern.id)
+            DPattern.ListOf(elements, pattern.id)
         }
-        is C.Pattern.CompoundOf -> {
+        is CPattern.CompoundOf -> {
             val elements = pattern.elements.map { (name, element) -> name to defunctionalizePattern(element) }
-            D.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
+            DPattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
         }
-        is C.Pattern.BoxOf -> {
+        is CPattern.BoxOf -> {
             val content = defunctionalizePattern(pattern.content)
             val tag = defunctionalizePattern(pattern.tag)
-            D.Pattern.BoxOf(content, tag, pattern.id)
+            DPattern.BoxOf(content, tag, pattern.id)
         }
-        is C.Pattern.RefOf -> {
+        is CPattern.RefOf -> {
             val element = defunctionalizePattern(pattern.element)
-            D.Pattern.RefOf(element, pattern.id)
+            DPattern.RefOf(element, pattern.id)
         }
-        is C.Pattern.Refl -> D.Pattern.Refl(pattern.id)
-        is C.Pattern.Unit -> D.Pattern.Unit(pattern.id)
-        is C.Pattern.Bool -> D.Pattern.Bool(pattern.id)
-        is C.Pattern.Byte -> D.Pattern.Byte(pattern.id)
-        is C.Pattern.Short -> D.Pattern.Short(pattern.id)
-        is C.Pattern.Int -> D.Pattern.Int(pattern.id)
-        is C.Pattern.Long -> D.Pattern.Long(pattern.id)
-        is C.Pattern.Float -> D.Pattern.Float(pattern.id)
-        is C.Pattern.Double -> D.Pattern.Double(pattern.id)
-        is C.Pattern.String -> D.Pattern.String(pattern.id)
-        is C.Pattern.ByteArray -> D.Pattern.ByteArray(pattern.id)
-        is C.Pattern.IntArray -> D.Pattern.IntArray(pattern.id)
-        is C.Pattern.LongArray -> D.Pattern.LongArray(pattern.id)
+        is CPattern.Refl -> DPattern.Refl(pattern.id)
+        is CPattern.Unit -> DPattern.Unit(pattern.id)
+        is CPattern.Bool -> DPattern.Bool(pattern.id)
+        is CPattern.Byte -> DPattern.Byte(pattern.id)
+        is CPattern.Short -> DPattern.Short(pattern.id)
+        is CPattern.Int -> DPattern.Int(pattern.id)
+        is CPattern.Long -> DPattern.Long(pattern.id)
+        is CPattern.Float -> DPattern.Float(pattern.id)
+        is CPattern.Double -> DPattern.Double(pattern.id)
+        is CPattern.String -> DPattern.String(pattern.id)
+        is CPattern.ByteArray -> DPattern.ByteArray(pattern.id)
+        is CPattern.IntArray -> DPattern.IntArray(pattern.id)
+        is CPattern.LongArray -> DPattern.LongArray(pattern.id)
     }
 
-    private fun defunctionalizeEffect(effect: C.Effect): D.Effect = when (effect) {
-        is C.Effect.Name -> D.Effect.Name(effect.name)
+    private fun defunctionalizeEffect(effect: CEffect): DEffect = when (effect) {
+        is CEffect.Name -> DEffect.Name(effect.name)
     }
 
     data class Result(
-        val item: D.Item,
-        val types: Map<Id, C.VTerm>,
-        val functions: Map<Int, D.Term>
+        val item: DItem,
+        val types: Map<Id, CVTerm>,
+        val functions: Map<Int, DTerm>
     )
 
     companion object {

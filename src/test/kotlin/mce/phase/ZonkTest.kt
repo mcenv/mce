@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.ast.core.VTerm
 import mce.fetch
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.Zonk
@@ -7,7 +8,6 @@ import mce.server.Key
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertIs
-import mce.ast.Core as C
 
 class ZonkTest {
     private fun zonk(name: String): Zonk.Result = fetch(Key.ZonkResult(name))
@@ -15,7 +15,7 @@ class ZonkTest {
     @Test
     fun meta() {
         val result = zonk("meta")
-        assertIs<C.VTerm.Bool>(result.normalizer.getSolution(0))
+        assertIs<VTerm.Bool>(result.normalizer.getSolution(0))
     }
 
     @Test

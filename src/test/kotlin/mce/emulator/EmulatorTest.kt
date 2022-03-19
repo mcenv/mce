@@ -1,15 +1,15 @@
 package mce.emulator
 
-import mce.ast.Packed
-import mce.ast.Packed.Command
-import mce.ast.Packed.Function
-import mce.ast.Packed.Nbt
-import mce.ast.Packed.ResourceLocation
-import mce.ast.Packed.SourceProvider.Value
+import mce.ast.pack.Command
+import mce.ast.pack.Nbt
+import mce.ast.pack.NbtType
+import mce.ast.pack.ResourceLocation
+import mce.ast.pack.SourceProvider.Value
 import mce.phase.backend.Pack.Companion.get
 import mce.phase.backend.Pack.Companion.nbtPath
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import mce.ast.pack.Function as PFunction
 
 class EmulatorTest {
     @Test
@@ -18,7 +18,7 @@ class EmulatorTest {
         val storage = NbtStorage()
         val executor = Executor(
             functions = mapOf(
-                a to Function(
+                a to PFunction(
                     a,
                     listOf(
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(0))),
@@ -38,7 +38,7 @@ class EmulatorTest {
                             IntNbt(0),
                             IntNbt(1),
                         ),
-                        Packed.NbtType.INT,
+                        NbtType.INT,
                     ),
                 ),
             ),
@@ -53,7 +53,7 @@ class EmulatorTest {
         val storage = NbtStorage()
         val executor = Executor(
             functions = mapOf(
-                a to Function(
+                a to PFunction(
                     a,
                     listOf(
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(0))),
@@ -61,7 +61,7 @@ class EmulatorTest {
                         Command.RunFunction(b),
                     ),
                 ),
-                b to Function(
+                b to PFunction(
                     b,
                     listOf(
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(2))),
@@ -83,7 +83,7 @@ class EmulatorTest {
                             IntNbt(2),
                             IntNbt(3),
                         ),
-                        Packed.NbtType.INT,
+                        NbtType.INT,
                     ),
                 ),
             ),

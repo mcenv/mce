@@ -1,11 +1,11 @@
 package mce.phase.frontend
 
 import mce.ast.Id
+import mce.ast.core.*
 import mce.phase.Normalizer
 import mce.phase.map
 import mce.phase.quoteTerm
 import mce.util.run
-import mce.ast.Core as C
 
 /**
  * Performs zonking.
@@ -16,57 +16,57 @@ class Zonk private constructor(
 ) {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
 
-    private fun zonkItem(item: C.Item): C.Item = when (item) {
-        is C.Item.Def -> {
+    private fun zonkItem(item: Item): Item = when (item) {
+        is Item.Def -> {
             val parameters = item.parameters.map { zonkParameter(it) }
             val body = zonkTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body, item.id)
+            Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body, item.id)
         }
-        is C.Item.Mod -> {
+        is Item.Mod -> {
             val body = zonkModule(item.body)
-            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
+            Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
         }
-        is C.Item.Test -> {
+        is Item.Test -> {
             val body = zonkTerm(item.body)
-            C.Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
+            Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
         }
     }
 
-    private fun zonkParameter(parameter: C.Parameter): C.Parameter {
+    private fun zonkParameter(parameter: Parameter): Parameter {
         val lower = parameter.lower?.let { zonkTerm(it) }
         val upper = parameter.upper?.let { zonkTerm(it) }
         val type = zonkTerm(parameter.type)
-        return C.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
+        return Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
     }
 
-    private fun zonkModule(module: C.Module): C.Module = when (module) {
-        is C.Module.Var -> module
-        is C.Module.Str -> {
+    private fun zonkModule(module: Module): Module = when (module) {
+        is Module.Var -> module
+        is Module.Str -> {
             val items = module.items.map { zonkItem(it) }
-            C.Module.Str(items, module.id)
+            Module.Str(items, module.id)
         }
-        is C.Module.Sig -> {
+        is Module.Sig -> {
             val signatures = module.signatures.map { zonkSignature(it) }
-            C.Module.Sig(signatures, module.id)
+            Module.Sig(signatures, module.id)
         }
-        is C.Module.Type -> module
+        is Module.Type -> module
     }
 
-    private fun zonkSignature(signature: C.Signature): C.Signature = when (signature) {
-        is C.Signature.Def -> {
+    private fun zonkSignature(signature: Signature): Signature = when (signature) {
+        is Signature.Def -> {
             val parameters = signature.parameters.map { zonkParameter(it) }
             val resultant = zonkTerm(signature.resultant)
-            C.Signature.Def(signature.name, parameters, resultant, signature.id)
+            Signature.Def(signature.name, parameters, resultant, signature.id)
         }
-        is C.Signature.Mod -> {
+        is Signature.Mod -> {
             val type = zonkModule(signature.type)
-            C.Signature.Mod(signature.name, type, signature.id)
+            Signature.Mod(signature.name, type, signature.id)
         }
-        is C.Signature.Test -> C.Signature.Test(signature.name, signature.id)
+        is Signature.Test -> Signature.Test(signature.name, signature.id)
     }
 
-    private fun zonkTerm(term: C.Term): C.Term = when (term) {
-        is C.Term.Meta -> when (val solution = normalizer.getSolution(term.index)) {
+    private fun zonkTerm(term: Term): Term = when (term) {
+        is Term.Meta -> when (val solution = normalizer.getSolution(term.index)) {
             null -> {
                 diagnostics += Diagnostic.UnsolvedMeta(term.id!!)
                 term
@@ -77,8 +77,8 @@ class Zonk private constructor(
     }
 
     data class Result(
-        val item: C.Item,
-        val types: Map<Id, C.VTerm>,
+        val item: Item,
+        val types: Map<Id, VTerm>,
         val normalizer: Normalizer,
         val diagnostics: List<Diagnostic>
     )

@@ -1,11 +1,11 @@
 package mce.server
 
 import kotlinx.coroutines.runBlocking
+import mce.ast.surface.Term
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import mce.ast.Surface as S
 
 class ServerTest {
     private fun runServer(action: suspend Server.() -> Unit) {
@@ -19,7 +19,7 @@ class ServerTest {
         runServer {
             val name = "server"
             val id = UUID(0, 0)
-            assertIs<S.Term.Bool>(hover(name, id).type)
+            assertIs<Term.Bool>(hover(name, id).type)
         }
     }
 
@@ -42,7 +42,7 @@ class ServerTest {
             val id = UUID(0, 0)
             val item = completion(name, id).first()
             assertEquals("a", item.name)
-            assertIs<S.Term.Int>(item.type)
+            assertIs<Term.Int>(item.type)
         }
     }
 }

@@ -1,11 +1,11 @@
 package mce.builtin.src.int_array
 
-import mce.ast.Core
+import mce.ast.core.VTerm
 import mce.phase.Normalizer
 
-fun Normalizer.size(): Core.VTerm {
+fun Normalizer.size(): VTerm {
     return when (val `is` = lookup(size - 1)) {
-        is Core.VTerm.ListOf -> Core.VTerm.IntOf(`is`.elements.size)
-        else -> Core.VTerm.Def("int_array/size", listOf(`is`).map { lazyOf(it) })
+        is VTerm.ListOf -> VTerm.IntOf(`is`.elements.size)
+        else -> VTerm.Def("int_array/size", listOf(`is`).map { lazyOf(it) })
     }
 }

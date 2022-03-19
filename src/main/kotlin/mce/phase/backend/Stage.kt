@@ -1,84 +1,84 @@
 package mce.phase.backend
 
 import mce.ast.Id
+import mce.ast.core.*
 import mce.phase.Normalizer
 import mce.phase.frontend.Zonk
 import mce.phase.map
 import mce.phase.normTerm
 import mce.util.run
-import mce.ast.Core as C
 
 /**
  * Performs staging.
  */
 @Suppress("NAME_SHADOWING")
 class Stage private constructor(
-    private val normalizer: Normalizer
+    private val normalizer: Normalizer,
 ) {
-    private fun stageItem(item: C.Item): C.Item = when (item) {
-        is C.Item.Def -> {
+    private fun stageItem(item: Item): Item = when (item) {
+        is Item.Def -> {
             val parameters = item.parameters.map { stageParameter(it) }
             val body = stageTerm(item.body)
-            C.Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body, item.id)
+            Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body, item.id)
         }
-        is C.Item.Mod -> {
+        is Item.Mod -> {
             val body = stageModule(item.body)
-            C.Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
+            Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
         }
-        is C.Item.Test -> {
+        is Item.Test -> {
             val body = stageTerm(item.body)
-            C.Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
+            Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
         }
     }
 
-    private fun stageParameter(parameter: C.Parameter): C.Parameter {
+    private fun stageParameter(parameter: Parameter): Parameter {
         val lower = parameter.lower?.let { stageTerm(it) }
         val upper = parameter.upper?.let { stageTerm(it) }
         val type = stageTerm(parameter.type)
-        return C.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
+        return Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
     }
 
-    private fun stageModule(module: C.Module): C.Module = when (module) {
-        is C.Module.Var -> module
-        is C.Module.Str -> {
+    private fun stageModule(module: Module): Module = when (module) {
+        is Module.Var -> module
+        is Module.Str -> {
             val items = module.items.map { stageItem(it) }
-            C.Module.Str(items, module.id!!)
+            Module.Str(items, module.id!!)
         }
-        is C.Module.Sig -> {
+        is Module.Sig -> {
             val signatures = module.signatures.map { stageSignature(it) }
-            C.Module.Sig(signatures, module.id!!)
+            Module.Sig(signatures, module.id!!)
         }
-        is C.Module.Type -> module
+        is Module.Type -> module
     }
 
-    private fun stageSignature(signature: C.Signature): C.Signature = when (signature) {
-        is C.Signature.Def -> {
+    private fun stageSignature(signature: Signature): Signature = when (signature) {
+        is Signature.Def -> {
             val parameters = signature.parameters.map { stageParameter(it) }
             val resultant = stageTerm(signature.resultant)
-            C.Signature.Def(signature.name, parameters, resultant, signature.id)
+            Signature.Def(signature.name, parameters, resultant, signature.id)
         }
-        is C.Signature.Mod -> {
+        is Signature.Mod -> {
             val type = stageModule(signature.type)
-            C.Signature.Mod(signature.name, type, signature.id)
+            Signature.Mod(signature.name, type, signature.id)
         }
-        is C.Signature.Test -> C.Signature.Test(signature.name, signature.id)
+        is Signature.Test -> Signature.Test(signature.name, signature.id)
     }
 
-    private fun stageTerm(term: C.Term): C.Term = when (term) {
-        is C.Term.Hole -> throw Error()
-        is C.Term.Meta -> throw Error()
-        is C.Term.CodeOf -> throw Error()
-        is C.Term.Splice -> {
+    private fun stageTerm(term: Term): Term = when (term) {
+        is Term.Hole -> throw Error()
+        is Term.Meta -> throw Error()
+        is Term.CodeOf -> throw Error()
+        is Term.Splice -> {
             val staged = normTerm(term).run(normalizer)
             stageTerm(staged)
         }
-        is C.Term.Code -> throw Error()
+        is Term.Code -> throw Error()
         else -> term.map { stageTerm(it) }
     }
 
     data class Result(
-        val item: C.Item,
-        val types: Map<Id, C.VTerm>
+        val item: Item,
+        val types: Map<Id, VTerm>
     )
 
     companion object {

@@ -1,6 +1,6 @@
 package mce.builtin
 
-import mce.ast.Core
+import mce.ast.core.VTerm
 import mce.builtin.src.identity
 import mce.phase.Normalizer
 import mce.builtin.src.byte_array.size as byte_array_size
@@ -15,7 +15,7 @@ import mce.builtin.src.int_array.size as int_array_size
 import mce.builtin.src.list.size as list_size
 import mce.builtin.src.long_array.size as long_array_size
 
-val builtins: Map<String, Normalizer.() -> Core.VTerm> = mapOf(
+val builtins: Map<String, Normalizer.() -> VTerm> = mapOf(
     "identity" to { identity() },
     "int/eq" to { int_eq() },
     "int/ne" to { int_ne() },
@@ -31,11 +31,11 @@ val builtins: Map<String, Normalizer.() -> Core.VTerm> = mapOf(
 )
 
 @Suppress("NAME_SHADOWING")
-val commuter: Comparator<Core.VTerm> = Comparator { term1, term2 ->
+val commuter: Comparator<VTerm> = Comparator { term1, term2 ->
     when {
-        term1 is Core.VTerm.Var && term2 is Core.VTerm.Var -> term1.level.compareTo(term2.level)
-        term1 is Core.VTerm.Var -> 1
-        term2 is Core.VTerm.Var -> -1
+        term1 is VTerm.Var && term2 is VTerm.Var -> term1.level.compareTo(term2.level)
+        term1 is VTerm.Var -> 1
+        term2 is VTerm.Var -> -1
         else -> 0
     }
 }

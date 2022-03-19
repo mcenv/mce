@@ -1,6 +1,6 @@
 package mce.builtin.src
 
-import mce.ast.Core
+import mce.ast.core.VTerm
 import mce.phase.Normalizer
 
-fun Normalizer.identity(): Core.VTerm = lookup(size - 1)
+fun Normalizer.identity(): VTerm = lookup(size - 1)

@@ -4,16 +4,17 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.ast.Id
+import mce.ast.surface.Item
+import mce.ast.surface.Modifier
 import mce.phase.backend.Defunctionalize
 import mce.phase.backend.Pack
 import mce.phase.backend.Stage
-import mce.phase.frontend.Diagnostic.Companion.serializeTerm
 import mce.phase.frontend.Elaborate
 import mce.phase.frontend.Parse
 import mce.phase.frontend.Zonk
+import mce.phase.frontend.serializeTerm
 import mce.phase.quoteTerm
 import mce.util.run
-import mce.ast.Surface as S
 
 class Server {
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
@@ -49,7 +50,7 @@ class Server {
         it.readAllBytes().toString(Charsets.UTF_8)
     }
 
-    private fun visible(item: S.Item, name: String): Boolean = item.modifiers.contains(S.Modifier.BUILTIN) || item.exports.contains("*") || item.exports.contains(name)
+    private fun visible(item: Item, name: String): Boolean = item.modifiers.contains(Modifier.BUILTIN) || item.exports.contains("*") || item.exports.contains(name)
 
     suspend fun hover(name: String, id: Id): HoverItem {
         val output = fetch(Key.ElaborateResult(name))

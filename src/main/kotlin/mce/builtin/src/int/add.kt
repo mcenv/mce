@@ -1,18 +1,18 @@
 package mce.builtin.src.int
 
-import mce.ast.Core
+import mce.ast.core.VTerm
 import mce.builtin.commuter
 import mce.phase.Normalizer
 
-fun Normalizer.add(): Core.VTerm {
+fun Normalizer.add(): VTerm {
     val a = lookup(size - 2)
     val b = lookup(size - 1)
     return when {
-        a is Core.VTerm.IntOf && b is Core.VTerm.IntOf -> Core.VTerm.IntOf(a.value + b.value)
+        a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(a.value + b.value)
         // 0 + b = b
-        a is Core.VTerm.IntOf && a.value == 0 -> b
+        a is VTerm.IntOf && a.value == 0 -> b
         // a + 0 = a
-        b is Core.VTerm.IntOf && b.value == 0 -> a
-        else -> Core.VTerm.Def("int/add", listOf(a, b).sortedWith(commuter).map { lazyOf(it) })
+        b is VTerm.IntOf && b.value == 0 -> a
+        else -> VTerm.Def("int/add", listOf(a, b).sortedWith(commuter).map { lazyOf(it) })
     }
 }

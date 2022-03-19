@@ -1,8 +1,8 @@
 package mce.server
 
-import mce.ast.Surface as S
+import mce.ast.surface.Term
 
 data class CompletionItem(
     val name: String,
-    val type: S.Term,
+    val type: Term,
 )

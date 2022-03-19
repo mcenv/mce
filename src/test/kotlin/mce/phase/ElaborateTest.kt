@@ -1,5 +1,7 @@
 package mce.phase
 
+import mce.ast.core.VTerm
+import mce.ast.surface.Effect
 import mce.fetch
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.Elaborate
@@ -8,8 +10,6 @@ import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertIs
-import mce.ast.Core as C
-import mce.ast.Surface as S
 
 class ElaborateTest {
     private fun elaborate(name: String): Elaborate.Result = fetch(Key.ElaborateResult(name))
@@ -21,8 +21,8 @@ class ElaborateTest {
     @Test
     fun elaborate() {
         val result = elaborate("elaborate").success()
-        assertIs<C.VTerm.Type>(result.types[UUID(0, 0)])
-        assertIs<C.VTerm.Bool>(result.types[UUID(0, 1)])
+        assertIs<VTerm.Type>(result.types[UUID(0, 0)])
+        assertIs<VTerm.Bool>(result.types[UUID(0, 1)])
     }
 
     @Test
@@ -141,7 +141,7 @@ class ElaborateTest {
     @Test
     fun meta() {
         val result = elaborate("meta").success()
-        assertIs<C.VTerm.Bool>(result.normalizer.getSolution(0))
+        assertIs<VTerm.Bool>(result.normalizer.getSolution(0))
     }
 
     @Test
@@ -302,7 +302,7 @@ class ElaborateTest {
     @Test
     fun impureDef() {
         val result = elaborate("impure_def")
-        assertContains(result.diagnostics, Diagnostic.EffectMismatch(emptyList(), listOf(S.Effect.Name("a")), UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.EffectMismatch(emptyList(), listOf(Effect.Name("a")), UUID(0, 0)))
     }
 
     @Test

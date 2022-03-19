@@ -1,7 +1,7 @@
 package mce.server
 
-import mce.ast.Surface as S
+import mce.ast.surface.Term
 
 data class HoverItem(
-    val type: S.Term,
+    val type: Term,
 )

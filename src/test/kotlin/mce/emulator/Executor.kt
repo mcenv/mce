@@ -1,17 +1,7 @@
 package mce.emulator
 
-import mce.ast.Packed.Command
-import mce.ast.Packed.Consumer
-import mce.ast.Packed.Execute
-import mce.ast.Packed.Function
-import mce.ast.Packed.NbtPath
-import mce.ast.Packed.Objective
-import mce.ast.Packed.Operation
-import mce.ast.Packed.ResourceLocation
-import mce.ast.Packed.ScoreHolder
-import mce.ast.Packed.SourceComparator
-import mce.ast.Packed.SourceProvider
-import mce.ast.Packed.StoreType
+import mce.ast.pack.*
+import mce.ast.pack.Function
 import mce.emulator.NbtLens.countMatching
 import mce.emulator.NbtLens.get
 import mce.emulator.NbtLens.getOrCreate

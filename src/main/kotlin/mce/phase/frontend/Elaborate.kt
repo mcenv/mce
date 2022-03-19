@@ -6,55 +6,71 @@ import kotlinx.collections.immutable.plus
 import mce.ast.Id
 import mce.ast.freshId
 import mce.phase.*
-import mce.phase.frontend.Diagnostic.Companion.serializeEffect
-import mce.phase.frontend.Diagnostic.Companion.serializeTerm
 import mce.util.State
 import mce.util.run
 import mce.util.toLinkedHashMap
-import mce.ast.Core as C
-import mce.ast.Surface as S
+import mce.ast.core.Effect as CEffect
+import mce.ast.core.Entry as CEntry
+import mce.ast.core.Item as CItem
+import mce.ast.core.Modifier as CModifier
+import mce.ast.core.Module as CModule
+import mce.ast.core.Parameter as CParameter
+import mce.ast.core.Pattern as CPattern
+import mce.ast.core.Signature as CSignature
+import mce.ast.core.Term as CTerm
+import mce.ast.core.VModule as CVModule
+import mce.ast.core.VSignature as CVSignature
+import mce.ast.core.VTerm as CVTerm
+import mce.ast.surface.Effect as SEffect
+import mce.ast.surface.Item as SItem
+import mce.ast.surface.Modifier as SModifier
+import mce.ast.surface.Module as SModule
+import mce.ast.surface.Parameter as SParameter
+import mce.ast.surface.Pattern as SPattern
+import mce.ast.surface.Signature as SSignature
+import mce.ast.surface.Term as STerm
 
 @Suppress("NAME_SHADOWING")
 class Elaborate private constructor(
-    private val items: Map<String, C.Item>,
+    private val items: Map<String, CItem>,
 ) {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
-    private val completions: MutableMap<Id, List<Pair<String, C.VTerm>>> = mutableMapOf()
-    private val types: MutableMap<Id, C.VTerm> = mutableMapOf()
-    private val solutions: MutableList<C.VTerm?> = mutableListOf()
+    private val completions: MutableMap<Id, List<Pair<String, CVTerm>>> = mutableMapOf()
+    private val types: MutableMap<Id, CVTerm> = mutableMapOf()
+    private val solutions: MutableList<CVTerm?> = mutableListOf()
 
     /**
      * Infers the signature of the [item].
      */
-    private fun inferItem(item: S.Item): State<Context, Pair<C.Item, C.VSignature>> = {
+    private fun inferItem(item: SItem): State<Context, Pair<CItem, CVSignature>> = {
         val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
         when (item) {
-            is S.Item.Def -> {
-                !modify { copy(meta = item.modifiers.contains(S.Modifier.META), termRelevant = false, typeRelevant = true) }
+            is SItem.Def -> {
+                !modify { copy(meta = item.modifiers.contains(SModifier.META), termRelevant = false, typeRelevant = true) }
                 val parameters = !bindParameters(item.parameters)
                 val resultant = !checkTerm(item.resultant, TYPE)
                 val vResultant = !lift({ normalizer }, evalTerm(resultant))
                 val effects = item.effects.map { elaborateEffect(it) }.toSet()
                 val body = !(
-                        if (item.modifiers.contains(S.Modifier.BUILTIN)) {
-                            pure(C.Term.Hole(item.body.id))
+                        if (item.modifiers.contains(SModifier.BUILTIN)) {
+                            pure(CTerm.Hole(item.body.id))
                         } else {
                             !modify { copy(termRelevant = true, typeRelevant = false) }
                             checkTerm(item.body, vResultant)
                         }
                         )
                 (!get()).checkPhase(item.body.id, vResultant)
-                C.Item.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to C.VSignature.Def(item.name, parameters, resultant, null)
+                CItem.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to CVSignature.Def(item.name, parameters, resultant, null)
             }
-            is S.Item.Mod -> {
-                val type = !checkModule(item.type, C.VModule.Type(null))
+            is SItem.Mod -> {
+                val type = !checkModule(item.type, CVModule.Type(null))
                 val vType = !lift({ normalizer }, evalModule(type))
                 val body = !checkModule(item.body, vType)
-                C.Item.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to C.VSignature.Mod(item.name, vType, null)
+                CItem.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to CVSignature.Mod(item.name, vType, null)
             }
-            is S.Item.Test -> {
+            is SItem.Test -> {
                 val body = !checkTerm(item.body, BOOL)
-                C.Item.Test(item.imports, item.exports, modifiers, item.name, body, item.id) to C.VSignature.Test(item.name, null)
+                CItem.Test(item.imports, item.exports, modifiers, item.name, body, item.id) to CVSignature.Test(item.name, null)
             }
         }
     }
@@ -62,7 +78,7 @@ class Elaborate private constructor(
     /**
      * Checks the [item] against the [signature] under this context.
      */
-    private fun checkItem(item: S.Item, signature: C.VSignature): State<Context, C.Item> = {
+    private fun checkItem(item: SItem, signature: CVSignature): State<Context, CItem> = {
         val (inferred, inferredSignature) = !inferItem(item)
         if (!(!lift({ Normalizer(persistentListOf(), items, solutions) }, unifySignatures(inferredSignature, signature)))) {
             diagnose(Diagnostic.SignatureMismatch(item.id)) // TODO: serialize signatures
@@ -73,15 +89,15 @@ class Elaborate private constructor(
     /**
      * Elaborates the [modifier].
      */
-    private fun elaborateModifier(modifier: S.Modifier): C.Modifier = when (modifier) {
-        S.Modifier.BUILTIN -> C.Modifier.BUILTIN
-        S.Modifier.META -> C.Modifier.META
+    private fun elaborateModifier(modifier: SModifier): CModifier = when (modifier) {
+        SModifier.BUILTIN -> CModifier.BUILTIN
+        SModifier.META -> CModifier.META
     }
 
     /**
      * Binds the [parameters] to the context.
      */
-    private fun bindParameters(parameters: List<S.Parameter>): State<Context, List<C.Parameter>> = {
+    private fun bindParameters(parameters: List<SParameter>): State<Context, List<CParameter>> = {
         !parameters.mapM { parameter ->
             {
                 val type = !checkTerm(parameter.type, TYPE)
@@ -91,7 +107,7 @@ class Elaborate private constructor(
                 val upper = parameter.upper?.let { !checkTerm(it, vType) }
                 val vUpper = upper?.let { !lift({ normalizer }, evalTerm(it)) }
                 !modify { bind(parameter.id, Entry(parameter.termRelevant, parameter.name, vLower, vUpper, parameter.typeRelevant, vType, stage)) }
-                C.Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
+                CParameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
             }
         }
     }
@@ -99,35 +115,35 @@ class Elaborate private constructor(
     /**
      * Infers the type of the [module] under the context.
      */
-    private fun inferModule(module: S.Module): State<Context, Pair<C.Module, C.VModule>> = {
+    private fun inferModule(module: SModule): State<Context, Pair<CModule, CVModule>> = {
         when (module) {
-            is S.Module.Var -> when (val item = items[module.name]) {
-                is C.Item.Mod -> C.Module.Var(module.name, module.id) to item.type
+            is SModule.Var -> when (val item = items[module.name]) {
+                is CItem.Mod -> CModule.Var(module.name, module.id) to item.type
                 else -> {
                     diagnose(Diagnostic.ModNotFound(module.name, module.id))
-                    C.Module.Var(module.name, module.id) to TODO()
+                    CModule.Var(module.name, module.id) to TODO()
                 }
             }
-            is S.Module.Str -> {
+            is SModule.Str -> {
                 val (items, signatures) = (!module.items.mapM { inferItem(it) }).unzip()
-                C.Module.Str(items, module.id) to C.VModule.Sig(signatures, null)
+                CModule.Str(items, module.id) to CVModule.Sig(signatures, null)
             }
-            is S.Module.Sig -> {
+            is SModule.Sig -> {
                 val signatures = !module.signatures.mapM { elaborateSignature(it) }
-                C.Module.Sig(signatures, module.id) to C.VModule.Type(null)
+                CModule.Sig(signatures, module.id) to CVModule.Type(null)
             }
-            is S.Module.Type -> C.Module.Type(module.id) to C.VModule.Type(null)
+            is SModule.Type -> CModule.Type(module.id) to CVModule.Type(null)
         }
     }
 
     /**
      * Checks the [module] against the [type] under the context.
      */
-    private fun checkModule(module: S.Module, type: C.VModule): State<Context, C.Module> = {
+    private fun checkModule(module: SModule, type: CVModule): State<Context, CModule> = {
         when {
-            module is S.Module.Str && type is C.VModule.Sig -> {
+            module is SModule.Str && type is CVModule.Sig -> {
                 val items = !(module.items zip type.signatures).mapM { (item, signature) -> checkItem(item, signature) }
-                C.Module.Str(items, module.id)
+                CModule.Str(items, module.id)
             }
             else -> {
                 val (inferred, inferredType) = !inferModule(module)
@@ -142,36 +158,36 @@ class Elaborate private constructor(
     /**
      * Checks if the [module1] and the [module2] can be unified under the normalizer.
      */
-    private fun unifyModules(module1: C.VModule, module2: C.VModule): State<Normalizer, Boolean> = {
+    private fun unifyModules(module1: CVModule, module2: CVModule): State<Normalizer, Boolean> = {
         when (module1) {
-            is C.VModule.Var -> module2 is C.VModule.Var && module1.name == module2.name
-            is C.VModule.Sig -> module2 is C.VModule.Sig && !(module1.signatures zip module2.signatures).allM { (signature1, signature2) -> unifySignatures(signature1, signature2) }
-            is C.VModule.Str -> false // TODO
-            is C.VModule.Type -> module2 is C.VModule.Type
+            is CVModule.Var -> module2 is CVModule.Var && module1.name == module2.name
+            is CVModule.Sig -> module2 is CVModule.Sig && !(module1.signatures zip module2.signatures).allM { (signature1, signature2) -> unifySignatures(signature1, signature2) }
+            is CVModule.Str -> false // TODO
+            is CVModule.Type -> module2 is CVModule.Type
         }
     }
 
     /**
      * Checks if the [signature1] and the [signature2] can be unified under the normalizer.
      */
-    private fun unifySignatures(signature1: C.VSignature, signature2: C.VSignature): State<Normalizer, Boolean> = {
+    private fun unifySignatures(signature1: CVSignature, signature2: CVSignature): State<Normalizer, Boolean> = {
         when (signature1) {
-            is C.VSignature.Def ->
-                signature2 is C.VSignature.Def &&
+            is CVSignature.Def ->
+                signature2 is CVSignature.Def &&
                         signature1.name == signature2.name &&
                         signature1.parameters.size == signature2.parameters.size &&
                         !(signature1.parameters zip signature2.parameters).allM { (parameter1, parameter2) ->
                             unifyTerms(!evalTerm(parameter2.type), !evalTerm(parameter1.type)).also {
-                                !modify { bind(lazyOf(C.VTerm.Var("", size))) }
+                                !modify { bind(lazyOf(CVTerm.Var("", size))) }
                             }
                         } &&
                         !unifyTerms(!evalTerm(signature1.resultant), !evalTerm(signature2.resultant))
-            is C.VSignature.Mod ->
-                signature2 is C.VSignature.Mod &&
+            is CVSignature.Mod ->
+                signature2 is CVSignature.Mod &&
                         signature1.name == signature2.name &&
                         !unifyModules(signature1.type, signature2.type)
-            is C.VSignature.Test ->
-                signature2 is C.VSignature.Test &&
+            is CVSignature.Test ->
+                signature2 is CVSignature.Test &&
                         signature1.name == signature2.name
         }
     }
@@ -179,45 +195,45 @@ class Elaborate private constructor(
     /**
      * Elaborates the [signature] under the context.
      */
-    private fun elaborateSignature(signature: S.Signature): State<Context, C.Signature> = {
+    private fun elaborateSignature(signature: SSignature): State<Context, CSignature> = {
         when (signature) {
-            is S.Signature.Def ->
+            is SSignature.Def ->
                 !restore {
                     !modify { copy(termRelevant = false, typeRelevant = true) }
                     val parameters = !bindParameters(signature.parameters)
                     val resultant = !checkTerm(signature.resultant, TYPE)
-                    C.Signature.Def(signature.name, parameters, resultant, signature.id)
+                    CSignature.Def(signature.name, parameters, resultant, signature.id)
                 }
-            is S.Signature.Mod -> {
-                val type = !checkModule(signature.type, C.VModule.Type(null))
-                C.Signature.Mod(signature.name, type, signature.id)
+            is SSignature.Mod -> {
+                val type = !checkModule(signature.type, CVModule.Type(null))
+                CSignature.Mod(signature.name, type, signature.id)
             }
-            is S.Signature.Test -> C.Signature.Test(signature.name, signature.id)
+            is SSignature.Test -> CSignature.Test(signature.name, signature.id)
         }
     }
 
     /**
      * Infers the type of the [term] under the context.
      */
-    private fun inferTerm(term: S.Term): State<Context, Typing> = {
+    private fun inferTerm(term: STerm): State<Context, Typing> = {
         when (term) {
-            is S.Term.Hole -> {
+            is STerm.Hole -> {
                 completions[term.id] = (!get()).entries.map { it.name to it.type }
-                Typing(C.Term.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(!lift({ normalizer }, quoteTerm(END))), term.id)))
+                Typing(CTerm.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(!lift({ normalizer }, quoteTerm(END))), term.id)))
             }
-            is S.Term.Meta -> {
+            is STerm.Meta -> {
                 val type = !lift({ normalizer }, fresh(term.id))
                 val term = !checkTerm(term, type)
                 Typing(term, type)
             }
-            is S.Term.Anno ->
+            is STerm.Anno ->
                 !restore {
                     !modify { copy(termRelevant = false, typeRelevant = true) }
                     val type = !lift({ normalizer }, evalTerm(!checkTerm(term.type, TYPE)))
                     val term = !checkTerm(term.element, type)
                     Typing(term, type)
                 }
-            is S.Term.Var ->
+            is STerm.Var ->
                 !gets {
                     val level = lookup(term.name)
                     val type = when (level) {
@@ -232,39 +248,39 @@ class Elaborate private constructor(
                             type
                         }
                     }
-                    Typing(C.Term.Var(term.name, level, term.id), type)
+                    Typing(CTerm.Var(term.name, level, term.id), type)
                 }
-            is S.Term.UnitOf -> Typing(C.Term.UnitOf(term.id), UNIT)
-            is S.Term.BoolOf -> Typing(C.Term.BoolOf(term.value, term.id), BOOL)
-            is S.Term.ByteOf -> Typing(C.Term.ByteOf(term.value, term.id), BYTE)
-            is S.Term.ShortOf -> Typing(C.Term.ShortOf(term.value, term.id), SHORT)
-            is S.Term.IntOf -> Typing(C.Term.IntOf(term.value, term.id), INT)
-            is S.Term.LongOf -> Typing(C.Term.LongOf(term.value, term.id), LONG)
-            is S.Term.FloatOf -> Typing(C.Term.FloatOf(term.value, term.id), FLOAT)
-            is S.Term.DoubleOf -> Typing(C.Term.DoubleOf(term.value, term.id), DOUBLE)
-            is S.Term.StringOf -> Typing(C.Term.StringOf(term.value, term.id), STRING)
-            is S.Term.ByteArrayOf -> {
+            is STerm.UnitOf -> Typing(CTerm.UnitOf(term.id), UNIT)
+            is STerm.BoolOf -> Typing(CTerm.BoolOf(term.value, term.id), BOOL)
+            is STerm.ByteOf -> Typing(CTerm.ByteOf(term.value, term.id), BYTE)
+            is STerm.ShortOf -> Typing(CTerm.ShortOf(term.value, term.id), SHORT)
+            is STerm.IntOf -> Typing(CTerm.IntOf(term.value, term.id), INT)
+            is STerm.LongOf -> Typing(CTerm.LongOf(term.value, term.id), LONG)
+            is STerm.FloatOf -> Typing(CTerm.FloatOf(term.value, term.id), FLOAT)
+            is STerm.DoubleOf -> Typing(CTerm.DoubleOf(term.value, term.id), DOUBLE)
+            is STerm.StringOf -> Typing(CTerm.StringOf(term.value, term.id), STRING)
+            is STerm.ByteArrayOf -> {
                 val elements = !term.elements.mapM { checkTerm(it, BYTE) }
-                Typing(C.Term.ByteArrayOf(elements, term.id), BYTE_ARRAY)
+                Typing(CTerm.ByteArrayOf(elements, term.id), BYTE_ARRAY)
             }
-            is S.Term.IntArrayOf -> {
+            is STerm.IntArrayOf -> {
                 val elements = !term.elements.mapM { checkTerm(it, INT) }
-                Typing(C.Term.IntArrayOf(elements, term.id), INT_ARRAY)
+                Typing(CTerm.IntArrayOf(elements, term.id), INT_ARRAY)
             }
-            is S.Term.LongArrayOf -> {
+            is STerm.LongArrayOf -> {
                 val elements = !term.elements.mapM { checkTerm(it, LONG) }
-                Typing(C.Term.LongArrayOf(elements, term.id), LONG_ARRAY)
+                Typing(CTerm.LongArrayOf(elements, term.id), LONG_ARRAY)
             }
-            is S.Term.ListOf -> if (term.elements.isEmpty()) {
-                Typing(C.Term.ListOf(emptyList(), term.id), C.VTerm.List(lazyOf(END), lazyOf(C.VTerm.IntOf(0))))
+            is STerm.ListOf -> if (term.elements.isEmpty()) {
+                Typing(CTerm.ListOf(emptyList(), term.id), CVTerm.List(lazyOf(END), lazyOf(CVTerm.IntOf(0))))
             } else { // TODO: use union of element types
                 val head = !inferTerm(term.elements.first())
                 val tail = !term.elements.drop(1).mapM { checkTerm(it, head.type) }
                 val elements = listOf(head.term) + tail
-                val size = C.VTerm.IntOf(elements.size)
-                Typing(C.Term.ListOf(elements, term.id), C.VTerm.List(lazyOf(head.type), lazyOf(size)))
+                val size = CVTerm.IntOf(elements.size)
+                Typing(CTerm.ListOf(elements, term.id), CVTerm.List(lazyOf(head.type), lazyOf(size)))
             }
-            is S.Term.CompoundOf -> {
+            is STerm.CompoundOf -> {
                 val elements = !term.elements.mapM { (name, element) ->
                     {
                         val element = !(inferTerm(element))
@@ -272,99 +288,99 @@ class Elaborate private constructor(
                     }
                 }
                 Typing(
-                    C.Term.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
-                    C.VTerm.Compound(elements.map { (name, element) -> name to C.Entry(true, !lift({ normalizer }, quoteTerm(element.type)), null) }.toLinkedHashMap())
+                    CTerm.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
+                    CVTerm.Compound(elements.map { (name, element) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(element.type)), null) }.toLinkedHashMap())
                 )
             }
-            is S.Term.BoxOf -> {
+            is STerm.BoxOf -> {
                 val tTag = !checkTerm(term.tag, TYPE)
                 val vTag = !lift({ normalizer }, evalTerm(tTag))
                 val content = !checkTerm(term.content, vTag)
-                Typing(C.Term.BoxOf(content, tTag, term.id), C.VTerm.Box(lazyOf(vTag)))
+                Typing(CTerm.BoxOf(content, tTag, term.id), CVTerm.Box(lazyOf(vTag)))
             }
-            is S.Term.RefOf -> {
+            is STerm.RefOf -> {
                 val element = !inferTerm(term.element)
-                Typing(C.Term.RefOf(element.term, term.id), C.VTerm.Ref(lazyOf(element.type)))
+                Typing(CTerm.RefOf(element.term, term.id), CVTerm.Ref(lazyOf(element.type)))
             }
-            is S.Term.Refl -> {
+            is STerm.Refl -> {
                 val left = lazy { !lift({ normalizer }, fresh(term.id)) }
-                Typing(C.Term.Refl(term.id), C.VTerm.Eq(left, left))
+                Typing(CTerm.Refl(term.id), CVTerm.Eq(left, left))
             }
-            is S.Term.CodeOf ->
+            is STerm.CodeOf ->
                 !restore {
                     !modify { copy(stage = stage + 1) }
                     val element = !inferTerm(term.element)
-                    Typing(C.Term.CodeOf(element.term, term.id), C.VTerm.Code(lazyOf(element.type)))
+                    Typing(CTerm.CodeOf(element.term, term.id), CVTerm.Code(lazyOf(element.type)))
                 }
-            is S.Term.Splice ->
+            is STerm.Splice ->
                 !restore {
                     !modify { copy(stage = stage - 1) }
                     val element = !inferTerm(term.element)
                     val type = when (val type = !gets { normalizer.force(element.type) }) {
-                        is C.VTerm.Code -> type.element.value
+                        is CVTerm.Code -> type.element.value
                         else -> type.also {
-                            !lift({ normalizer }) { !unifyTerms(it, C.VTerm.Code(lazyOf(!fresh(freshId())))) }
+                            !lift({ normalizer }) { !unifyTerms(it, CVTerm.Code(lazyOf(!fresh(freshId())))) }
                         }
                     }
-                    Typing(C.Term.Splice(element.term, term.id), type)
+                    Typing(CTerm.Splice(element.term, term.id), type)
                 }
-            is S.Term.Or -> {
+            is STerm.Or -> {
                 val variants = !term.variants.mapM { checkTerm(it, TYPE) }
-                Typing(C.Term.Or(variants, term.id), TYPE)
+                Typing(CTerm.Or(variants, term.id), TYPE)
             }
-            is S.Term.And -> {
+            is STerm.And -> {
                 val variants = !term.variants.mapM { checkTerm(it, TYPE) }
-                Typing(C.Term.And(variants, term.id), TYPE)
+                Typing(CTerm.And(variants, term.id), TYPE)
             }
-            is S.Term.Unit -> Typing(C.Term.Unit(term.id), TYPE)
-            is S.Term.Bool -> Typing(C.Term.Bool(term.id), TYPE)
-            is S.Term.Byte -> Typing(C.Term.Byte(term.id), TYPE)
-            is S.Term.Short -> Typing(C.Term.Short(term.id), TYPE)
-            is S.Term.Int -> Typing(C.Term.Int(term.id), TYPE)
-            is S.Term.Long -> Typing(C.Term.Long(term.id), TYPE)
-            is S.Term.Float -> Typing(C.Term.Float(term.id), TYPE)
-            is S.Term.Double -> Typing(C.Term.Double(term.id), TYPE)
-            is S.Term.String -> Typing(C.Term.String(term.id), TYPE)
-            is S.Term.ByteArray -> Typing(C.Term.ByteArray(term.id), TYPE)
-            is S.Term.IntArray -> Typing(C.Term.IntArray(term.id), TYPE)
-            is S.Term.LongArray -> Typing(C.Term.LongArray(term.id), TYPE)
-            is S.Term.List -> {
+            is STerm.Unit -> Typing(CTerm.Unit(term.id), TYPE)
+            is STerm.Bool -> Typing(CTerm.Bool(term.id), TYPE)
+            is STerm.Byte -> Typing(CTerm.Byte(term.id), TYPE)
+            is STerm.Short -> Typing(CTerm.Short(term.id), TYPE)
+            is STerm.Int -> Typing(CTerm.Int(term.id), TYPE)
+            is STerm.Long -> Typing(CTerm.Long(term.id), TYPE)
+            is STerm.Float -> Typing(CTerm.Float(term.id), TYPE)
+            is STerm.Double -> Typing(CTerm.Double(term.id), TYPE)
+            is STerm.String -> Typing(CTerm.String(term.id), TYPE)
+            is STerm.ByteArray -> Typing(CTerm.ByteArray(term.id), TYPE)
+            is STerm.IntArray -> Typing(CTerm.IntArray(term.id), TYPE)
+            is STerm.LongArray -> Typing(CTerm.LongArray(term.id), TYPE)
+            is STerm.List -> {
                 val element = !checkTerm(term.element, TYPE)
                 !restore {
                     !modify { copy(termRelevant = false, typeRelevant = true) }
                     val size = !checkTerm(term.size, INT)
-                    Typing(C.Term.List(element, size, term.id), TYPE)
+                    Typing(CTerm.List(element, size, term.id), TYPE)
                 }
             }
-            is S.Term.Compound ->
+            is STerm.Compound ->
                 !restore {
                     val elements = !term.elements.mapM { entry ->
                         {
                             val element = !checkTerm(entry.type, TYPE)
                             !modify { bind(entry.id, Entry(false, entry.name.text, END, ANY, true, !lift({ normalizer }, evalTerm(element)), stage)) }
-                            entry.name to C.Entry(entry.relevant, element, entry.id)
+                            entry.name to CEntry(entry.relevant, element, entry.id)
                         }
                     }
-                    Typing(C.Term.Compound(elements.toLinkedHashMap(), term.id), TYPE)
+                    Typing(CTerm.Compound(elements.toLinkedHashMap(), term.id), TYPE)
                 }
-            is S.Term.Box -> {
+            is STerm.Box -> {
                 val content = !checkTerm(term.content, TYPE)
-                Typing(C.Term.Box(content, term.id), TYPE)
+                Typing(CTerm.Box(content, term.id), TYPE)
             }
-            is S.Term.Ref -> {
+            is STerm.Ref -> {
                 val element = !checkTerm(term.element, TYPE)
-                Typing(C.Term.Ref(element, term.id), TYPE)
+                Typing(CTerm.Ref(element, term.id), TYPE)
             }
-            is S.Term.Eq -> {
+            is STerm.Eq -> {
                 val left = !inferTerm(term.left)
                 val right = !checkTerm(term.right, left.type)
-                Typing(C.Term.Eq(left.term, right, term.id), TYPE)
+                Typing(CTerm.Eq(left.term, right, term.id), TYPE)
             }
-            is S.Term.Code -> {
+            is STerm.Code -> {
                 val element = !checkTerm(term.element, TYPE)
-                Typing(C.Term.Code(element, term.id), TYPE)
+                Typing(CTerm.Code(element, term.id), TYPE)
             }
-            is S.Term.Type -> Typing(C.Term.Type(term.id), TYPE)
+            is STerm.Type -> Typing(CTerm.Type(term.id), TYPE)
             else -> {
                 val computation = !inferComputation(term)
                 if (computation.effects.isNotEmpty()) {
@@ -380,10 +396,10 @@ class Elaborate private constructor(
     /**
      * Infers the type of the [computation] under the context.
      */
-    private fun inferComputation(computation: S.Term): State<Context, Typing> = {
+    private fun inferComputation(computation: STerm): State<Context, Typing> = {
         when (computation) {
-            is S.Term.Def -> when (val item = items[computation.name]) {
-                is C.Item.Def -> {
+            is STerm.Def -> when (val item = items[computation.name]) {
+                is CItem.Def -> {
                     if (item.parameters.size != computation.arguments.size) {
                         diagnose(Diagnostic.SizeMismatch(item.parameters.size, computation.arguments.size, computation.id))
                     }
@@ -404,20 +420,20 @@ class Elaborate private constructor(
                             }
                         }
                         val resultant = !evalTerm(item.resultant)
-                        Typing(C.Term.Def(computation.name, arguments, computation.id), resultant, item.effects)
+                        Typing(CTerm.Def(computation.name, arguments, computation.id), resultant, item.effects)
                     }
                 }
-                else -> Typing(C.Term.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
+                else -> Typing(CTerm.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
             }
-            is S.Term.Let -> {
+            is STerm.Let -> {
                 val init = !inferComputation(computation.init)
                 !restore {
                     !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
                     val body = !inferComputation(computation.body)
-                    Typing(C.Term.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
+                    Typing(CTerm.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
                 }
             }
-            is S.Term.Match -> {
+            is STerm.Match -> {
                 val type = !lift({ normalizer }, fresh(computation.id)) // TODO: use union of element types
                 val scrutinee = !inferTerm(computation.scrutinee)
                 val clauses = !computation.clauses.mapM { (pattern, body) ->
@@ -427,9 +443,9 @@ class Elaborate private constructor(
                         pattern to body
                     }
                 }
-                Typing(C.Term.Match(scrutinee.term, clauses, computation.id), type)
+                Typing(CTerm.Match(scrutinee.term, clauses, computation.id), type)
             }
-            is S.Term.FunOf -> {
+            is STerm.FunOf -> {
                 val types = !lift({ normalizer }, { !computation.parameters.mapM { fresh(computation.id) } })
                 !restore {
                     !(computation.parameters zip types).forEachM { (parameter, type) ->
@@ -438,26 +454,26 @@ class Elaborate private constructor(
                     val body = !inferComputation(computation.body)
                     !lift({ normalizer }) {
                         val parameters = (computation.parameters zip types).map { (parameter, type) ->
-                            C.Parameter(true /* TODO */, parameter.text, !quoteTerm(END), !quoteTerm(ANY), true, !quoteTerm(type), parameter.id)
+                            CParameter(true /* TODO */, parameter.text, !quoteTerm(END), !quoteTerm(ANY), true, !quoteTerm(type), parameter.id)
                         }
-                        Typing(C.Term.FunOf(computation.parameters, body.term, computation.id), C.VTerm.Fun(parameters, !quoteTerm(body.type), body.effects))
+                        Typing(CTerm.FunOf(computation.parameters, body.term, computation.id), CVTerm.Fun(parameters, !quoteTerm(body.type), body.effects))
                     }
                 }
             }
-            is S.Term.Apply -> {
+            is STerm.Apply -> {
                 val function = !inferComputation(computation.function)
                 val type = !lift({ normalizer }) {
                     when (val type = (!get()).force(function.type)) {
-                        is C.VTerm.Fun -> type
+                        is CVTerm.Fun -> type
                         else -> {
                             val parameters = computation.arguments.map {
-                                C.Parameter(true, "", null, null, true, !quoteTerm(!fresh(freshId())), freshId())
+                                CParameter(true, "", null, null, true, !quoteTerm(!fresh(freshId())), freshId())
                             }
                             val vResultant = !fresh(freshId())
                             val resultant = !quoteTerm(vResultant)
-                            val effects = emptySet<C.Effect>() // TODO
-                            !unifyTerms(type, C.VTerm.Fun(parameters, resultant, effects, null))
-                            C.VTerm.Fun(parameters, resultant, effects, type.id)
+                            val effects = emptySet<CEffect>() // TODO
+                            !unifyTerms(type, CVTerm.Fun(parameters, resultant, effects, null))
+                            CVTerm.Fun(parameters, resultant, effects, type.id)
                         }
                     }
                 }
@@ -480,15 +496,15 @@ class Elaborate private constructor(
                         }
                     }
                     val resultant = !evalTerm(type.resultant)
-                    Typing(C.Term.Apply(function.term, arguments, computation.id), resultant, type.effects)
+                    Typing(CTerm.Apply(function.term, arguments, computation.id), resultant, type.effects)
                 }
             }
-            is S.Term.Fun ->
+            is STerm.Fun ->
                 !restore {
                     val parameters = !bindParameters(computation.parameters)
                     val resultant = !checkTerm(computation.resultant, TYPE) /* TODO: check effects */
                     val effects = computation.effects.map { elaborateEffect(it) }.toSet()
-                    Typing(C.Term.Fun(parameters, resultant, effects, computation.id), TYPE)
+                    Typing(CTerm.Fun(parameters, resultant, effects, computation.id), TYPE)
                 }
             else -> !inferTerm(computation)
         }
@@ -497,31 +513,31 @@ class Elaborate private constructor(
     /**
      * Checks the [term] against the [type] under the context.
      */
-    private fun checkTerm(term: S.Term, type: C.VTerm): State<Context, C.Term> = {
+    private fun checkTerm(term: STerm, type: CVTerm): State<Context, CTerm> = {
         val type = !gets {
             normalizer.force(type).also {
                 types[term.id] = it
             }
         }
         when {
-            term is S.Term.Hole -> {
+            term is STerm.Hole -> {
                 completions[term.id] = (!get()).entries.map { it.name to it.type }
                 diagnose(Diagnostic.TermExpected(serializeTerm(!lift({ normalizer }, quoteTerm(type))), term.id))
-                C.Term.Hole(term.id)
+                CTerm.Hole(term.id)
             }
-            term is S.Term.Meta ->
+            term is STerm.Meta ->
                 !lift({ normalizer }) {
                     !quoteTerm(!fresh(term.id))
                 }
-            term is S.Term.ListOf && type is C.VTerm.List -> {
+            term is STerm.ListOf && type is CVTerm.List -> {
                 val elements = !term.elements.mapM { checkTerm(it, type.element.value) }
                 when (val size = !gets { normalizer.force(type.size.value) }) {
-                    is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
+                    is CVTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
                     else -> {}
                 }
-                C.Term.ListOf(elements, term.id)
+                CTerm.ListOf(elements, term.id)
             }
-            term is S.Term.CompoundOf && type is C.VTerm.Compound ->
+            term is STerm.CompoundOf && type is CVTerm.Compound ->
                 !restore {
                     val elements = !(term.elements zip type.elements.values).mapM { (element, entry) ->
                         {
@@ -532,17 +548,17 @@ class Elaborate private constructor(
                             element.first to tElement
                         }
                     }
-                    C.Term.CompoundOf(elements.toLinkedHashMap(), term.id)
+                    CTerm.CompoundOf(elements.toLinkedHashMap(), term.id)
                 }
-            term is S.Term.RefOf && type is C.VTerm.Ref -> {
+            term is STerm.RefOf && type is CVTerm.Ref -> {
                 val element = !checkTerm(term.element, type.element.value)
-                C.Term.RefOf(element, term.id)
+                CTerm.RefOf(element, term.id)
             }
-            term is S.Term.CodeOf && type is C.VTerm.Code ->
+            term is STerm.CodeOf && type is CVTerm.Code ->
                 !restore {
                     !modify { copy(stage = stage + 1) }
                     val element = !checkTerm(term.element, type.element.value)
-                    C.Term.CodeOf(element, term.id)
+                    CTerm.CodeOf(element, term.id)
                 }
             else -> {
                 val computation = !checkComputation(term, type, emptySet())
@@ -554,22 +570,22 @@ class Elaborate private constructor(
     /**
      * Checks the [computation] against the [type] and the [effects] under the context.
      */
-    private fun checkComputation(computation: S.Term, type: C.VTerm, effects: Set<C.Effect>): State<Context, Effecting> = {
+    private fun checkComputation(computation: STerm, type: CVTerm, effects: Set<CEffect>): State<Context, Effecting> = {
         val type = !gets {
             normalizer.force(type).also {
                 types[computation.id] = it
             }
         }
         when {
-            computation is S.Term.Let ->
+            computation is STerm.Let ->
                 !restore {
                     val init = !inferComputation(computation.init)
                     !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
                     val body = !checkComputation(computation.body, type, effects)
                     val effects = init.effects + body.effects
-                    Effecting(C.Term.Let(computation.name, init.term, body.term, computation.id), effects)
+                    Effecting(CTerm.Let(computation.name, init.term, body.term, computation.id), effects)
                 }
-            computation is S.Term.Match -> {
+            computation is STerm.Match -> {
                 val scrutinee = !inferTerm(computation.scrutinee)
                 val clauses = !computation.clauses.mapM { (pattern, body) ->
                     restore {
@@ -579,9 +595,9 @@ class Elaborate private constructor(
                     }
                 }
                 val effects = clauses.flatMap { (_, body) -> body.effects }.toSet()
-                Effecting(C.Term.Match(scrutinee.term, clauses.map { (pattern, body) -> pattern to body.term }, computation.id), effects)
+                Effecting(CTerm.Match(scrutinee.term, clauses.map { (pattern, body) -> pattern to body.term }, computation.id), effects)
             }
-            computation is S.Term.FunOf && type is C.VTerm.Fun -> {
+            computation is STerm.FunOf && type is CVTerm.Fun -> {
                 if (type.parameters.size != computation.parameters.size) {
                     diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.parameters.size, computation.id))
                 }
@@ -596,7 +612,7 @@ class Elaborate private constructor(
                         }
                     }
                     val resultant = !checkComputation(computation.body, !lift({ normalizer }, evalTerm(type.resultant)), effects)
-                    Effecting(C.Term.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
+                    Effecting(CTerm.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
                 }
             }
             else -> {
@@ -620,12 +636,12 @@ class Elaborate private constructor(
     /**
      * Checks if the [term1] and the [term2] can be unified under the normalizer.
      */
-    private fun unifyTerms(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Boolean> = {
+    private fun unifyTerms(term1: CVTerm, term2: CVTerm): State<Normalizer, Boolean> = {
         val (value1, value2) = !gets { force(term1) to force(term2) }
         when {
             value1.id != null && value2.id != null && value1.id == value2.id -> true
-            value1 is C.VTerm.Meta && value2 is C.VTerm.Meta && value1.index == value2.index -> true
-            value1 is C.VTerm.Meta ->
+            value1 is CVTerm.Meta && value2 is CVTerm.Meta && value1.index == value2.index -> true
+            value1 is CVTerm.Meta ->
                 !(when (val solved1 = !gets { getSolution(value1.index) }) {
                     null ->
                         gets {
@@ -634,32 +650,32 @@ class Elaborate private constructor(
                         }
                     else -> unifyTerms(solved1, value2)
                 })
-            value2 is C.VTerm.Meta -> !unifyTerms(value2, value1)
-            value1 is C.VTerm.Var && value2 is C.VTerm.Var -> value1.level == value2.level
-            value1 is C.VTerm.Def && value2 is C.VTerm.Def && value1.name == value2.name -> true
-            value1 is C.VTerm.Match && value2 is C.VTerm.Match -> false // TODO
-            value1 is C.VTerm.UnitOf && value2 is C.VTerm.UnitOf -> true
-            value1 is C.VTerm.BoolOf && value2 is C.VTerm.BoolOf -> value1.value == value2.value
-            value1 is C.VTerm.ByteOf && value2 is C.VTerm.ByteOf -> value1.value == value2.value
-            value1 is C.VTerm.ShortOf && value2 is C.VTerm.ShortOf -> value1.value == value2.value
-            value1 is C.VTerm.IntOf && value2 is C.VTerm.IntOf -> value1.value == value2.value
-            value1 is C.VTerm.LongOf && value2 is C.VTerm.LongOf -> value1.value == value2.value
-            value1 is C.VTerm.FloatOf && value2 is C.VTerm.FloatOf -> value1.value == value2.value
-            value1 is C.VTerm.DoubleOf && value2 is C.VTerm.DoubleOf -> value1.value == value2.value
-            value1 is C.VTerm.StringOf && value2 is C.VTerm.StringOf -> value1.value == value2.value
-            value1 is C.VTerm.ByteArrayOf && value2 is C.VTerm.ByteArrayOf ->
+            value2 is CVTerm.Meta -> !unifyTerms(value2, value1)
+            value1 is CVTerm.Var && value2 is CVTerm.Var -> value1.level == value2.level
+            value1 is CVTerm.Def && value2 is CVTerm.Def && value1.name == value2.name -> true
+            value1 is CVTerm.Match && value2 is CVTerm.Match -> false // TODO
+            value1 is CVTerm.UnitOf && value2 is CVTerm.UnitOf -> true
+            value1 is CVTerm.BoolOf && value2 is CVTerm.BoolOf -> value1.value == value2.value
+            value1 is CVTerm.ByteOf && value2 is CVTerm.ByteOf -> value1.value == value2.value
+            value1 is CVTerm.ShortOf && value2 is CVTerm.ShortOf -> value1.value == value2.value
+            value1 is CVTerm.IntOf && value2 is CVTerm.IntOf -> value1.value == value2.value
+            value1 is CVTerm.LongOf && value2 is CVTerm.LongOf -> value1.value == value2.value
+            value1 is CVTerm.FloatOf && value2 is CVTerm.FloatOf -> value1.value == value2.value
+            value1 is CVTerm.DoubleOf && value2 is CVTerm.DoubleOf -> value1.value == value2.value
+            value1 is CVTerm.StringOf && value2 is CVTerm.StringOf -> value1.value == value2.value
+            value1 is CVTerm.ByteArrayOf && value2 is CVTerm.ByteArrayOf ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.IntArrayOf && value2 is C.VTerm.IntArrayOf ->
+            value1 is CVTerm.IntArrayOf && value2 is CVTerm.IntArrayOf ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.LongArrayOf && value2 is C.VTerm.LongArrayOf ->
+            value1 is CVTerm.LongArrayOf && value2 is CVTerm.LongArrayOf ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.ListOf && value2 is C.VTerm.ListOf ->
+            value1 is CVTerm.ListOf && value2 is CVTerm.ListOf ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.CompoundOf && value2 is C.VTerm.CompoundOf ->
+            value1 is CVTerm.CompoundOf && value2 is CVTerm.CompoundOf ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
                             {
@@ -667,67 +683,67 @@ class Elaborate private constructor(
                                         !unifyTerms(entry1.value.value, entry2.value.value)
                             }
                         }
-            value1 is C.VTerm.BoxOf && value2 is C.VTerm.BoxOf ->
+            value1 is CVTerm.BoxOf && value2 is CVTerm.BoxOf ->
                 !unifyTerms(value1.content.value, value2.content.value) &&
                         !unifyTerms(value1.tag.value, value2.tag.value)
-            value1 is C.VTerm.RefOf && value2 is C.VTerm.RefOf -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Refl && value2 is C.VTerm.Refl -> true
-            value1 is C.VTerm.FunOf && value2 is C.VTerm.FunOf ->
+            value1 is CVTerm.RefOf && value2 is CVTerm.RefOf -> !unifyTerms(value1.element.value, value2.element.value)
+            value1 is CVTerm.Refl && value2 is CVTerm.Refl -> true
+            value1 is CVTerm.FunOf && value2 is CVTerm.FunOf ->
                 value1.parameters.size == value2.parameters.size && !restore {
                     !value1.parameters.forEachM { parameter ->
-                        modify { bind(lazyOf(C.VTerm.Var(parameter.text, size))) }
+                        modify { bind(lazyOf(CVTerm.Var(parameter.text, size))) }
                     }
                     !unifyTerms(!evalTerm(value1.body), !evalTerm(value2.body))
                 }
-            value1 is C.VTerm.Apply && value2 is C.VTerm.Apply ->
+            value1 is CVTerm.Apply && value2 is CVTerm.Apply ->
                 !unifyTerms(value1.function, value2.function) &&
                         !(value1.arguments zip value2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is C.VTerm.CodeOf && value2 is C.VTerm.CodeOf -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Splice && value2 is C.VTerm.Splice -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Or && value1.variants.isEmpty() && value2 is C.VTerm.Or && value2.variants.isEmpty() -> true
-            value1 is C.VTerm.And && value1.variants.isEmpty() && value2 is C.VTerm.And && value2.variants.isEmpty() -> true
-            value1 is C.VTerm.Unit && value2 is C.VTerm.Unit -> true
-            value1 is C.VTerm.Bool && value2 is C.VTerm.Bool -> true
-            value1 is C.VTerm.Byte && value2 is C.VTerm.Byte -> true
-            value1 is C.VTerm.Short && value2 is C.VTerm.Short -> true
-            value1 is C.VTerm.Int && value2 is C.VTerm.Int -> true
-            value1 is C.VTerm.Long && value2 is C.VTerm.Long -> true
-            value1 is C.VTerm.Float && value2 is C.VTerm.Float -> true
-            value1 is C.VTerm.Double && value2 is C.VTerm.Double -> true
-            value1 is C.VTerm.String && value2 is C.VTerm.String -> true
-            value1 is C.VTerm.ByteArray && value2 is C.VTerm.ByteArray -> true
-            value1 is C.VTerm.IntArray && value2 is C.VTerm.IntArray -> true
-            value1 is C.VTerm.LongArray && value2 is C.VTerm.LongArray -> true
-            value1 is C.VTerm.List && value2 is C.VTerm.List ->
+            value1 is CVTerm.CodeOf && value2 is CVTerm.CodeOf -> !unifyTerms(value1.element.value, value2.element.value)
+            value1 is CVTerm.Splice && value2 is CVTerm.Splice -> !unifyTerms(value1.element.value, value2.element.value)
+            value1 is CVTerm.Or && value1.variants.isEmpty() && value2 is CVTerm.Or && value2.variants.isEmpty() -> true
+            value1 is CVTerm.And && value1.variants.isEmpty() && value2 is CVTerm.And && value2.variants.isEmpty() -> true
+            value1 is CVTerm.Unit && value2 is CVTerm.Unit -> true
+            value1 is CVTerm.Bool && value2 is CVTerm.Bool -> true
+            value1 is CVTerm.Byte && value2 is CVTerm.Byte -> true
+            value1 is CVTerm.Short && value2 is CVTerm.Short -> true
+            value1 is CVTerm.Int && value2 is CVTerm.Int -> true
+            value1 is CVTerm.Long && value2 is CVTerm.Long -> true
+            value1 is CVTerm.Float && value2 is CVTerm.Float -> true
+            value1 is CVTerm.Double && value2 is CVTerm.Double -> true
+            value1 is CVTerm.String && value2 is CVTerm.String -> true
+            value1 is CVTerm.ByteArray && value2 is CVTerm.ByteArray -> true
+            value1 is CVTerm.IntArray && value2 is CVTerm.IntArray -> true
+            value1 is CVTerm.LongArray && value2 is CVTerm.LongArray -> true
+            value1 is CVTerm.List && value2 is CVTerm.List ->
                 !unifyTerms(value1.element.value, value2.element.value) &&
                         !unifyTerms(value1.size.value, value2.size.value)
-            value1 is C.VTerm.Compound && value2 is C.VTerm.Compound ->
+            value1 is CVTerm.Compound && value2 is CVTerm.Compound ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
                             restore {
-                                !modify { bind(lazyOf(C.VTerm.Var(entry1.key.text, size))) }
+                                !modify { bind(lazyOf(CVTerm.Var(entry1.key.text, size))) }
                                 entry1.key.text == entry2.key.text &&
                                         entry1.value.relevant == entry2.value.relevant &&
                                         !unifyTerms(!evalTerm(entry1.value.type), !evalTerm(entry2.value.type))
                             }
                         }
-            value1 is C.VTerm.Box && value2 is C.VTerm.Box -> !unifyTerms(value1.content.value, value2.content.value)
-            value1 is C.VTerm.Ref && value2 is C.VTerm.Ref -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Eq && value2 is C.VTerm.Eq ->
+            value1 is CVTerm.Box && value2 is CVTerm.Box -> !unifyTerms(value1.content.value, value2.content.value)
+            value1 is CVTerm.Ref && value2 is CVTerm.Ref -> !unifyTerms(value1.element.value, value2.element.value)
+            value1 is CVTerm.Eq && value2 is CVTerm.Eq ->
                 !unifyTerms(value1.left.value, value2.left.value) &&
                         !unifyTerms(value1.right.value, value2.right.value)
-            value1 is C.VTerm.Fun && value2 is C.VTerm.Fun ->
+            value1 is CVTerm.Fun && value2 is CVTerm.Fun ->
                 value1.parameters.size == value2.parameters.size &&
                         value1.effects == value2.effects &&
                         !(value1.parameters zip value2.parameters).allM { (parameter1, parameter2) ->
                             restore {
-                                !modify { bind(lazyOf(C.VTerm.Var("", size))) }
+                                !modify { bind(lazyOf(CVTerm.Var("", size))) }
                                 !(unifyTerms(!evalTerm(parameter2.type), !evalTerm(parameter1.type)))
                             }
                         } &&
                         !unifyTerms(!evalTerm(value1.resultant), !evalTerm(value2.resultant))
-            value1 is C.VTerm.Code && value2 is C.VTerm.Code -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is C.VTerm.Type && value2 is C.VTerm.Type -> true
+            value1 is CVTerm.Code && value2 is CVTerm.Code -> !unifyTerms(value1.element.value, value2.element.value)
+            value1 is CVTerm.Type && value2 is CVTerm.Type -> true
             else -> false
         }
     }
@@ -735,31 +751,31 @@ class Elaborate private constructor(
     /**
      * Checks if the [term1] is a subtype of the [term2] under the context.
      */
-    private fun subtypeTerms(term1: C.VTerm, term2: C.VTerm): State<Context, Boolean> = {
+    private fun subtypeTerms(term1: CVTerm, term2: CVTerm): State<Context, Boolean> = {
         val (term1, term2) = !(gets { normalizer.force(term1) to normalizer.force(term2) })
         when {
-            term1 is C.VTerm.Var && term2 is C.VTerm.Var && term1.level == term2.level -> true
-            term1 is C.VTerm.Var && !gets { entries[term1.level].upper } != null -> {
+            term1 is CVTerm.Var && term2 is CVTerm.Var && term1.level == term2.level -> true
+            term1 is CVTerm.Var && !gets { entries[term1.level].upper } != null -> {
                 val upper = !gets { entries[term1.level].upper!! }
                 !subtypeTerms(upper, term2)
             }
-            term2 is C.VTerm.Var && !gets { entries[term2.level].lower } != null -> {
+            term2 is CVTerm.Var && !gets { entries[term2.level].lower } != null -> {
                 val lower = !gets { entries[term2.level].lower!! }
                 !subtypeTerms(term1, lower)
             }
-            term1 is C.VTerm.Apply && term2 is C.VTerm.Apply ->
+            term1 is CVTerm.Apply && term2 is CVTerm.Apply ->
                 !subtypeTerms(term1.function, term2.function) &&
                         !(term1.arguments zip term2.arguments).allM { (argument1, argument2) ->
                             lift({ normalizer }, unifyTerms(argument1.value, argument2.value)) // pointwise subtyping
                         }
-            term1 is C.VTerm.Or -> !term1.variants.allM { subtypeTerms(it.value, term2) }
-            term2 is C.VTerm.Or -> !term2.variants.anyM { subtypeTerms(term1, it.value) }
-            term2 is C.VTerm.And -> !term2.variants.allM { subtypeTerms(term1, it.value) }
-            term1 is C.VTerm.And -> !term1.variants.anyM { subtypeTerms(it.value, term2) }
-            term1 is C.VTerm.List && term2 is C.VTerm.List ->
+            term1 is CVTerm.Or -> !term1.variants.allM { subtypeTerms(it.value, term2) }
+            term2 is CVTerm.Or -> !term2.variants.anyM { subtypeTerms(term1, it.value) }
+            term2 is CVTerm.And -> !term2.variants.allM { subtypeTerms(term1, it.value) }
+            term1 is CVTerm.And -> !term1.variants.anyM { subtypeTerms(it.value, term2) }
+            term1 is CVTerm.List && term2 is CVTerm.List ->
                 !subtypeTerms(term1.element.value, term2.element.value) &&
                         !lift({ normalizer }, unifyTerms(term1.size.value, term2.size.value))
-            term1 is C.VTerm.Compound && term2 is C.VTerm.Compound ->
+            term1 is CVTerm.Compound && term2 is CVTerm.Compound ->
                 !term2.elements.entries.allM { entry2 ->
                     {
                         val element1 = term1.elements[entry2.key]
@@ -772,9 +788,9 @@ class Elaborate private constructor(
                         } else false
                     }
                 }
-            term1 is C.VTerm.Box && term2 is C.VTerm.Box -> !subtypeTerms(term1.content.value, term2.content.value)
-            term1 is C.VTerm.Ref && term2 is C.VTerm.Ref -> !subtypeTerms(term1.element.value, term2.element.value)
-            term1 is C.VTerm.Fun && term2 is C.VTerm.Fun ->
+            term1 is CVTerm.Box && term2 is CVTerm.Box -> !subtypeTerms(term1.content.value, term2.content.value)
+            term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !subtypeTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Fun && term2 is CVTerm.Fun ->
                 term1.parameters.size == term2.parameters.size &&
                         !(term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
                             restore {
@@ -786,7 +802,7 @@ class Elaborate private constructor(
                         } &&
                         !(subtypeTerms(!lift({ normalizer }, evalTerm(term1.resultant)), !lift({ normalizer }, evalTerm(term2.resultant)))) &&
                         term2.effects.containsAll(term1.effects)
-            term1 is C.VTerm.Code && term2 is C.VTerm.Code -> !subtypeTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Code && term2 is CVTerm.Code -> !subtypeTerms(term1.element.value, term2.element.value)
             else -> !lift({ normalizer }, unifyTerms(term1, term2))
         }
     }
@@ -794,45 +810,45 @@ class Elaborate private constructor(
     /**
      * Infers the type of the [pattern] under the context.
      */
-    private fun inferPattern(pattern: S.Pattern): State<Context, Pair<C.Pattern, C.VTerm>> = {
+    private fun inferPattern(pattern: SPattern): State<Context, Pair<CPattern, CVTerm>> = {
         when (pattern) {
-            is S.Pattern.Var -> {
+            is SPattern.Var -> {
                 val type = !lift({ normalizer }, fresh(pattern.id))
                 !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, true, type, stage)) }
-                C.Pattern.Var(pattern.name, pattern.id) to type
+                CPattern.Var(pattern.name, pattern.id) to type
             }
-            is S.Pattern.UnitOf -> C.Pattern.UnitOf(pattern.id) to UNIT
-            is S.Pattern.BoolOf -> C.Pattern.BoolOf(pattern.value, pattern.id) to BOOL
-            is S.Pattern.ByteOf -> C.Pattern.ByteOf(pattern.value, pattern.id) to BYTE
-            is S.Pattern.ShortOf -> C.Pattern.ShortOf(pattern.value, pattern.id) to SHORT
-            is S.Pattern.IntOf -> C.Pattern.IntOf(pattern.value, pattern.id) to INT
-            is S.Pattern.LongOf -> C.Pattern.LongOf(pattern.value, pattern.id) to LONG
-            is S.Pattern.FloatOf -> C.Pattern.FloatOf(pattern.value, pattern.id) to FLOAT
-            is S.Pattern.DoubleOf -> C.Pattern.DoubleOf(pattern.value, pattern.id) to DOUBLE
-            is S.Pattern.StringOf -> C.Pattern.StringOf(pattern.value, pattern.id) to STRING
-            is S.Pattern.ByteArrayOf -> {
+            is SPattern.UnitOf -> CPattern.UnitOf(pattern.id) to UNIT
+            is SPattern.BoolOf -> CPattern.BoolOf(pattern.value, pattern.id) to BOOL
+            is SPattern.ByteOf -> CPattern.ByteOf(pattern.value, pattern.id) to BYTE
+            is SPattern.ShortOf -> CPattern.ShortOf(pattern.value, pattern.id) to SHORT
+            is SPattern.IntOf -> CPattern.IntOf(pattern.value, pattern.id) to INT
+            is SPattern.LongOf -> CPattern.LongOf(pattern.value, pattern.id) to LONG
+            is SPattern.FloatOf -> CPattern.FloatOf(pattern.value, pattern.id) to FLOAT
+            is SPattern.DoubleOf -> CPattern.DoubleOf(pattern.value, pattern.id) to DOUBLE
+            is SPattern.StringOf -> CPattern.StringOf(pattern.value, pattern.id) to STRING
+            is SPattern.ByteArrayOf -> {
                 val elements = !pattern.elements.mapM { element -> checkPattern(element, BYTE) }
-                C.Pattern.ByteArrayOf(elements, pattern.id) to BYTE_ARRAY
+                CPattern.ByteArrayOf(elements, pattern.id) to BYTE_ARRAY
             }
-            is S.Pattern.IntArrayOf -> {
+            is SPattern.IntArrayOf -> {
                 val elements = !pattern.elements.mapM { element -> checkPattern(element, INT) }
-                C.Pattern.IntArrayOf(elements, pattern.id) to INT_ARRAY
+                CPattern.IntArrayOf(elements, pattern.id) to INT_ARRAY
             }
-            is S.Pattern.LongArrayOf -> {
+            is SPattern.LongArrayOf -> {
                 val elements = !pattern.elements.mapM { element -> checkPattern(element, LONG) }
-                C.Pattern.LongArrayOf(elements, pattern.id) to LONG_ARRAY
+                CPattern.LongArrayOf(elements, pattern.id) to LONG_ARRAY
             }
-            is S.Pattern.ListOf -> {
+            is SPattern.ListOf -> {
                 if (pattern.elements.isEmpty()) {
-                    C.Pattern.ListOf(emptyList(), pattern.id) to END
+                    CPattern.ListOf(emptyList(), pattern.id) to END
                 } else { // TODO: use union of element types
                     val (head, headType) = !inferPattern(pattern.elements.first())
                     val elements = !pattern.elements.drop(1).mapM { element -> checkPattern(element, headType) }
-                    val size = C.VTerm.IntOf(elements.size)
-                    C.Pattern.ListOf(listOf(head) + elements, pattern.id) to C.VTerm.List(lazyOf(headType), lazyOf(size))
+                    val size = CVTerm.IntOf(elements.size)
+                    CPattern.ListOf(listOf(head) + elements, pattern.id) to CVTerm.List(lazyOf(headType), lazyOf(size))
                 }
             }
-            is S.Pattern.CompoundOf -> {
+            is SPattern.CompoundOf -> {
                 val elements = !pattern.elements.mapM { (name, element) ->
                     {
                         val (element, elementType) = !inferPattern(element)
@@ -840,35 +856,35 @@ class Elaborate private constructor(
                     }
                 }
                 val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
-                val elementTypes = elements.map { (name, _, type) -> name to C.Entry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
-                C.Pattern.CompoundOf(elementTerms, pattern.id) to C.VTerm.Compound(elementTypes)
+                val elementTypes = elements.map { (name, _, type) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
+                CPattern.CompoundOf(elementTerms, pattern.id) to CVTerm.Compound(elementTypes)
             }
-            is S.Pattern.BoxOf -> {
+            is SPattern.BoxOf -> {
                 val tag = !checkPattern(pattern.tag, TYPE)
                 val vTag = tag.toType() ?: !lift({ normalizer }, fresh(pattern.id))
                 val content = !checkPattern(pattern.content, vTag)
-                C.Pattern.BoxOf(content, tag, pattern.id) to C.VTerm.Box(lazyOf(vTag))
+                CPattern.BoxOf(content, tag, pattern.id) to CVTerm.Box(lazyOf(vTag))
             }
-            is S.Pattern.RefOf -> {
+            is SPattern.RefOf -> {
                 val (element, elementType) = !inferPattern(pattern.element)
-                C.Pattern.RefOf(element, pattern.id) to C.VTerm.Ref(lazyOf(elementType))
+                CPattern.RefOf(element, pattern.id) to CVTerm.Ref(lazyOf(elementType))
             }
-            is S.Pattern.Refl -> {
+            is SPattern.Refl -> {
                 val left = lazy { !lift({ normalizer }, fresh(pattern.id)) }
-                C.Pattern.Refl(pattern.id) to C.VTerm.Eq(left, left)
+                CPattern.Refl(pattern.id) to CVTerm.Eq(left, left)
             }
-            is S.Pattern.Unit -> C.Pattern.Unit(pattern.id) to UNIT
-            is S.Pattern.Bool -> C.Pattern.Bool(pattern.id) to TYPE
-            is S.Pattern.Byte -> C.Pattern.Byte(pattern.id) to TYPE
-            is S.Pattern.Short -> C.Pattern.Short(pattern.id) to TYPE
-            is S.Pattern.Int -> C.Pattern.Int(pattern.id) to TYPE
-            is S.Pattern.Long -> C.Pattern.Long(pattern.id) to TYPE
-            is S.Pattern.Float -> C.Pattern.Float(pattern.id) to TYPE
-            is S.Pattern.Double -> C.Pattern.Double(pattern.id) to TYPE
-            is S.Pattern.String -> C.Pattern.String(pattern.id) to TYPE
-            is S.Pattern.ByteArray -> C.Pattern.ByteArray(pattern.id) to TYPE
-            is S.Pattern.IntArray -> C.Pattern.IntArray(pattern.id) to TYPE
-            is S.Pattern.LongArray -> C.Pattern.LongArray(pattern.id) to TYPE
+            is SPattern.Unit -> CPattern.Unit(pattern.id) to UNIT
+            is SPattern.Bool -> CPattern.Bool(pattern.id) to TYPE
+            is SPattern.Byte -> CPattern.Byte(pattern.id) to TYPE
+            is SPattern.Short -> CPattern.Short(pattern.id) to TYPE
+            is SPattern.Int -> CPattern.Int(pattern.id) to TYPE
+            is SPattern.Long -> CPattern.Long(pattern.id) to TYPE
+            is SPattern.Float -> CPattern.Float(pattern.id) to TYPE
+            is SPattern.Double -> CPattern.Double(pattern.id) to TYPE
+            is SPattern.String -> CPattern.String(pattern.id) to TYPE
+            is SPattern.ByteArray -> CPattern.ByteArray(pattern.id) to TYPE
+            is SPattern.IntArray -> CPattern.IntArray(pattern.id) to TYPE
+            is SPattern.LongArray -> CPattern.LongArray(pattern.id) to TYPE
         }.also { (_, type) ->
             types[pattern.id] = type
         }
@@ -877,28 +893,28 @@ class Elaborate private constructor(
     /**
      * Checks the [pattern] against the [type] under the context.
      */
-    private fun checkPattern(pattern: S.Pattern, type: C.VTerm): State<Context, C.Pattern> = {
+    private fun checkPattern(pattern: SPattern, type: CVTerm): State<Context, CPattern> = {
         val type = !gets {
             normalizer.force(type).also {
                 types[pattern.id] = it
             }
         }
         when {
-            pattern is S.Pattern.Var -> {
+            pattern is SPattern.Var -> {
                 !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, true, type, stage)) }
-                C.Pattern.Var(pattern.name, pattern.id)
+                CPattern.Var(pattern.name, pattern.id)
             }
-            pattern is S.Pattern.ListOf && type is C.VTerm.List -> {
+            pattern is SPattern.ListOf && type is CVTerm.List -> {
                 val elements = !pattern.elements.mapM { element ->
                     checkPattern(element, type.element.value)
                 }
                 when (val size = !gets { normalizer.force(type.size.value) }) {
-                    is C.VTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
+                    is CVTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
                     else -> {}
                 }
-                C.Pattern.ListOf(elements, pattern.id)
+                CPattern.ListOf(elements, pattern.id)
             }
-            pattern is S.Pattern.CompoundOf && type is C.VTerm.Compound -> {
+            pattern is SPattern.CompoundOf && type is CVTerm.Compound -> {
                 val elements = !(pattern.elements zip type.elements.entries).mapM { (element, entry) ->
                     {
                         val type = !lift({ normalizer }, evalTerm(entry.value.type))
@@ -906,25 +922,25 @@ class Elaborate private constructor(
                         element.first to pattern
                     }
                 }
-                C.Pattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
+                CPattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
             }
-            pattern is S.Pattern.BoxOf && type is C.VTerm.Box -> {
+            pattern is SPattern.BoxOf && type is CVTerm.Box -> {
                 val tag = !checkPattern(pattern.tag, TYPE)
                 val vTag = tag.toType() ?: type.content.value
                 val content = !checkPattern(pattern.content, vTag)
-                C.Pattern.BoxOf(content, tag, pattern.id)
+                CPattern.BoxOf(content, tag, pattern.id)
             }
-            pattern is S.Pattern.RefOf && type is C.VTerm.Ref -> {
+            pattern is SPattern.RefOf && type is CVTerm.Ref -> {
                 val element = !checkPattern(pattern.element, type.element.value)
-                C.Pattern.RefOf(element, pattern.id)
+                CPattern.RefOf(element, pattern.id)
             }
-            pattern is S.Pattern.Refl && type is C.VTerm.Eq -> {
+            pattern is SPattern.Refl && type is CVTerm.Eq -> {
                 val normalizer = !lift({ normalizer }, {
                     !match(type.left.value, type.right.value)
                     !get()
                 })
                 !modify { copy(normalizer = normalizer) }
-                C.Pattern.Refl(pattern.id)
+                CPattern.Refl(pattern.id)
             }
             else -> {
                 val (inferred, inferredType) = !inferPattern(pattern)
@@ -943,42 +959,42 @@ class Elaborate private constructor(
     /**
      * Converts this pattern to a semantic term.
      */
-    private fun C.Pattern.toType(): C.VTerm? = when (this) {
-        is C.Pattern.Unit -> UNIT
-        is C.Pattern.Bool -> BOOL
-        is C.Pattern.Byte -> BYTE
-        is C.Pattern.Short -> SHORT
-        is C.Pattern.Int -> INT
-        is C.Pattern.Long -> LONG
-        is C.Pattern.Float -> FLOAT
-        is C.Pattern.Double -> DOUBLE
-        is C.Pattern.String -> STRING
-        is C.Pattern.ByteArray -> BYTE_ARRAY
-        is C.Pattern.IntArray -> INT_ARRAY
-        is C.Pattern.LongArray -> LONG_ARRAY
+    private fun CPattern.toType(): CVTerm? = when (this) {
+        is CPattern.Unit -> UNIT
+        is CPattern.Bool -> BOOL
+        is CPattern.Byte -> BYTE
+        is CPattern.Short -> SHORT
+        is CPattern.Int -> INT
+        is CPattern.Long -> LONG
+        is CPattern.Float -> FLOAT
+        is CPattern.Double -> DOUBLE
+        is CPattern.String -> STRING
+        is CPattern.ByteArray -> BYTE_ARRAY
+        is CPattern.IntArray -> INT_ARRAY
+        is CPattern.LongArray -> LONG_ARRAY
         else -> null
     }
 
     /**
      * Matches the [term1] and the [term2].
      */
-    private fun match(term1: C.VTerm, term2: C.VTerm): State<Normalizer, Unit> = {
+    private fun match(term1: CVTerm, term2: CVTerm): State<Normalizer, Unit> = {
         val (term1, term2) = !gets { force(term1) to force(term2) }
         when {
-            term2 is C.VTerm.Var -> !modify { subst(term2.level, lazyOf(term1)) }
-            term1 is C.VTerm.Var -> !modify { subst(term1.level, lazyOf(term2)) }
-            term1 is C.VTerm.ByteArrayOf && term2 is C.VTerm.ByteArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
-            term1 is C.VTerm.IntArrayOf && term2 is C.VTerm.IntArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
-            term1 is C.VTerm.LongArrayOf && term2 is C.VTerm.LongArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
-            term1 is C.VTerm.ListOf && term2 is C.VTerm.ListOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
-            term1 is C.VTerm.CompoundOf && term2 is C.VTerm.CompoundOf -> !(term1.elements.entries zip term2.elements.entries).forEachM { (entry1, entry2) ->
+            term2 is CVTerm.Var -> !modify { subst(term2.level, lazyOf(term1)) }
+            term1 is CVTerm.Var -> !modify { subst(term1.level, lazyOf(term2)) }
+            term1 is CVTerm.ByteArrayOf && term2 is CVTerm.ByteArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+            term1 is CVTerm.IntArrayOf && term2 is CVTerm.IntArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+            term1 is CVTerm.LongArrayOf && term2 is CVTerm.LongArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+            term1 is CVTerm.ListOf && term2 is CVTerm.ListOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
+            term1 is CVTerm.CompoundOf && term2 is CVTerm.CompoundOf -> !(term1.elements.entries zip term2.elements.entries).forEachM { (entry1, entry2) ->
                 if (entry1.key == entry2.key) match(entry1.value.value, entry2.value.value) else pure(Unit)
             }
-            term1 is C.VTerm.BoxOf && term2 is C.VTerm.BoxOf -> {
+            term1 is CVTerm.BoxOf && term2 is CVTerm.BoxOf -> {
                 !match(term1.content.value, term2.content.value)
                 !match(term1.tag.value, term2.tag.value)
             }
-            term1 is C.VTerm.RefOf && term2 is C.VTerm.RefOf -> !match(term1.element.value, term2.element.value)
+            term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !match(term1.element.value, term2.element.value)
             else -> Unit // TODO
         }
     }
@@ -986,89 +1002,89 @@ class Elaborate private constructor(
     /**
      * Elaborates the [effect].
      */
-    private fun elaborateEffect(effect: S.Effect): C.Effect = when (effect) {
-        is S.Effect.Name -> C.Effect.Name(effect.name)
+    private fun elaborateEffect(effect: SEffect): CEffect = when (effect) {
+        is SEffect.Name -> CEffect.Name(effect.name)
     }
 
     /**
      * Ensures that the representation of the [type] is monomorphic under this normalizer.
      */
-    private fun Normalizer.checkRepresentation(id: Id, type: C.VTerm) {
-        fun join(term1: C.VTerm, term2: C.VTerm): Boolean {
+    private fun Normalizer.checkRepresentation(id: Id, type: CVTerm) {
+        fun join(term1: CVTerm, term2: CVTerm): Boolean {
             val term1 = force(term1)
             val term2 = force(term2)
             return when (term1) {
-                is C.VTerm.Or -> term1.variants.all { join(it.value, term2) }
-                is C.VTerm.And -> term1.variants.any { join(it.value, term2) }
-                is C.VTerm.Unit -> term2 is C.VTerm.Unit
-                is C.VTerm.Bool -> term2 is C.VTerm.Bool
-                is C.VTerm.Byte -> term2 is C.VTerm.Byte
-                is C.VTerm.Short -> term2 is C.VTerm.Short
-                is C.VTerm.Int -> term2 is C.VTerm.Int
-                is C.VTerm.Long -> term2 is C.VTerm.Long
-                is C.VTerm.Float -> term2 is C.VTerm.Float
-                is C.VTerm.Double -> term2 is C.VTerm.Double
-                is C.VTerm.String -> term2 is C.VTerm.String
-                is C.VTerm.ByteArray -> term2 is C.VTerm.ByteArray
-                is C.VTerm.IntArray -> term2 is C.VTerm.IntArray
-                is C.VTerm.LongArray -> term2 is C.VTerm.LongArray
-                is C.VTerm.List -> term2 is C.VTerm.List
-                is C.VTerm.Compound -> term2 is C.VTerm.Compound
-                is C.VTerm.Box -> term2 is C.VTerm.Box
-                is C.VTerm.Ref -> term2 is C.VTerm.Ref
-                is C.VTerm.Eq -> term2 is C.VTerm.Eq
-                is C.VTerm.Fun -> term2 is C.VTerm.Fun
-                is C.VTerm.Type -> term2 is C.VTerm.Type
+                is CVTerm.Or -> term1.variants.all { join(it.value, term2) }
+                is CVTerm.And -> term1.variants.any { join(it.value, term2) }
+                is CVTerm.Unit -> term2 is CVTerm.Unit
+                is CVTerm.Bool -> term2 is CVTerm.Bool
+                is CVTerm.Byte -> term2 is CVTerm.Byte
+                is CVTerm.Short -> term2 is CVTerm.Short
+                is CVTerm.Int -> term2 is CVTerm.Int
+                is CVTerm.Long -> term2 is CVTerm.Long
+                is CVTerm.Float -> term2 is CVTerm.Float
+                is CVTerm.Double -> term2 is CVTerm.Double
+                is CVTerm.String -> term2 is CVTerm.String
+                is CVTerm.ByteArray -> term2 is CVTerm.ByteArray
+                is CVTerm.IntArray -> term2 is CVTerm.IntArray
+                is CVTerm.LongArray -> term2 is CVTerm.LongArray
+                is CVTerm.List -> term2 is CVTerm.List
+                is CVTerm.Compound -> term2 is CVTerm.Compound
+                is CVTerm.Box -> term2 is CVTerm.Box
+                is CVTerm.Ref -> term2 is CVTerm.Ref
+                is CVTerm.Eq -> term2 is CVTerm.Eq
+                is CVTerm.Fun -> term2 is CVTerm.Fun
+                is CVTerm.Type -> term2 is CVTerm.Type
                 else -> false
             }
         }
 
         when (type) {
-            is C.VTerm.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
-            is C.VTerm.Or -> if (type.variants.size >= 2) {
+            is CVTerm.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
+            is CVTerm.Or -> if (type.variants.size >= 2) {
                 val first = type.variants.first().value
                 if (!type.variants.drop(1).all { join(first, it.value) }) {
                     diagnose(Diagnostic.PolymorphicRepresentation(id))
                 }
             }
-            is C.VTerm.And -> if (type.variants.isEmpty()) {
+            is CVTerm.And -> if (type.variants.isEmpty()) {
                 diagnose(Diagnostic.PolymorphicRepresentation(id))
             }
             else -> {}
         }
     }
 
-    private fun diagnose(diagnostic: Diagnostic): C.VTerm {
+    private fun diagnose(diagnostic: Diagnostic): CVTerm {
         diagnostics += diagnostic
         return END
     }
 
     data class Result(
-        val item: C.Item,
-        val types: Map<Id, C.VTerm>,
+        val item: CItem,
+        val types: Map<Id, CVTerm>,
         val normalizer: Normalizer,
         val diagnostics: List<Diagnostic>,
-        val completions: Map<Id, List<Pair<String, C.VTerm>>>,
+        val completions: Map<Id, List<Pair<String, CVTerm>>>,
     )
 
     private data class Typing(
-        val term: C.Term,
-        val type: C.VTerm,
-        val effects: Set<C.Effect> = emptySet(),
+        val term: CTerm,
+        val type: CVTerm,
+        val effects: Set<CEffect> = emptySet(),
     )
 
     private data class Effecting(
-        val term: C.Term,
-        val effects: Set<C.Effect>,
+        val term: CTerm,
+        val effects: Set<CEffect>,
     )
 
     private data class Entry(
         val termRelevant: Boolean,
         val name: String,
-        val lower: C.VTerm?,
-        val upper: C.VTerm?,
+        val lower: CVTerm?,
+        val upper: CVTerm?,
         val typeRelevant: Boolean,
-        val type: C.VTerm,
+        val type: CVTerm,
         val stage: Int,
     )
 
@@ -1084,9 +1100,9 @@ class Elaborate private constructor(
 
         fun lookup(name: String): Int = entries.indexOfLast { it.name == name }
 
-        fun bind(id: Id, entry: Entry, term: C.VTerm? = null): Context = bindUnchecked(entry, term).also { checkPhase(id, entry.type) }
+        fun bind(id: Id, entry: Entry, term: CVTerm? = null): Context = bindUnchecked(entry, term).also { checkPhase(id, entry.type) }
 
-        fun bindUnchecked(entry: Entry, term: C.VTerm? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(term ?: C.VTerm.Var(entry.name, size))), meta, stage, termRelevant, typeRelevant)
+        fun bindUnchecked(entry: Entry, term: CVTerm? = null): Context = Context(entries + entry, normalizer.bind(lazyOf(term ?: CVTerm.Var(entry.name, size))), meta, stage, termRelevant, typeRelevant)
 
         fun empty(): Context = Context(persistentListOf(), normalizer.empty(), meta, stage, termRelevant, typeRelevant)
 
@@ -1099,29 +1115,29 @@ class Elaborate private constructor(
             typeRelevant: Boolean = this.typeRelevant,
         ): Context = Context(entries, normalizer, meta, stage, termRelevant, typeRelevant)
 
-        fun checkPhase(id: Id, type: C.VTerm) {
-            if (!meta && type is C.VTerm.Code) diagnose(Diagnostic.PhaseMismatch(id))
+        fun checkPhase(id: Id, type: CVTerm) {
+            if (!meta && type is CVTerm.Code) diagnose(Diagnostic.PhaseMismatch(id))
         }
     }
 
     companion object {
-        private val UNIT = C.VTerm.Unit()
-        private val BOOL = C.VTerm.Bool()
-        private val BYTE = C.VTerm.Byte()
-        private val SHORT = C.VTerm.Short()
-        private val INT = C.VTerm.Int()
-        private val LONG = C.VTerm.Long()
-        private val FLOAT = C.VTerm.Float()
-        private val DOUBLE = C.VTerm.Double()
-        private val STRING = C.VTerm.String()
-        private val BYTE_ARRAY = C.VTerm.ByteArray()
-        private val INT_ARRAY = C.VTerm.IntArray()
-        private val LONG_ARRAY = C.VTerm.LongArray()
-        private val END = C.VTerm.Or(emptyList())
-        private val ANY = C.VTerm.And(emptyList())
-        private val TYPE = C.VTerm.Type()
+        private val UNIT = CVTerm.Unit()
+        private val BOOL = CVTerm.Bool()
+        private val BYTE = CVTerm.Byte()
+        private val SHORT = CVTerm.Short()
+        private val INT = CVTerm.Int()
+        private val LONG = CVTerm.Long()
+        private val FLOAT = CVTerm.Float()
+        private val DOUBLE = CVTerm.Double()
+        private val STRING = CVTerm.String()
+        private val BYTE_ARRAY = CVTerm.ByteArray()
+        private val INT_ARRAY = CVTerm.IntArray()
+        private val LONG_ARRAY = CVTerm.LongArray()
+        private val END = CVTerm.Or(emptyList())
+        private val ANY = CVTerm.And(emptyList())
+        private val TYPE = CVTerm.Type()
 
-        operator fun invoke(item: S.Item, items: Map<String, C.Item>): Result = Elaborate(items).run {
+        operator fun invoke(item: SItem, items: Map<String, CItem>): Result = Elaborate(items).run {
             val normalizer = Normalizer(persistentListOf(), items, solutions)
             val (item, _) = inferItem(item).run(Context(persistentListOf(), normalizer, false, 0, true, true))
             Result(item, types, normalizer, diagnostics, completions)

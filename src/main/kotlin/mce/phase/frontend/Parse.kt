@@ -3,8 +3,8 @@ package mce.phase.frontend
 import mce.ast.Id
 import mce.ast.Name
 import mce.ast.freshId
+import mce.ast.surface.*
 import java.util.*
-import mce.ast.Surface as S
 
 @Deprecated("Use decoder")
 class Parse private constructor(
@@ -12,7 +12,7 @@ class Parse private constructor(
 ) {
     private var cursor: Int = 0
 
-    private fun parseItem(id: Id = freshId()): S.Item {
+    private fun parseItem(id: Id = freshId()): Item {
         val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
         var word = readWord()
         val imports = if (word == "import") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
@@ -33,7 +33,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                S.Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body, id)
+                Item.Def(imports, exports, modifiers, name, parameters, resultant, effects, body, id)
             }
             "mod" -> {
                 val name = readWord()
@@ -41,7 +41,7 @@ class Parse private constructor(
                 val type = parseModule()
                 expectString("≔")
                 val body = parseModule()
-                S.Item.Mod(imports, exports, modifiers, name, type, body, id)
+                Item.Mod(imports, exports, modifiers, name, type, body, id)
             }
             "test" -> {
                 val name = readWord()
@@ -49,19 +49,19 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                S.Item.Test(imports, exports, modifiers, name, body, id)
+                Item.Test(imports, exports, modifiers, name, body, id)
             }
             else -> error("unexpected item '$word'")
         }
     }
 
-    private fun parseModifier(): S.Modifier = when (val word = readWord()) {
-        "builtin" -> S.Modifier.BUILTIN
-        "meta" -> S.Modifier.META
+    private fun parseModifier(): Modifier = when (val word = readWord()) {
+        "builtin" -> Modifier.BUILTIN
+        "meta" -> Modifier.META
         else -> error("unexpected modifier '$word'")
     }
 
-    private fun parseParameter(id: Id = freshId()): S.Parameter {
+    private fun parseParameter(id: Id = freshId()): Parameter {
         return if (peekChar() == '0') {
             skip()
             val name = readWord()
@@ -80,11 +80,11 @@ class Parse private constructor(
                     false
                 } else true) to parseTerm()
             }
-            S.Parameter(false, name, lower, upper, typeRelevant, type, id)
+            Parameter(false, name, lower, upper, typeRelevant, type, id)
         } else {
             val term = parseTerm()
             return if (peekChar() == ',' || peekChar() == ']') {
-                S.Parameter(true, "", null, null, true, term, id)
+                Parameter(true, "", null, null, true, term, id)
             } else {
                 val lower = if (peekChar() == '≥') {
                     skip()
@@ -101,27 +101,27 @@ class Parse private constructor(
                         false
                     } else true) to parseTerm()
                 }
-                S.Parameter(true, (term as S.Term.Var).name, lower, upper, typeRelevant, type, id)
+                Parameter(true, (term as Term.Var).name, lower, upper, typeRelevant, type, id)
             }
         }
     }
 
-    private fun parseModule(id: Id = freshId()): S.Module = when (peekChar()) {
+    private fun parseModule(id: Id = freshId()): Module = when (peekChar()) {
         '{' -> {
             val items = parseList('{', '}') { parseItem() }
-            S.Module.Str(items, id)
+            Module.Str(items, id)
         }
         else -> when (val word = readWord()) {
             "sig" -> {
                 val signatures = parseList('{', '}') { parseSignature() }
-                S.Module.Sig(signatures, id)
+                Module.Sig(signatures, id)
             }
-            "type" -> S.Module.Type(id)
-            else -> S.Module.Var(word, id)
+            "type" -> Module.Type(id)
+            else -> Module.Var(word, id)
         }
     }
 
-    private fun parseSignature(id: Id = freshId()): S.Signature = when (val word = readWord()) {
+    private fun parseSignature(id: Id = freshId()): Signature = when (val word = readWord()) {
         "def" -> {
             val name = readWord()
             val parameters = parseList('[', ']') { parseParameter() }
@@ -129,22 +129,22 @@ class Parse private constructor(
                 expect(':')
                 parseTerm()
             }
-            S.Signature.Def(name, parameters, resultant, id)
+            Signature.Def(name, parameters, resultant, id)
         }
         "mod" -> {
             val name = readWord()
             expect(':')
             val type = parseModule()
-            S.Signature.Mod(name, type, id)
+            Signature.Mod(name, type, id)
         }
         "test" -> {
             val name = readWord()
-            S.Signature.Test(name, id)
+            Signature.Test(name, id)
         }
         else -> error("unexpected signature '$word'")
     }
 
-    private fun parseTerm(id: Id = freshId()): S.Term = when (peekChar()) {
+    private fun parseTerm(id: Id = freshId()): Term = when (peekChar()) {
         '(' -> {
             skip()
             if (peekChar() == '#') {
@@ -156,83 +156,83 @@ class Parse private constructor(
                     ')' -> left
                     '[' -> {
                         val arguments = parseList('[', ']') { parseTerm() }
-                        S.Term.Def((left as? S.Term.Var)?.name ?: error("name expected"), arguments, id)
+                        Term.Def((left as? Term.Var)?.name ?: error("name expected"), arguments, id)
                     }
                     '@' -> {
                         skip()
                         val arguments = parseList('[', ']') { parseTerm() }
-                        S.Term.Apply(left, arguments, id)
+                        Term.Apply(left, arguments, id)
                     }
                     ':' -> {
                         skip()
                         val right = parseTerm()
-                        S.Term.Anno(left, right, id)
+                        Term.Anno(left, right, id)
                     }
                     '∈' -> {
                         skip()
                         val right = parseTerm()
-                        S.Term.BoxOf(left, right, id)
+                        Term.BoxOf(left, right, id)
                     }
                     '=' -> {
                         skip()
                         val right = parseTerm()
-                        S.Term.Eq(left, right, id)
+                        Term.Eq(left, right, id)
                     }
                     else -> {
                         val operator = parseTerm()
                         val right = parseTerm()
-                        S.Term.Def((operator as? S.Term.Var)?.name ?: error("name expected"), listOf(left, right), id)
+                        Term.Def((operator as? Term.Var)?.name ?: error("name expected"), listOf(left, right), id)
                     }
                 }
             }.also { expect(')') }
         }
         '_' -> {
             skip()
-            S.Term.Hole(id)
+            Term.Hole(id)
         }
         '?' -> {
             skip()
-            S.Term.Meta(id)
+            Term.Meta(id)
         }
         '⟨' -> {
             skip()
-            S.Term.UnitOf(id).also { expect('⟩') }
+            Term.UnitOf(id).also { expect('⟩') }
         }
-        '"' -> S.Term.StringOf(readString(), id)
+        '"' -> Term.StringOf(readString(), id)
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
                 skip(2)
-                S.Term.ByteArrayOf(parseList(';', ']') { parseTerm() }, id)
+                Term.ByteArrayOf(parseList(';', ']') { parseTerm() }, id)
             }
             peek(1) == 'i' && peek(2) == ';' -> {
                 skip(2)
-                S.Term.IntArrayOf(parseList(';', ']') { parseTerm() }, id)
+                Term.IntArrayOf(parseList(';', ']') { parseTerm() }, id)
             }
             peek(1) == 'l' && peek(2) == ';' -> {
                 skip(2)
-                S.Term.LongArrayOf(parseList(';', ']') { parseTerm() }, id)
+                Term.LongArrayOf(parseList(';', ']') { parseTerm() }, id)
             }
-            else -> S.Term.ListOf(parseList('[', ']') { parseTerm() }, id)
+            else -> Term.ListOf(parseList('[', ']') { parseTerm() }, id)
         }
-        '{' -> S.Term.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parseTerm() }) }, id)
+        '{' -> Term.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parseTerm() }) }, id)
         '&' -> {
             skip()
-            S.Term.RefOf(parseTerm(), id)
+            Term.RefOf(parseTerm(), id)
         }
         'λ' -> {
             skip()
             val parameters = parseList('[', ']') { parseName() }
             expectString("→")
             val body = parseTerm()
-            S.Term.FunOf(parameters, body, id)
+            Term.FunOf(parameters, body, id)
         }
         '`' -> {
             skip()
-            S.Term.CodeOf(parseTerm(), id)
+            Term.CodeOf(parseTerm(), id)
         }
         '$' -> {
             skip()
-            S.Term.Splice(parseTerm(), id)
+            Term.Splice(parseTerm(), id)
         }
         else -> when (val word = readWord()) {
             "let" -> {
@@ -241,42 +241,42 @@ class Parse private constructor(
                 val init = parseTerm()
                 expect(',')
                 val body = parseTerm()
-                S.Term.Let(name, init, body, id)
+                Term.Let(name, init, body, id)
             }
             "match" -> {
                 val scrutinee = parseTerm()
                 val clauses = parseList('[', ']') { parsePair({ parsePattern() }, { expectString("⇒") }, { parseTerm() }) }
-                S.Term.Match(scrutinee, clauses, id)
+                Term.Match(scrutinee, clauses, id)
             }
-            "false" -> S.Term.BoolOf(false, id)
-            "true" -> S.Term.BoolOf(true, id)
-            "refl" -> S.Term.Refl(id)
+            "false" -> Term.BoolOf(false, id)
+            "true" -> Term.BoolOf(true, id)
+            "refl" -> Term.Refl(id)
             "or" -> {
                 val variants = parseList('{', '}') { parseTerm() }
-                S.Term.Or(variants, id)
+                Term.Or(variants, id)
             }
-            "end" -> S.Term.Or(emptyList(), id)
+            "end" -> Term.Or(emptyList(), id)
             "and" -> {
                 val variants = parseList('{', '}') { parseTerm() }
-                S.Term.And(variants, id)
+                Term.And(variants, id)
             }
-            "any" -> S.Term.And(emptyList(), id)
-            "unit" -> S.Term.Unit(id)
-            "bool" -> S.Term.Bool(id)
-            "byte" -> S.Term.Byte(id)
-            "short" -> S.Term.Short(id)
-            "int" -> S.Term.Int(id)
-            "long" -> S.Term.Long(id)
-            "float" -> S.Term.Float(id)
-            "double" -> S.Term.Double(id)
-            "string" -> S.Term.String(id)
-            "byte_array" -> S.Term.ByteArray(id)
-            "int_array" -> S.Term.IntArray(id)
-            "long_array" -> S.Term.LongArray(id)
+            "any" -> Term.And(emptyList(), id)
+            "unit" -> Term.Unit(id)
+            "bool" -> Term.Bool(id)
+            "byte" -> Term.Byte(id)
+            "short" -> Term.Short(id)
+            "int" -> Term.Int(id)
+            "long" -> Term.Long(id)
+            "float" -> Term.Float(id)
+            "double" -> Term.Double(id)
+            "string" -> Term.String(id)
+            "byte_array" -> Term.ByteArray(id)
+            "int_array" -> Term.IntArray(id)
+            "long_array" -> Term.LongArray(id)
             "list" -> {
                 val element = parseTerm()
                 val size = parseTerm()
-                S.Term.List(element, size, id)
+                Term.List(element, size, id)
             }
             "compound" -> {
                 val elements = parseList('{', '}') {
@@ -286,20 +286,20 @@ class Parse private constructor(
                     } else true
                     val left = parseTerm()
                     if (peekChar() == ',' || peekChar() == '}') {
-                        S.Entry(erased, Name("", freshId()), left, freshId())
+                        Entry(erased, Name("", freshId()), left, freshId())
                     } else {
                         expect(':')
                         val right = parseTerm()
-                        S.Entry(erased, Name((left as? S.Term.Var)?.name ?: error("name expected"), freshId()), right, freshId())
+                        Entry(erased, Name((left as? Term.Var)?.name ?: error("name expected"), freshId()), right, freshId())
                     }
                 }
-                S.Term.Compound(elements, id)
+                Term.Compound(elements, id)
             }
             "box" -> {
                 val content = parseTerm()
-                S.Term.Box(content, id)
+                Term.Box(content, id)
             }
-            "ref" -> S.Term.Ref(parseTerm(), id)
+            "ref" -> Term.Ref(parseTerm(), id)
             "fun" -> {
                 val parameters = parseList('[', ']') { parseParameter() }
                 expectString("→")
@@ -308,23 +308,23 @@ class Parse private constructor(
                     skip()
                     parseEffects()
                 } else emptyList()
-                S.Term.Fun(parameters, resultant, effects, id)
+                Term.Fun(parameters, resultant, effects, id)
             }
-            "code" -> S.Term.Code(parseTerm(), id)
-            "type" -> S.Term.Type(id)
+            "code" -> Term.Code(parseTerm(), id)
+            "type" -> Term.Type(id)
             else -> when {
-                BYTE_EXPRESSION.matches(word) -> S.Term.ByteOf(word.dropLast(1).toByte(), id)
-                SHORT_EXPRESSION.matches(word) -> S.Term.ShortOf(word.dropLast(1).toShort(), id)
-                INT_EXPRESSION.matches(word) -> S.Term.IntOf(word.toInt(), id)
-                LONG_EXPRESSION.matches(word) -> S.Term.LongOf(word.dropLast(1).toLong(), id)
-                FLOAT_EXPRESSION.matches(word) -> S.Term.FloatOf(word.dropLast(1).toFloat(), id)
-                DOUBLE_EXPRESSION.matches(word) -> S.Term.DoubleOf(word.dropLast(1).toDouble(), id)
-                else -> S.Term.Var(word, id)
+                BYTE_EXPRESSION.matches(word) -> Term.ByteOf(word.dropLast(1).toByte(), id)
+                SHORT_EXPRESSION.matches(word) -> Term.ShortOf(word.dropLast(1).toShort(), id)
+                INT_EXPRESSION.matches(word) -> Term.IntOf(word.toInt(), id)
+                LONG_EXPRESSION.matches(word) -> Term.LongOf(word.dropLast(1).toLong(), id)
+                FLOAT_EXPRESSION.matches(word) -> Term.FloatOf(word.dropLast(1).toFloat(), id)
+                DOUBLE_EXPRESSION.matches(word) -> Term.DoubleOf(word.dropLast(1).toDouble(), id)
+                else -> Term.Var(word, id)
             }
         }
     }
 
-    private fun parsePattern(id: Id = freshId()): S.Pattern = when (peekChar()) {
+    private fun parsePattern(id: Id = freshId()): Pattern = when (peekChar()) {
         '(' -> {
             skip()
             val left = parsePattern()
@@ -333,69 +333,69 @@ class Parse private constructor(
                 '∈' -> {
                     skip()
                     val right = parsePattern()
-                    S.Pattern.BoxOf(left, right, id)
+                    Pattern.BoxOf(left, right, id)
                 }
                 else -> error("unexpected operator '$char'")
             }.also { expect(')') }
         }
         '⟨' -> {
             skip()
-            S.Pattern.UnitOf(id).also { expect('⟩') }
+            Pattern.UnitOf(id).also { expect('⟩') }
         }
-        '"' -> S.Pattern.StringOf(readString(), id)
+        '"' -> Pattern.StringOf(readString(), id)
         '[' -> when {
             peek(1) == 'b' && peek(2) == ';' -> {
                 skip(2)
-                S.Pattern.ByteArrayOf(parseList(';', ']') { parsePattern() }, id)
+                Pattern.ByteArrayOf(parseList(';', ']') { parsePattern() }, id)
             }
             peek(1) == 'i' && peek(2) == ';' -> {
                 skip(2)
-                S.Pattern.IntArrayOf(parseList(';', ']') { parsePattern() }, id)
+                Pattern.IntArrayOf(parseList(';', ']') { parsePattern() }, id)
             }
             peek(1) == 'l' && peek(2) == ';' -> {
                 skip(2)
-                S.Pattern.LongArrayOf(parseList(';', ']') { parsePattern() }, id)
+                Pattern.LongArrayOf(parseList(';', ']') { parsePattern() }, id)
             }
-            else -> S.Pattern.ListOf(parseList('[', ']') { parsePattern() }, id)
+            else -> Pattern.ListOf(parseList('[', ']') { parsePattern() }, id)
         }
-        '{' -> S.Pattern.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parsePattern() }) }, id)
+        '{' -> Pattern.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parsePattern() }) }, id)
         '&' -> {
             skip()
-            S.Pattern.RefOf(parsePattern(), id)
+            Pattern.RefOf(parsePattern(), id)
         }
         else -> when (val word = readWord()) {
-            "false" -> S.Pattern.BoolOf(false, id)
-            "true" -> S.Pattern.BoolOf(true, id)
-            "refl" -> S.Pattern.Refl(id)
-            "unit" -> S.Pattern.Unit(id)
-            "bool" -> S.Pattern.Bool(id)
-            "byte" -> S.Pattern.Byte(id)
-            "short" -> S.Pattern.Short(id)
-            "int" -> S.Pattern.Int(id)
-            "long" -> S.Pattern.Long(id)
-            "float" -> S.Pattern.Float(id)
-            "double" -> S.Pattern.Double(id)
-            "string" -> S.Pattern.String(id)
-            "byte_array" -> S.Pattern.ByteArray(id)
-            "int_array" -> S.Pattern.IntArray(id)
-            "long_array" -> S.Pattern.LongArray(id)
+            "false" -> Pattern.BoolOf(false, id)
+            "true" -> Pattern.BoolOf(true, id)
+            "refl" -> Pattern.Refl(id)
+            "unit" -> Pattern.Unit(id)
+            "bool" -> Pattern.Bool(id)
+            "byte" -> Pattern.Byte(id)
+            "short" -> Pattern.Short(id)
+            "int" -> Pattern.Int(id)
+            "long" -> Pattern.Long(id)
+            "float" -> Pattern.Float(id)
+            "double" -> Pattern.Double(id)
+            "string" -> Pattern.String(id)
+            "byte_array" -> Pattern.ByteArray(id)
+            "int_array" -> Pattern.IntArray(id)
+            "long_array" -> Pattern.LongArray(id)
             else -> when {
-                BYTE_EXPRESSION.matches(word) -> S.Pattern.ByteOf(word.dropLast(1).toByte(), id)
-                SHORT_EXPRESSION.matches(word) -> S.Pattern.ShortOf(word.dropLast(1).toShort(), id)
-                INT_EXPRESSION.matches(word) -> S.Pattern.IntOf(word.toInt(), id)
-                LONG_EXPRESSION.matches(word) -> S.Pattern.LongOf(word.dropLast(1).toLong(), id)
-                FLOAT_EXPRESSION.matches(word) -> S.Pattern.FloatOf(word.dropLast(1).toFloat(), id)
-                DOUBLE_EXPRESSION.matches(word) -> S.Pattern.DoubleOf(word.dropLast(1).toDouble(), id)
-                else -> S.Pattern.Var(word, id)
+                BYTE_EXPRESSION.matches(word) -> Pattern.ByteOf(word.dropLast(1).toByte(), id)
+                SHORT_EXPRESSION.matches(word) -> Pattern.ShortOf(word.dropLast(1).toShort(), id)
+                INT_EXPRESSION.matches(word) -> Pattern.IntOf(word.toInt(), id)
+                LONG_EXPRESSION.matches(word) -> Pattern.LongOf(word.dropLast(1).toLong(), id)
+                FLOAT_EXPRESSION.matches(word) -> Pattern.FloatOf(word.dropLast(1).toFloat(), id)
+                DOUBLE_EXPRESSION.matches(word) -> Pattern.DoubleOf(word.dropLast(1).toDouble(), id)
+                else -> Pattern.Var(word, id)
             }
         }
     }
 
-    private fun parseEffects(): List<S.Effect> = parseList('{', '}') { parseEffect() }
+    private fun parseEffects(): List<Effect> = parseList('{', '}') { parseEffect() }
 
-    private fun parseEffect(): S.Effect {
+    private fun parseEffect(): Effect {
         val name = readWord()
-        return S.Effect.Name(name)
+        return Effect.Name(name)
     }
 
     private fun parseName(): Name {
@@ -475,7 +475,7 @@ class Parse private constructor(
         private val FLOAT_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?f")
         private val DOUBLE_EXPRESSION = Regex("[-+]?(?:[0-9]+[.]?|[0-9]*[.][0-9]+)(?:e[-+]?[0-9]+)?d")
 
-        operator fun invoke(name: String, input: String): S.Item = Parse(input).run {
+        operator fun invoke(name: String, input: String): Item = Parse(input).run {
             parseItem().also {
                 if (it.name != name) error("")
                 skipWhitespace()
