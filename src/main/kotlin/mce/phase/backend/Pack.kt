@@ -342,6 +342,6 @@ class Pack private constructor(
             }
         }
 
-        operator fun invoke(input: Defunctionalize.Result): Datapack = Pack(input.types).pack(input.functions, input.item)
+        operator fun invoke(input: Defun.Result): Datapack = Pack(input.types).pack(input.functions, input.item)
     }
 }

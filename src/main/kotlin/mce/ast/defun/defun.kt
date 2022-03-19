@@ -11,16 +11,19 @@ import kotlin.Long as KLong
 import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
+import kotlin.collections.Set as KSet
 
 sealed class Item {
     abstract val imports: KList<KString>
     abstract val exports: KList<KString>
+    abstract val modifiers: KSet<Modifier>
     abstract val name: KString
     abstract val id: Id
 
     data class Def(
         override val imports: KList<KString>,
         override val exports: KList<KString>,
+        override val modifiers: KSet<Modifier>,
         override val name: KString,
         val parameters: KList<Parameter>,
         val body: Term,
@@ -30,6 +33,7 @@ sealed class Item {
     data class Mod(
         override val imports: KList<KString>,
         override val exports: KList<KString>,
+        override val modifiers: KSet<Modifier>,
         override val name: KString,
         val body: Module,
         override val id: Id,
@@ -38,10 +42,15 @@ sealed class Item {
     data class Test(
         override val imports: KList<KString>,
         override val exports: KList<KString>,
+        override val modifiers: KSet<Modifier>,
         override val name: KString,
         val body: Term,
         override val id: Id,
     ) : Item()
+}
+
+enum class Modifier {
+    BUILTIN,
 }
 
 data class Parameter(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
@@ -110,7 +119,7 @@ sealed class Term {
     data class Box(val content: Term, override val id: Id) : Term()
     data class Ref(val element: Term, override val id: Id) : Term()
     data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
-    data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: Set<Effect>, override val id: Id) : Term()
+    data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>, override val id: Id) : Term()
     data class Type(override val id: Id) : Term()
 }
 

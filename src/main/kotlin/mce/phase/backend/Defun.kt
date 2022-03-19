@@ -5,6 +5,7 @@ import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import mce.ast.core.Effect as CEffect
 import mce.ast.core.Item as CItem
+import mce.ast.core.Modifier as CModifier
 import mce.ast.core.Module as CModule
 import mce.ast.core.Parameter as CParameter
 import mce.ast.core.Pattern as CPattern
@@ -14,6 +15,7 @@ import mce.ast.core.VTerm as CVTerm
 import mce.ast.defun.Effect as DEffect
 import mce.ast.defun.Entry as DEntry
 import mce.ast.defun.Item as DItem
+import mce.ast.defun.Modifier as DModifier
 import mce.ast.defun.Module as DModule
 import mce.ast.defun.Parameter as DParameter
 import mce.ast.defun.Pattern as DPattern
@@ -21,23 +23,31 @@ import mce.ast.defun.Signature as DSignature
 import mce.ast.defun.Term as DTerm
 
 @Suppress("NAME_SHADOWING")
-class Defunctionalize private constructor() {
+class Defun private constructor() {
     private val functions: MutableMap<Int, DTerm> = mutableMapOf()
 
-    private fun defunctionalizeItem(item: CItem): DItem = when (item) {
-        is CItem.Def -> {
-            val parameters = item.parameters.map { defunctionalizeParameter(it) }
-            val body = defunctionalizeTerm(item.body)
-            DItem.Def(item.imports, item.exports, item.name, parameters, body, item.id)
+    private fun defunctionalizeItem(item: CItem): DItem {
+        val modifiers = item.modifiers.map { defunctionalizeModifier(it) }.toSet()
+        return when (item) {
+            is CItem.Def -> {
+                val parameters = item.parameters.map { defunctionalizeParameter(it) }
+                val body = defunctionalizeTerm(item.body)
+                DItem.Def(item.imports, item.exports, modifiers, item.name, parameters, body, item.id)
+            }
+            is CItem.Mod -> {
+                val body = defunctionalizeModule(item.body)
+                DItem.Mod(item.imports, item.exports, modifiers, item.name, body, item.id)
+            }
+            is CItem.Test -> {
+                val body = defunctionalizeTerm(item.body)
+                DItem.Test(item.imports, item.exports, modifiers, item.name, body, item.id)
+            }
         }
-        is CItem.Mod -> {
-            val body = defunctionalizeModule(item.body)
-            DItem.Mod(item.imports, item.exports, item.name, body, item.id)
-        }
-        is CItem.Test -> {
-            val body = defunctionalizeTerm(item.body)
-            DItem.Test(item.imports, item.exports, item.name, body, item.id)
-        }
+    }
+
+    private fun defunctionalizeModifier(modifier: CModifier): DModifier = when (modifier) {
+        CModifier.BUILTIN -> DModifier.BUILTIN
+        CModifier.META -> throw Error()
     }
 
     private fun defunctionalizeParameter(parameter: CParameter): DParameter {
@@ -263,7 +273,7 @@ class Defunctionalize private constructor() {
 
         private fun freshTag(): Int = tag.getAndIncrement()
 
-        operator fun invoke(input: Stage.Result): Result = Defunctionalize().run {
+        operator fun invoke(input: Stage.Result): Result = Defun().run {
             Result(defunctionalizeItem(input.item), input.types, functions)
         }
     }

@@ -6,7 +6,7 @@ import kotlinx.coroutines.coroutineScope
 import mce.ast.Id
 import mce.ast.surface.Item
 import mce.ast.surface.Modifier
-import mce.phase.backend.Defunctionalize
+import mce.phase.backend.Defun
 import mce.phase.backend.Pack
 import mce.phase.backend.Stage
 import mce.phase.frontend.Elaborate
@@ -38,7 +38,7 @@ class Server {
                 }
                 is Key.ZonkResult -> Zonk(fetch(Key.ElaborateResult(key.name))) as V
                 is Key.StageResult -> Stage(fetch(Key.ZonkResult(key.name))) as V
-                is Key.DefunctionalizeResult -> Defunctionalize(fetch(Key.StageResult(key.name))) as V
+                is Key.DefunctionalizeResult -> Defun(fetch(Key.StageResult(key.name))) as V
                 is Key.Datapack -> Pack(fetch(Key.DefunctionalizeResult(key.name))) as V
             }.also {
                 setValue(key, it)
