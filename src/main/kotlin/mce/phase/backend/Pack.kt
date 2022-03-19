@@ -1,21 +1,23 @@
 package mce.phase.backend
 
 import mce.ast.Id
-import mce.ast.defun.*
+import mce.ast.defun.Item
+import mce.ast.defun.Term
 import mce.ast.pack.*
 import mce.ast.pack.Command.*
-import mce.ast.pack.Consumer.*
+import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
-import mce.ast.pack.SourceComparator.*
-import mce.ast.pack.SourceProvider.*
+import mce.ast.pack.SourceComparator.Matches
+import mce.ast.pack.SourceProvider.From
+import mce.ast.pack.SourceProvider.Value
 import mce.ast.core.VTerm as Type
 import mce.ast.pack.Function as PFunction
 
 @Suppress("NAME_SHADOWING")
 class Pack private constructor(
-    types: Map<Id, Type>
+    types: Map<Id, Type>,
 ) {
     private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
 
@@ -202,55 +204,10 @@ class Pack private constructor(
     private fun getType(id: Id): NbtType = types[id]!!
 
     companion object {
-        val nbtPath: NbtPath = NbtPath()
-
-        /**
-         * A storage to store stacks.
-         * @see [net.minecraft.resources.ResourceLocation.isAllowedInResourceLocation]
-         */
-        @Suppress("KDocUnresolvedReference")
-        val STACKS = ResourceLocation("0")
-
-        val BYTE = nbtPath["a"]
-        val SHORT = nbtPath["b"]
-        val INT = nbtPath["c"]
-        val LONG = nbtPath["d"]
-        val FLOAT = nbtPath["e"]
-        val DOUBLE = nbtPath["f"]
-        val BYTE_ARRAY = nbtPath["g"]
-        val STRING = nbtPath["h"]
-        val LIST = nbtPath["i"]
-        val COMPOUND = nbtPath["j"]
-        val INT_ARRAY = nbtPath["k"]
-        val LONG_ARRAY = nbtPath["l"]
-
-        /**
-         * An objective to store registers.
-         * @see [net.minecraft.commands.arguments.ObjectiveArgument.parse]
-         */
-        @Suppress("KDocUnresolvedReference")
-        val REGISTERS = Objective("0")
-
-        val REGISTER_0 = ScoreHolder("0")
-
         /**
          * A resource location of the apply function.
          */
         val APPLY = ResourceLocation("apply")
-
-        operator fun NbtPath.get(pattern: Nbt.Compound): NbtPath = NbtPath(nodes + NbtNode.MatchElement(pattern))
-
-        operator fun NbtPath.invoke(): NbtPath = NbtPath(nodes + NbtNode.AllElements)
-
-        operator fun NbtPath.get(index: Int): NbtPath = NbtPath(nodes + NbtNode.IndexedElement(index))
-
-        operator fun NbtPath.get(name: String, pattern: Nbt.Compound): NbtPath = NbtPath(nodes + NbtNode.MatchObject(name, pattern))
-
-        operator fun NbtPath.get(name: String): NbtPath = NbtPath(nodes + NbtNode.CompoundChild(name))
-
-        fun Append(target: ResourceLocation, path: NbtPath, source: SourceProvider): Command = InsertAtIndex(target, path, -1, source)
-
-        fun Prepend(target: ResourceLocation, path: NbtPath, source: SourceProvider): Command = InsertAtIndex(target, path, 0, source)
 
         private fun erase(type: Type): NbtType = when (type) {
             is Type.Hole -> throw Error()

@@ -8,12 +8,6 @@ import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.Function
 import mce.ast.pack.SourceProvider.Value
 import mce.fetch
-import mce.phase.backend.Pack.Companion.BYTE
-import mce.phase.backend.Pack.Companion.INT
-import mce.phase.backend.Pack.Companion.REGISTERS
-import mce.phase.backend.Pack.Companion.REGISTER_0
-import mce.phase.backend.Pack.Companion.STACKS
-import mce.phase.backend.Pack.Companion.get
 import mce.server.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals

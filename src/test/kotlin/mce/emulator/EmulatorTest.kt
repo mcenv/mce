@@ -1,12 +1,7 @@
 package mce.emulator
 
-import mce.ast.pack.Command
-import mce.ast.pack.Nbt
-import mce.ast.pack.NbtType
-import mce.ast.pack.ResourceLocation
+import mce.ast.pack.*
 import mce.ast.pack.SourceProvider.Value
-import mce.phase.backend.Pack.Companion.get
-import mce.phase.backend.Pack.Companion.nbtPath
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import mce.ast.pack.Function as PFunction
