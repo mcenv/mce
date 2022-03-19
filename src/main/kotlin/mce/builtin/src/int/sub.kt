@@ -1,6 +1,11 @@
 package mce.builtin.src.int
 
 import mce.ast.core.VTerm
+import mce.ast.pack.*
+import mce.ast.pack.Command.*
+import mce.ast.pack.Consumer.RESULT
+import mce.ast.pack.Execute.*
+import mce.ast.pack.Operation.MINUS_ASSIGN
 import mce.builtin.BuiltinFunction2
 
 object sub : BuiltinFunction2("int/sub") {
@@ -12,4 +17,11 @@ object sub : BuiltinFunction2("int/sub") {
         a is VTerm.Var && b is VTerm.Var && a.level == b.level -> VTerm.IntOf(0)
         else -> null
     }
+
+    override fun pack(): List<Command> = listOf(
+        Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
+        RemoveData(STACKS, INT[-1]),
+        Command.Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
+        Command.Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(PerformOperation(REGISTER_1, REGISTERS, MINUS_ASSIGN, REGISTER_0, REGISTERS))))
+    )
 }

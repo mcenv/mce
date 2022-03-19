@@ -1,6 +1,11 @@
 package mce.builtin.src.int
 
 import mce.ast.core.VTerm
+import mce.ast.pack.*
+import mce.ast.pack.Command.*
+import mce.ast.pack.Consumer.RESULT
+import mce.ast.pack.Execute.*
+import mce.ast.pack.Operation.PLUS_ASSIGN
 import mce.builtin.BuiltinFunction2
 import mce.builtin.commuter
 
@@ -13,4 +18,11 @@ object add : BuiltinFunction2("int/add") {
         b is VTerm.IntOf && b.value == 0 -> a
         else -> VTerm.Def(name, listOf(a, b).sortedWith(commuter).map { lazyOf(it) })
     }
+
+    override fun pack(): List<Command> = listOf(
+        Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
+        RemoveData(STACKS, INT[-1]),
+        Command.Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
+        Command.Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(PerformOperation(REGISTER_1, REGISTERS, PLUS_ASSIGN, REGISTER_0, REGISTERS))))
+    )
 }

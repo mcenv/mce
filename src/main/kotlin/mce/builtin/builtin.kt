@@ -1,6 +1,7 @@
 package mce.builtin
 
 import mce.ast.core.VTerm
+import mce.ast.pack.Command
 import mce.builtin.src.identity
 import mce.phase.Normalizer
 import mce.builtin.src.byte_array.size as byte_array_size
@@ -15,20 +16,20 @@ import mce.builtin.src.int_array.size as int_array_size
 import mce.builtin.src.list.size as list_size
 import mce.builtin.src.long_array.size as long_array_size
 
-val builtins: Map<String, BuiltinFunction> = mapOf(
-    "identity" to identity,
-    "int/eq" to int_eq,
-    "int/ne" to int_ne,
-    "int/add" to int_add,
-    "int/sub" to int_sub,
-    "int/mul" to int_mul,
-    "int/div" to int_div,
-    "int/mod" to int_mod,
-    "byte_array/size" to byte_array_size,
-    "int_array/size" to int_array_size,
-    "long_array/size" to long_array_size,
-    "list/size" to list_size,
-)
+val builtins: Map<String, BuiltinFunction> = listOf(
+    identity,
+    int_eq,
+    int_ne,
+    int_add,
+    int_sub,
+    int_mul,
+    int_div,
+    int_mod,
+    byte_array_size,
+    int_array_size,
+    long_array_size,
+    list_size,
+).associateBy { it.name }
 
 @Suppress("NAME_SHADOWING")
 val commuter: Comparator<VTerm> = Comparator { term1, term2 ->
@@ -47,7 +48,7 @@ abstract class BuiltinFunction(val name: String) {
 
     fun Normalizer.eval(): VTerm = evalOrNull() ?: VTerm.Def(name, arguments())
 
-    // abstract fun pack(): List<Command>
+    abstract fun pack(): List<Command>
 }
 
 abstract class BuiltinFunction1(name: String) : BuiltinFunction(name) {
