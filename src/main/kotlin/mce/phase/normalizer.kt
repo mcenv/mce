@@ -10,14 +10,15 @@ import mce.builtin.builtins
 import mce.util.State
 import mce.util.toLinkedHashMap
 
+@Suppress("NOTHING_TO_INLINE")
 class Normalizer(
-    private val values: PersistentList<Lazy<VTerm>>,
+    val values: PersistentList<Lazy<VTerm>>,
     val items: Map<String, Item>,
     val solutions: MutableList<VTerm?>
 ) {
-    val size: Int get() = values.size
+    inline val size: Int get() = values.size
 
-    fun lookup(level: Int): VTerm = values.getOrNull(level)?.value ?: VTerm.Var("", level)
+    inline fun lookup(level: Int): VTerm = values.getOrNull(level)?.value ?: VTerm.Var("", level)
 
     fun subst(level: Int, term: Lazy<VTerm>): Normalizer = Normalizer(values.set(level, term), items, solutions)
 
@@ -86,7 +87,7 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             val item = !gets { getItem(term.name)!! } as Item.Def;
             !term.arguments.forEachM { argument -> modify { bind(lazy { !evalTerm(argument) }) } }
             if (item.modifiers.contains(Modifier.BUILTIN)) {
-                builtins[term.name]!!(!get())
+                !gets { with(builtins[term.name]!!) { eval() } }
             } else {
                 !evalTerm(item.body)
             }

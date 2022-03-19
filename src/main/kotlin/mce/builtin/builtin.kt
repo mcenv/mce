@@ -15,19 +15,19 @@ import mce.builtin.src.int_array.size as int_array_size
 import mce.builtin.src.list.size as list_size
 import mce.builtin.src.long_array.size as long_array_size
 
-val builtins: Map<String, Normalizer.() -> VTerm> = mapOf(
-    "identity" to { identity() },
-    "int/eq" to { int_eq() },
-    "int/ne" to { int_ne() },
-    "int/add" to { int_add() },
-    "int/sub" to { int_sub() },
-    "int/mul" to { int_mul() },
-    "int/div" to { int_div() },
-    "int/mod" to { int_mod() },
-    "byte_array/size" to { byte_array_size() },
-    "int_array/size" to { int_array_size() },
-    "long_array/size" to { long_array_size() },
-    "list/size" to { list_size() },
+val builtins: Map<String, BuiltinFunction> = mapOf(
+    "identity" to identity,
+    "int/eq" to int_eq,
+    "int/ne" to int_ne,
+    "int/add" to int_add,
+    "int/sub" to int_sub,
+    "int/mul" to int_mul,
+    "int/div" to int_div,
+    "int/mod" to int_mod,
+    "byte_array/size" to byte_array_size,
+    "int_array/size" to int_array_size,
+    "long_array/size" to long_array_size,
+    "list/size" to list_size,
 )
 
 @Suppress("NAME_SHADOWING")
@@ -38,4 +38,38 @@ val commuter: Comparator<VTerm> = Comparator { term1, term2 ->
         term2 is VTerm.Var -> -1
         else -> 0
     }
+}
+
+abstract class BuiltinFunction(val name: String) {
+    abstract fun Normalizer.arguments(): List<Lazy<VTerm>>
+
+    abstract fun Normalizer.evalOrNull(): VTerm?
+
+    fun Normalizer.eval(): VTerm = evalOrNull() ?: VTerm.Def(name, arguments())
+
+    // abstract fun pack(): List<Command>
+}
+
+abstract class BuiltinFunction1(name: String) : BuiltinFunction(name) {
+    override fun Normalizer.arguments(): List<Lazy<VTerm>> = listOf(lazyOf(lookup(size - 1)))
+
+    override fun Normalizer.evalOrNull(): VTerm? = eval(lookup(size - 1))
+
+    abstract fun eval(a: VTerm): VTerm?
+}
+
+abstract class BuiltinFunction2(name: String) : BuiltinFunction(name) {
+    override fun Normalizer.arguments(): List<Lazy<VTerm>> = listOf(lazyOf(lookup(size - 2)), lazyOf(lookup(size - 1)))
+
+    override fun Normalizer.evalOrNull(): VTerm? = eval(lookup(size - 2), lookup(size - 1))
+
+    abstract fun eval(a: VTerm, b: VTerm): VTerm?
+}
+
+abstract class BuiltinFunction3(name: String) : BuiltinFunction(name) {
+    override fun Normalizer.arguments(): List<Lazy<VTerm>> = listOf(lazyOf(lookup(size - 3)), lazyOf(lookup(size - 2)), lazyOf(lookup(size - 1)))
+
+    override fun Normalizer.evalOrNull(): VTerm? = eval(lookup(size - 3), lookup(size - 2), lookup(size - 1))
+
+    abstract fun eval(a: VTerm, b: VTerm, c: VTerm): VTerm?
 }

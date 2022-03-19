@@ -1,15 +1,11 @@
 package mce.builtin.src.list
 
 import mce.ast.core.VTerm
-import mce.phase.Normalizer
+import mce.builtin.BuiltinFunction3
 
-fun Normalizer.size(): VTerm {
-    return when (val `as` = lookup(size - 1)) {
-        is VTerm.ListOf -> VTerm.IntOf(`as`.elements.size)
-        else -> {
-            val α = lookup(size - 3)
-            val n = lookup(size - 2)
-            VTerm.Def("list/size", listOf(α, n, `as`).map(::lazyOf))
-        }
+object size : BuiltinFunction3("list/size") {
+    override fun eval(a: VTerm, b: VTerm, c: VTerm): VTerm? = when (c) {
+        is VTerm.ListOf -> VTerm.IntOf(c.elements.size)
+        else -> null
     }
 }

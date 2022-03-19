@@ -1,11 +1,11 @@
 package mce.builtin.src.byte_array
 
 import mce.ast.core.VTerm
-import mce.phase.Normalizer
+import mce.builtin.BuiltinFunction1
 
-fun Normalizer.size(): VTerm {
-    return when (val bs = lookup(size - 1)) {
-        is VTerm.ListOf -> VTerm.IntOf(bs.elements.size)
-        else -> VTerm.Def("byte_array/size", listOf(bs).map { lazyOf(it) })
+object size : BuiltinFunction1("byte_array/size") {
+    override fun eval(a: VTerm): VTerm? = when (a) {
+        is VTerm.ListOf -> VTerm.IntOf(a.elements.size)
+        else -> null
     }
 }
