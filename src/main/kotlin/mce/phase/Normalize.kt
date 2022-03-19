@@ -9,6 +9,7 @@ import mce.ast.freshId
 import mce.builtin.builtins
 import mce.util.State
 import mce.util.toLinkedHashMap
+import kotlin.collections.Map
 
 @Suppress("NOTHING_TO_INLINE")
 class Normalizer(
