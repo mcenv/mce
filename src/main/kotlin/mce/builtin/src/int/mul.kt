@@ -2,7 +2,8 @@ package mce.builtin.src.int
 
 import mce.ast.core.VTerm
 import mce.ast.pack.*
-import mce.ast.pack.Command.*
+import mce.ast.pack.Command.GetData
+import mce.ast.pack.Command.PerformOperation
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.TIMES_ASSIGN
@@ -26,7 +27,7 @@ object mul : BuiltinDef2("int/mul") {
 
     override fun pack(): List<Command> = listOf(
         Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-        RemoveData(STACKS, INT[-1]),
+        Pop(STACKS, INT),
         Command.Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
         Command.Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(PerformOperation(REGISTER_1, REGISTERS, TIMES_ASSIGN, REGISTER_0, REGISTERS))))
     )

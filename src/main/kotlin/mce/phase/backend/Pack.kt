@@ -30,7 +30,7 @@ class Pack private constructor(
         }
         val dispatch = PFunction(APPLY, mutableListOf<Command>().apply {
             add(Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))))
-            add(RemoveData(STACKS, INT[-1]))
+            add(Pop(STACKS, INT))
             // TODO: use 4-ary search
             functions.forEach { (tag, function) ->
                 add(Command.Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(tag..tag), Run(RunFunction(function.name)))))
@@ -93,7 +93,7 @@ class Pack private constructor(
                     if (element !is Term.ByteOf) {
                         packTerm(element)
                         +SetData(STACKS, BYTE_ARRAY[-1][index], From(STACKS, BYTE[-1]))
-                        +RemoveData(STACKS, BYTE[-1])
+                        +Pop(STACKS, BYTE)
                     }
                 }
             }
@@ -109,7 +109,7 @@ class Pack private constructor(
                     if (element !is Term.IntOf) {
                         packTerm(element)
                         +SetData(STACKS, INT_ARRAY[-1][index], From(STACKS, INT[-1]))
-                        +RemoveData(STACKS, INT[-1])
+                        +Pop(STACKS, INT)
                     }
                 }
             }
@@ -125,7 +125,7 @@ class Pack private constructor(
                     if (element !is Term.LongOf) {
                         packTerm(element)
                         +SetData(STACKS, LONG_ARRAY[-1][index], From(STACKS, LONG[-1]))
-                        +RemoveData(STACKS, LONG[-1])
+                        +Pop(STACKS, LONG)
                     }
                 }
             }

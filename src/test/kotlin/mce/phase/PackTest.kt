@@ -1,7 +1,7 @@
 package mce.phase
 
 import mce.ast.pack.*
-import mce.ast.pack.Command.*
+import mce.ast.pack.Command.GetData
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
@@ -24,13 +24,13 @@ class PackTest {
                         ResourceLocation("apply"),
                         listOf(
                             Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-                            RemoveData(STACKS, INT[-1]),
+                            Pop(STACKS, INT),
                         ),
                     ),
                     Function(
                         ResourceLocation("const"),
                         listOf(
-                            InsertAtIndex(STACKS, BYTE, -1, Value(Nbt.Byte(0))),
+                            Append(STACKS, BYTE, Value(Nbt.Byte(0))),
                         ),
                     ),
                 ),
