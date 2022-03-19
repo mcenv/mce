@@ -6,9 +6,9 @@ import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.DIV_ASSIGN
-import mce.builtin.BuiltinFunction2
+import mce.builtin.BuiltinDef2
 
-object div : BuiltinFunction2("int/div") {
+object div : BuiltinDef2("int/div") {
     override fun eval(a: VTerm, b: VTerm): VTerm? = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(Math.floorDiv(a.value, b.value))
         // a / 1 = a

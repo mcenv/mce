@@ -16,7 +16,7 @@ import mce.builtin.src.int_array.size as int_array_size
 import mce.builtin.src.list.size as list_size
 import mce.builtin.src.long_array.size as long_array_size
 
-val builtins: Map<String, BuiltinFunction> = listOf(
+val builtins: Map<String, BuiltinDef> = listOf(
     identity,
     int_eq,
     int_ne,
@@ -41,7 +41,7 @@ val commuter: Comparator<VTerm> = Comparator { term1, term2 ->
     }
 }
 
-abstract class BuiltinFunction(val name: String) {
+abstract class BuiltinDef(val name: String) {
     abstract fun Normalizer.arguments(): List<Lazy<VTerm>>
 
     abstract fun Normalizer.evalOrNull(): VTerm?
@@ -51,7 +51,7 @@ abstract class BuiltinFunction(val name: String) {
     abstract fun pack(): List<Command>
 }
 
-abstract class BuiltinFunction1(name: String) : BuiltinFunction(name) {
+abstract class BuiltinDef1(name: String) : BuiltinDef(name) {
     override fun Normalizer.arguments(): List<Lazy<VTerm>> = listOf(lazyOf(lookup(size - 1)))
 
     override fun Normalizer.evalOrNull(): VTerm? = eval(lookup(size - 1))
@@ -59,7 +59,7 @@ abstract class BuiltinFunction1(name: String) : BuiltinFunction(name) {
     abstract fun eval(a: VTerm): VTerm?
 }
 
-abstract class BuiltinFunction2(name: String) : BuiltinFunction(name) {
+abstract class BuiltinDef2(name: String) : BuiltinDef(name) {
     override fun Normalizer.arguments(): List<Lazy<VTerm>> = listOf(lazyOf(lookup(size - 2)), lazyOf(lookup(size - 1)))
 
     override fun Normalizer.evalOrNull(): VTerm? = eval(lookup(size - 2), lookup(size - 1))
@@ -67,7 +67,7 @@ abstract class BuiltinFunction2(name: String) : BuiltinFunction(name) {
     abstract fun eval(a: VTerm, b: VTerm): VTerm?
 }
 
-abstract class BuiltinFunction3(name: String) : BuiltinFunction(name) {
+abstract class BuiltinDef3(name: String) : BuiltinDef(name) {
     override fun Normalizer.arguments(): List<Lazy<VTerm>> = listOf(lazyOf(lookup(size - 3)), lazyOf(lookup(size - 2)), lazyOf(lookup(size - 1)))
 
     override fun Normalizer.evalOrNull(): VTerm? = eval(lookup(size - 3), lookup(size - 2), lookup(size - 1))

@@ -7,9 +7,9 @@ import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreData
 import mce.ast.pack.SourceProvider.Value
-import mce.builtin.BuiltinFunction3
+import mce.builtin.BuiltinDef3
 
-object size : BuiltinFunction3("list/size") {
+object size : BuiltinDef3("list/size") {
     override fun eval(a: VTerm, b: VTerm, c: VTerm): VTerm? = when (c) {
         is VTerm.ListOf -> VTerm.IntOf(c.elements.size)
         else -> null

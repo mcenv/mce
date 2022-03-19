@@ -6,9 +6,9 @@ import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.MOD_ASSIGN
-import mce.builtin.BuiltinFunction2
+import mce.builtin.BuiltinDef2
 
-object mod : BuiltinFunction2("int/mod") {
+object mod : BuiltinDef2("int/mod") {
     override fun eval(a: VTerm, b: VTerm): VTerm? = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(Math.floorMod(a.value, b.value))
         // a % 1 = 0

@@ -6,10 +6,10 @@ import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.PLUS_ASSIGN
-import mce.builtin.BuiltinFunction2
+import mce.builtin.BuiltinDef2
 import mce.builtin.commuter
 
-object add : BuiltinFunction2("int/add") {
+object add : BuiltinDef2("int/add") {
     override fun eval(a: VTerm, b: VTerm): VTerm = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(a.value + b.value)
         // 0 + b = b
