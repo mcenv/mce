@@ -31,7 +31,6 @@ val builtins: Map<String, BuiltinDef> = listOf(
     list_size,
 ).associateBy { it.name }
 
-@Suppress("NAME_SHADOWING")
 val commuter: Comparator<VTerm> = Comparator { term1, term2 ->
     when {
         term1 is VTerm.Var && term2 is VTerm.Var -> term1.level.compareTo(term2.level)

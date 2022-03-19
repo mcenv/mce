@@ -9,6 +9,7 @@ import mce.ast.pack.Operation.TIMES_ASSIGN
 import mce.builtin.BuiltinDef2
 import mce.builtin.commuter
 
+@Suppress("ClassName")
 object mul : BuiltinDef2("int/mul") {
     override fun eval(a: VTerm, b: VTerm): VTerm = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(a.value * b.value)

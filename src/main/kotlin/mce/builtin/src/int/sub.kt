@@ -8,6 +8,7 @@ import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.MINUS_ASSIGN
 import mce.builtin.BuiltinDef2
 
+@Suppress("ClassName")
 object sub : BuiltinDef2("int/sub") {
     override fun eval(a: VTerm, b: VTerm): VTerm? = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(a.value - b.value)

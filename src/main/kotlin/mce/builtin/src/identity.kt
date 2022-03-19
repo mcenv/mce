@@ -4,6 +4,7 @@ import mce.ast.core.VTerm
 import mce.ast.pack.Command
 import mce.builtin.BuiltinDef1
 
+@Suppress("ClassName")
 object identity : BuiltinDef1("identity") {
     override fun eval(a: VTerm): VTerm = a
 

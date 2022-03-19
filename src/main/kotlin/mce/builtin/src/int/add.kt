@@ -9,6 +9,7 @@ import mce.ast.pack.Operation.PLUS_ASSIGN
 import mce.builtin.BuiltinDef2
 import mce.builtin.commuter
 
+@Suppress("ClassName")
 object add : BuiltinDef2("int/add") {
     override fun eval(a: VTerm, b: VTerm): VTerm = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(a.value + b.value)

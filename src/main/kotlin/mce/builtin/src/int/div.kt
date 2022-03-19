@@ -8,6 +8,7 @@ import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.DIV_ASSIGN
 import mce.builtin.BuiltinDef2
 
+@Suppress("ClassName")
 object div : BuiltinDef2("int/div") {
     override fun eval(a: VTerm, b: VTerm): VTerm? = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(Math.floorDiv(a.value, b.value))

@@ -11,6 +11,7 @@ import mce.ast.pack.SourceProvider.Value
 import mce.builtin.BuiltinDef2
 import mce.builtin.commuter
 
+@Suppress("ClassName")
 object eq : BuiltinDef2("int/eq") {
     override fun eval(a: VTerm, b: VTerm): VTerm = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.BoolOf(a.value == b.value)

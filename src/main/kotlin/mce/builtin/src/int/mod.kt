@@ -8,6 +8,7 @@ import mce.ast.pack.Execute.*
 import mce.ast.pack.Operation.MOD_ASSIGN
 import mce.builtin.BuiltinDef2
 
+@Suppress("ClassName")
 object mod : BuiltinDef2("int/mod") {
     override fun eval(a: VTerm, b: VTerm): VTerm? = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.IntOf(Math.floorMod(a.value, b.value))
