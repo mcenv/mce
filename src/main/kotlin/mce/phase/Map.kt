@@ -64,9 +64,9 @@ abstract class Map {
     }
 
     protected fun mapTermInternal(term: Term): Term = when (term) {
-        is Term.Hole -> Term.Hole(term.id)
-        is Term.Meta -> Term.Meta(term.index, term.id)
-        is Term.Var -> Term.Var(term.name, term.level, term.id)
+        is Term.Hole -> term
+        is Term.Meta -> term
+        is Term.Var -> term
         is Term.Def -> Term.Def(term.name, term.arguments.map { mapTerm(it) }, term.id)
         is Term.Let -> Term.Let(term.name, mapTerm(term.init), mapTerm(term.body), term.id)
         is Term.Match -> Term.Match(mapTerm(term.scrutinee), term.clauses.map { it.first to mapTerm(it.second) }, term.id)
