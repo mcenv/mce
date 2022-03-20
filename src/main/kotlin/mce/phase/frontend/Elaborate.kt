@@ -51,14 +51,12 @@ class Elaborate private constructor(
                 val resultant = !checkTerm(item.resultant, TYPE)
                 val vResultant = !lift({ normalizer }, evalTerm(resultant))
                 val effects = item.effects.map { elaborateEffect(it) }.toSet()
-                val body = !(
-                        if (item.modifiers.contains(SModifier.BUILTIN)) {
-                            pure(CTerm.Hole(item.body.id))
-                        } else {
-                            !modify { copy(termRelevant = true, typeRelevant = false) }
-                            checkTerm(item.body, vResultant)
-                        }
-                        )
+                val body = if (item.modifiers.contains(SModifier.BUILTIN)) {
+                    CTerm.Hole(item.body.id)
+                } else {
+                    !modify { copy(termRelevant = true, typeRelevant = false) }
+                    !checkTerm(item.body, vResultant)
+                }
                 (!get()).checkPhase(item.body.id, vResultant)
                 CItem.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to CVSignature.Def(item.name, parameters, resultant, null)
             }
@@ -160,8 +158,12 @@ class Elaborate private constructor(
      */
     private fun unifyModules(module1: CVModule, module2: CVModule): State<Normalizer, Boolean> = {
         when (module1) {
-            is CVModule.Var -> module2 is CVModule.Var && module1.name == module2.name
-            is CVModule.Sig -> module2 is CVModule.Sig && !(module1.signatures zip module2.signatures).allM { (signature1, signature2) -> unifySignatures(signature1, signature2) }
+            is CVModule.Var ->
+                module2 is CVModule.Var &&
+                        module1.name == module2.name
+            is CVModule.Sig ->
+                module2 is CVModule.Sig &&
+                        !(module1.signatures zip module2.signatures).allM { (signature1, signature2) -> unifySignatures(signature1, signature2) }
             is CVModule.Str -> false // TODO
             is CVModule.Type -> module2 is CVModule.Type
         }
@@ -689,7 +691,7 @@ class Elaborate private constructor(
             value1 is CVTerm.RefOf && value2 is CVTerm.RefOf -> !unifyTerms(value1.element.value, value2.element.value)
             value1 is CVTerm.Refl && value2 is CVTerm.Refl -> true
             value1 is CVTerm.FunOf && value2 is CVTerm.FunOf ->
-                value1.parameters.size == value2.parameters.size && !restore {
+                value1.parameters.size == value2.parameters.size && run {
                     !value1.parameters.forEachM { parameter ->
                         modify { bind(lazyOf(CVTerm.Var(parameter.text, size))) }
                     }
@@ -720,7 +722,7 @@ class Elaborate private constructor(
             value1 is CVTerm.Compound && value2 is CVTerm.Compound ->
                 value1.elements.size == value2.elements.size &&
                         !(value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
-                            restore {
+                            {
                                 !modify { bind(lazyOf(CVTerm.Var(entry1.key.text, size))) }
                                 entry1.key.text == entry2.key.text &&
                                         entry1.value.relevant == entry2.value.relevant &&
@@ -736,7 +738,7 @@ class Elaborate private constructor(
                 value1.parameters.size == value2.parameters.size &&
                         value1.effects == value2.effects &&
                         !(value1.parameters zip value2.parameters).allM { (parameter1, parameter2) ->
-                            restore {
+                            {
                                 !modify { bind(lazyOf(CVTerm.Var("", size))) }
                                 !(unifyTerms(!evalTerm(parameter2.type), !evalTerm(parameter1.type)))
                             }
@@ -776,32 +778,37 @@ class Elaborate private constructor(
                 !subtypeTerms(term1.element.value, term2.element.value) &&
                         !lift({ normalizer }, unifyTerms(term1.size.value, term2.size.value))
             term1 is CVTerm.Compound && term2 is CVTerm.Compound ->
-                !term2.elements.entries.allM { entry2 ->
-                    {
-                        val element1 = term1.elements[entry2.key]
-                        if (element1 != null) {
-                            element1.relevant == entry2.value.relevant && !restore {
-                                val upper1 = !lift({ normalizer }, evalTerm(element1.type))
-                                !modify { bindUnchecked(Entry(false, entry2.key.text, null, upper1, true, TYPE, stage)) }
-                                !subtypeTerms(upper1, !lift({ normalizer }, evalTerm(entry2.value.type)))
-                            }
-                        } else false
+                !restore {
+                    !term2.elements.entries.allM { (key2, element2) ->
+                        {
+                            val element1 = term1.elements[key2]
+                            if (element1 != null) {
+                                element1.relevant == element2.relevant && run {
+                                    val upper1 = !lift({ normalizer }, evalTerm(element1.type))
+                                    !subtypeTerms(upper1, !lift({ normalizer }, evalTerm(element2.type))).also {
+                                        !modify { bindUnchecked(Entry(false, key2.text, null, upper1, true, TYPE, stage)) }
+                                    }
+                                }
+                            } else false
+                        }
                     }
                 }
             term1 is CVTerm.Box && term2 is CVTerm.Box -> !subtypeTerms(term1.content.value, term2.content.value)
             term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !subtypeTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Fun && term2 is CVTerm.Fun ->
                 term1.parameters.size == term2.parameters.size &&
-                        !(term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
-                            restore {
-                                !modify { bindUnchecked(Entry(parameter1.termRelevant, "", null, null /* TODO */, parameter1.typeRelevant, TYPE, stage)) }
-                                parameter1.termRelevant == parameter2.termRelevant &&
-                                        parameter1.typeRelevant == parameter2.typeRelevant &&
-                                        !subtypeTerms(!lift({ normalizer }, evalTerm(parameter2.type)), !lift({ normalizer }, evalTerm(parameter1.type)))
-                            }
-                        } &&
-                        !(subtypeTerms(!lift({ normalizer }, evalTerm(term1.resultant)), !lift({ normalizer }, evalTerm(term2.resultant)))) &&
-                        term2.effects.containsAll(term1.effects)
+                        term2.effects.containsAll(term1.effects) &&
+                        !restore {
+                            !(term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
+                                {
+                                    !modify { bindUnchecked(Entry(parameter1.termRelevant, "", null, null /* TODO */, parameter1.typeRelevant, TYPE, stage)) }
+                                    parameter1.termRelevant == parameter2.termRelevant &&
+                                            parameter1.typeRelevant == parameter2.typeRelevant &&
+                                            !subtypeTerms(!lift({ normalizer }, evalTerm(parameter2.type)), !lift({ normalizer }, evalTerm(parameter1.type)))
+                                }
+                            } &&
+                                    !(subtypeTerms(!lift({ normalizer }, evalTerm(term1.resultant)), !lift({ normalizer }, evalTerm(term2.resultant))))
+                        }
             term1 is CVTerm.Code && term2 is CVTerm.Code -> !subtypeTerms(term1.element.value, term2.element.value)
             else -> !lift({ normalizer }, unifyTerms(term1, term2))
         }
