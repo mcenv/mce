@@ -12,7 +12,7 @@ import mce.phase.backend.Stage
 import mce.phase.frontend.Elaborate
 import mce.phase.frontend.Parse
 import mce.phase.frontend.Zonk
-import mce.phase.frontend.serializeTerm
+import mce.phase.frontend.printTerm
 import mce.phase.quoteTerm
 import mce.util.run
 
@@ -54,14 +54,14 @@ class Server {
 
     suspend fun hover(name: String, id: Id): HoverItem {
         val output = fetch(Key.ElaborateResult(name))
-        val type = serializeTerm(quoteTerm(output.types[id]!!).run(output.normalizer))
+        val type = printTerm(quoteTerm(output.types[id]!!).run(output.normalizer))
         return HoverItem(type)
     }
 
     suspend fun completion(name: String, id: Id): List<CompletionItem> {
         val output = fetch(Key.ElaborateResult(name))
         return output.completions[id]?.let { completions ->
-            completions.map { (name, type) -> CompletionItem(name, serializeTerm(quoteTerm(type).run(output.normalizer))) }
+            completions.map { (name, type) -> CompletionItem(name, printTerm(quoteTerm(type).run(output.normalizer))) }
         } ?: emptyList()
     }
 

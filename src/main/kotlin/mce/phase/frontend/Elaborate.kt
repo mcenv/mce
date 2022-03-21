@@ -221,7 +221,7 @@ class Elaborate private constructor(
         when (term) {
             is STerm.Hole -> {
                 completions[term.id] = (!get()).entries.map { it.name to it.type }
-                Typing(CTerm.Hole(term.id), diagnose(Diagnostic.TermExpected(serializeTerm(!lift({ normalizer }, quoteTerm(END))), term.id)))
+                Typing(CTerm.Hole(term.id), diagnose(Diagnostic.TermExpected(printTerm(!lift({ normalizer }, quoteTerm(END))), term.id)))
             }
             is STerm.Meta -> {
                 val type = !lift({ normalizer }, fresh(term.id))
@@ -386,7 +386,7 @@ class Elaborate private constructor(
             else -> {
                 val computation = !inferComputation(term)
                 if (computation.effects.isNotEmpty()) {
-                    diagnose(Diagnostic.EffectMismatch(emptyList(), computation.effects.map { serializeEffect(it) }, term.id))
+                    diagnose(Diagnostic.EffectMismatch(emptyList(), computation.effects.map { printEffect(it) }, term.id))
                 }
                 computation
             }
@@ -412,10 +412,10 @@ class Elaborate private constructor(
                                 val argument = !checkTerm(argument, !evalTerm(parameter.type))
                                 val vArgument = !evalTerm(argument)
                                 parameter.lower?.let { !evalTerm(it) }?.also { lower ->
-                                    if (!(!subtypeTerms(lower, vArgument))) diagnose(Diagnostic.TermMismatch(serializeTerm(!quoteTerm(vArgument)), serializeTerm(!quoteTerm(lower)), id))
+                                    if (!(!subtypeTerms(lower, vArgument))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(vArgument)), printTerm(!quoteTerm(lower)), id))
                                 }
                                 parameter.upper?.let { !evalTerm(it) }?.also { upper ->
-                                    if (!(!subtypeTerms(vArgument, upper))) diagnose(Diagnostic.TermMismatch(serializeTerm(!quoteTerm(upper)), serializeTerm(!quoteTerm(vArgument)), id))
+                                    if (!(!subtypeTerms(vArgument, upper))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(upper)), printTerm(!quoteTerm(vArgument)), id))
                                 }
                                 !modify { bind(lazyOf(vArgument)) }
                                 argument
@@ -488,10 +488,10 @@ class Elaborate private constructor(
                             val tArgument = !checkTerm(argument, !evalTerm(parameter.type))
                             val vArgument = !evalTerm(tArgument)
                             parameter.lower?.let { !evalTerm(it) }?.also { lower ->
-                                if (!(!subtypeTerms(lower, vArgument))) diagnose(Diagnostic.TermMismatch(serializeTerm(!quoteTerm(vArgument)), serializeTerm(!quoteTerm(lower)), argument.id))
+                                if (!(!subtypeTerms(lower, vArgument))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(vArgument)), printTerm(!quoteTerm(lower)), argument.id))
                             }
                             parameter.upper?.let { !evalTerm(it) }?.also { upper ->
-                                if (!(!subtypeTerms(vArgument, upper))) diagnose(Diagnostic.TermMismatch(serializeTerm(!quoteTerm(upper)), serializeTerm(!quoteTerm(vArgument)), argument.id))
+                                if (!(!subtypeTerms(vArgument, upper))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(upper)), printTerm(!quoteTerm(vArgument)), argument.id))
                             }
                             !modify { bind(lazyOf(vArgument)) }
                             tArgument
@@ -524,7 +524,7 @@ class Elaborate private constructor(
         when {
             term is STerm.Hole -> {
                 completions[term.id] = (!get()).entries.map { it.name to it.type }
-                diagnose(Diagnostic.TermExpected(serializeTerm(!lift({ normalizer }, quoteTerm(type))), term.id))
+                diagnose(Diagnostic.TermExpected(printTerm(!lift({ normalizer }, quoteTerm(type))), term.id))
                 CTerm.Hole(term.id)
             }
             term is STerm.Meta ->
@@ -623,12 +623,12 @@ class Elaborate private constructor(
                 val isSubtype = !subtypeTerms(computation.type, type)
                 if (!isSubtype) {
                     types[id] = END
-                    val expected = serializeTerm(!lift({ normalizer }, quoteTerm(type)))
-                    val actual = serializeTerm(!lift({ normalizer }, quoteTerm(computation.type)))
+                    val expected = printTerm(!lift({ normalizer }, quoteTerm(type)))
+                    val actual = printTerm(!lift({ normalizer }, quoteTerm(computation.type)))
                     diagnose(Diagnostic.TermMismatch(expected, actual, id))
                 }
                 if (!(effects.containsAll(computation.effects))) {
-                    diagnose(Diagnostic.EffectMismatch(effects.map { serializeEffect(it) }, computation.effects.map { serializeEffect(it) }, id))
+                    diagnose(Diagnostic.EffectMismatch(effects.map { printEffect(it) }, computation.effects.map { printEffect(it) }, id))
                 }
                 Effecting(computation.term, computation.effects)
             }
@@ -954,8 +954,8 @@ class Elaborate private constructor(
                 val isSubtype = !subtypeTerms(inferredType, type)
                 if (!isSubtype) {
                     types[pattern.id] = END
-                    val expected = serializeTerm(!lift({ normalizer }, quoteTerm(type)))
-                    val actual = serializeTerm(!lift({ normalizer }, quoteTerm(inferredType)))
+                    val expected = printTerm(!lift({ normalizer }, quoteTerm(type)))
+                    val actual = printTerm(!lift({ normalizer }, quoteTerm(inferredType)))
                     diagnose(Diagnostic.TermMismatch(expected, actual, pattern.id))
                 }
                 inferred
