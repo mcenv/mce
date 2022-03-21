@@ -30,7 +30,7 @@ class Stage private constructor(
 
     data class Result(
         val item: Item,
-        val types: Map<Id, VTerm>
+        val types: Map<Id, VTerm>,
     )
 
     companion object {

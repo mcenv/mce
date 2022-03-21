@@ -1,13 +1,13 @@
 package mce.phase.frontend
 
 import mce.ast.freshId
-import mce.ast.core.Effect as CEffect
-import mce.ast.core.Pattern as CPattern
+import mce.ast.core.Eff as CEff
+import mce.ast.core.Pat as CPat
 import mce.ast.core.Term as CTerm
-import mce.ast.surface.Effect as SEffect
+import mce.ast.surface.Eff as SEff
 import mce.ast.surface.Entry as SEntry
-import mce.ast.surface.Parameter as SParameter
-import mce.ast.surface.Pattern as SPattern
+import mce.ast.surface.Param as SParam
+import mce.ast.surface.Pat as SPat
 import mce.ast.surface.Term as STerm
 
 fun printTerm(term: CTerm): STerm = when (term) {
@@ -16,7 +16,7 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Var -> STerm.Var(term.name, term.id ?: freshId())
     is CTerm.Def -> STerm.Def(term.name, term.arguments.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.Let -> STerm.Let(term.name, printTerm(term.init), printTerm(term.body), term.id ?: freshId())
-    is CTerm.Match -> STerm.Match(printTerm(term.scrutinee), term.clauses.map { printPattern(it.first) to printTerm(it.second) }, term.id ?: freshId())
+    is CTerm.Match -> STerm.Match(printTerm(term.scrutinee), term.clauses.map { printPat(it.first) to printTerm(it.second) }, term.id ?: freshId())
     is CTerm.UnitOf -> STerm.UnitOf(term.id ?: freshId())
     is CTerm.BoolOf -> STerm.BoolOf(term.value, term.id ?: freshId())
     is CTerm.ByteOf -> STerm.ByteOf(term.value, term.id ?: freshId())
@@ -34,7 +34,7 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.BoxOf -> STerm.BoxOf(printTerm(term.content), printTerm(term.tag), term.id ?: freshId())
     is CTerm.RefOf -> STerm.RefOf(printTerm(term.element), term.id ?: freshId())
     is CTerm.Refl -> STerm.Refl(term.id ?: freshId())
-    is CTerm.FunOf -> STerm.FunOf(term.parameters, printTerm(term.body), term.id ?: freshId())
+    is CTerm.FunOf -> STerm.FunOf(term.params, printTerm(term.body), term.id ?: freshId())
     is CTerm.Apply -> STerm.Apply(printTerm(term.function), term.arguments.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.CodeOf -> STerm.CodeOf(printTerm(term.element), term.id ?: freshId())
     is CTerm.Splice -> STerm.Splice(printTerm(term.element), term.id ?: freshId())
@@ -58,48 +58,48 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Ref -> STerm.Ref(printTerm(term.element), term.id ?: freshId())
     is CTerm.Eq -> STerm.Eq(printTerm(term.left), printTerm(term.right), term.id ?: freshId())
     is CTerm.Fun -> STerm.Fun(
-        term.parameters.map { SParameter(it.termRelevant, it.name, it.lower?.let(::printTerm), it.upper?.let(::printTerm), it.typeRelevant, printTerm(it.type), it.id) },
+        term.params.map { SParam(it.termRelevant, it.name, it.lower?.let(::printTerm), it.upper?.let(::printTerm), it.typeRelevant, printTerm(it.type), it.id) },
         printTerm(term.resultant),
-        term.effects.map(::printEffect),
+        term.effs.map(::printEff),
         term.id ?: freshId()
     )
     is CTerm.Code -> STerm.Code(printTerm(term.element), term.id ?: freshId())
     is CTerm.Type -> STerm.Type(term.id ?: freshId())
 }
 
-fun printPattern(pattern: CPattern): SPattern = when (pattern) {
-    is CPattern.Var -> SPattern.Var(pattern.name, pattern.id)
-    is CPattern.UnitOf -> SPattern.UnitOf(pattern.id)
-    is CPattern.BoolOf -> SPattern.BoolOf(pattern.value, pattern.id)
-    is CPattern.ByteOf -> SPattern.ByteOf(pattern.value, pattern.id)
-    is CPattern.ShortOf -> SPattern.ShortOf(pattern.value, pattern.id)
-    is CPattern.IntOf -> SPattern.IntOf(pattern.value, pattern.id)
-    is CPattern.LongOf -> SPattern.LongOf(pattern.value, pattern.id)
-    is CPattern.FloatOf -> SPattern.FloatOf(pattern.value, pattern.id)
-    is CPattern.DoubleOf -> SPattern.DoubleOf(pattern.value, pattern.id)
-    is CPattern.StringOf -> SPattern.StringOf(pattern.value, pattern.id)
-    is CPattern.ByteArrayOf -> SPattern.ByteArrayOf(pattern.elements.map { printPattern(it) }, pattern.id)
-    is CPattern.IntArrayOf -> SPattern.IntArrayOf(pattern.elements.map { printPattern(it) }, pattern.id)
-    is CPattern.LongArrayOf -> SPattern.LongArrayOf(pattern.elements.map { printPattern(it) }, pattern.id)
-    is CPattern.ListOf -> SPattern.ListOf(pattern.elements.map { printPattern(it) }, pattern.id)
-    is CPattern.CompoundOf -> SPattern.CompoundOf(pattern.elements.map { (name, element) -> name to printPattern(element) }, pattern.id)
-    is CPattern.BoxOf -> SPattern.BoxOf(printPattern(pattern.content), printPattern(pattern.tag), pattern.id)
-    is CPattern.RefOf -> SPattern.RefOf(printPattern(pattern.element), pattern.id)
-    is CPattern.Refl -> SPattern.Refl(pattern.id)
-    is CPattern.Unit -> SPattern.Unit(pattern.id)
-    is CPattern.Bool -> SPattern.Bool(pattern.id)
-    is CPattern.Byte -> SPattern.Byte(pattern.id)
-    is CPattern.Short -> SPattern.Short(pattern.id)
-    is CPattern.Int -> SPattern.Int(pattern.id)
-    is CPattern.Long -> SPattern.Long(pattern.id)
-    is CPattern.Float -> SPattern.Float(pattern.id)
-    is CPattern.Double -> SPattern.Double(pattern.id)
-    is CPattern.String -> SPattern.String(pattern.id)
-    is CPattern.ByteArray -> SPattern.ByteArray(pattern.id)
-    is CPattern.IntArray -> SPattern.IntArray(pattern.id)
-    is CPattern.LongArray -> SPattern.LongArray(pattern.id)
+fun printPat(pat: CPat): SPat = when (pat) {
+    is CPat.Var -> SPat.Var(pat.name, pat.id)
+    is CPat.UnitOf -> SPat.UnitOf(pat.id)
+    is CPat.BoolOf -> SPat.BoolOf(pat.value, pat.id)
+    is CPat.ByteOf -> SPat.ByteOf(pat.value, pat.id)
+    is CPat.ShortOf -> SPat.ShortOf(pat.value, pat.id)
+    is CPat.IntOf -> SPat.IntOf(pat.value, pat.id)
+    is CPat.LongOf -> SPat.LongOf(pat.value, pat.id)
+    is CPat.FloatOf -> SPat.FloatOf(pat.value, pat.id)
+    is CPat.DoubleOf -> SPat.DoubleOf(pat.value, pat.id)
+    is CPat.StringOf -> SPat.StringOf(pat.value, pat.id)
+    is CPat.ByteArrayOf -> SPat.ByteArrayOf(pat.elements.map { printPat(it) }, pat.id)
+    is CPat.IntArrayOf -> SPat.IntArrayOf(pat.elements.map { printPat(it) }, pat.id)
+    is CPat.LongArrayOf -> SPat.LongArrayOf(pat.elements.map { printPat(it) }, pat.id)
+    is CPat.ListOf -> SPat.ListOf(pat.elements.map { printPat(it) }, pat.id)
+    is CPat.CompoundOf -> SPat.CompoundOf(pat.elements.map { (name, element) -> name to printPat(element) }, pat.id)
+    is CPat.BoxOf -> SPat.BoxOf(printPat(pat.content), printPat(pat.tag), pat.id)
+    is CPat.RefOf -> SPat.RefOf(printPat(pat.element), pat.id)
+    is CPat.Refl -> SPat.Refl(pat.id)
+    is CPat.Unit -> SPat.Unit(pat.id)
+    is CPat.Bool -> SPat.Bool(pat.id)
+    is CPat.Byte -> SPat.Byte(pat.id)
+    is CPat.Short -> SPat.Short(pat.id)
+    is CPat.Int -> SPat.Int(pat.id)
+    is CPat.Long -> SPat.Long(pat.id)
+    is CPat.Float -> SPat.Float(pat.id)
+    is CPat.Double -> SPat.Double(pat.id)
+    is CPat.String -> SPat.String(pat.id)
+    is CPat.ByteArray -> SPat.ByteArray(pat.id)
+    is CPat.IntArray -> SPat.IntArray(pat.id)
+    is CPat.LongArray -> SPat.LongArray(pat.id)
 }
 
-fun printEffect(effect: CEffect): SEffect = when (effect) {
-    is CEffect.Name -> SEffect.Name(effect.name)
+fun printEff(eff: CEff): SEff = when (eff) {
+    is CEff.Name -> SEff.Name(eff.name)
 }

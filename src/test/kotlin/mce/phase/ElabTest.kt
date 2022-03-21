@@ -1,7 +1,7 @@
 package mce.phase
 
 import mce.ast.core.VTerm
-import mce.ast.surface.Effect
+import mce.ast.surface.Eff
 import mce.fetch
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.Elab
@@ -302,7 +302,7 @@ class ElabTest {
     @Test
     fun impureDef() {
         val result = elaborate("impure_def")
-        assertContains(result.diagnostics, Diagnostic.EffectMismatch(emptyList(), listOf(Effect.Name("a")), UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.EffMismatch(emptyList(), listOf(Eff.Name("a")), UUID(0, 0)))
     }
 
     @Test
@@ -318,19 +318,19 @@ class ElabTest {
     @Test
     fun polyVar() {
         val result = elaborate("poly_var")
-        assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PolyRepr(UUID(0, 0)))
     }
 
     @Test
     fun anyVar() {
         val result = elaborate("any_var")
-        assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PolyRepr(UUID(0, 0)))
     }
 
     @Test
     fun orInvalidJoinVar() {
         val result = elaborate("or_invalid_join_var")
-        assertContains(result.diagnostics, Diagnostic.PolymorphicRepresentation(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PolyRepr(UUID(0, 0)))
     }
 
     @Test

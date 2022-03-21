@@ -32,7 +32,7 @@ class Zonk private constructor(
         val item: Item,
         val types: Map<Id, VTerm>,
         val normalizer: Normalizer,
-        val diagnostics: List<Diagnostic>
+        val diagnostics: List<Diagnostic>,
     )
 
     companion object {

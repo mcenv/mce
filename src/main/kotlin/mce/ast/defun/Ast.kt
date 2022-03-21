@@ -25,7 +25,7 @@ sealed class Item {
         override val exports: KList<KString>,
         override val modifiers: KSet<Modifier>,
         override val name: KString,
-        val parameters: KList<Parameter>,
+        val params: KList<Param>,
         val body: Term,
         override val id: Id,
     ) : Item()
@@ -53,7 +53,7 @@ enum class Modifier {
     BUILTIN,
 }
 
-data class Parameter(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
+data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
 
 data class Entry(val relevant: KBoolean, val type: Term, val id: Id)
 
@@ -69,7 +69,7 @@ sealed class Module {
 sealed class Signature {
     abstract val id: Id
 
-    data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Signature()
+    data class Def(val name: KString, val params: KList<Param>, val resultant: Term, override val id: Id) : Signature()
     data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
     data class Test(val name: KString, override val id: Id) : Signature()
 }
@@ -80,7 +80,7 @@ sealed class Term {
     data class Var(val name: KString, val level: KInt, override val id: Id) : Term()
     data class Def(val name: KString, val arguments: KList<Term>, override val id: Id) : Term()
     data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
-    data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
+    data class Match(val scrutinee: Term, val clauses: KList<Pair<Pat, Term>>, override val id: Id) : Term()
     data class UnitOf(override val id: Id) : Term()
     data class BoolOf(val value: KBoolean, override val id: Id) : Term()
     data class ByteOf(val value: KByte, override val id: Id) : Term()
@@ -119,45 +119,45 @@ sealed class Term {
     data class Box(val content: Term, override val id: Id) : Term()
     data class Ref(val element: Term, override val id: Id) : Term()
     data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
-    data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KSet<Effect>, override val id: Id) : Term()
+    data class Fun(val params: KList<Param>, val resultant: Term, val effs: KSet<Eff>, override val id: Id) : Term()
     data class Type(override val id: Id) : Term()
 }
 
-sealed class Pattern {
+sealed class Pat {
     abstract val id: Id
 
-    data class Var(val name: KString, override val id: Id) : Pattern()
-    data class UnitOf(override val id: Id) : Pattern()
-    data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
-    data class ByteOf(val value: KByte, override val id: Id) : Pattern()
-    data class ShortOf(val value: KShort, override val id: Id) : Pattern()
-    data class IntOf(val value: KInt, override val id: Id) : Pattern()
-    data class LongOf(val value: KLong, override val id: Id) : Pattern()
-    data class FloatOf(val value: KFloat, override val id: Id) : Pattern()
-    data class DoubleOf(val value: KDouble, override val id: Id) : Pattern()
-    data class StringOf(val value: KString, override val id: Id) : Pattern()
-    data class ByteArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-    data class IntArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-    data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-    data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
-    data class CompoundOf(val elements: LinkedHashMap<Name, Pattern>, override val id: Id) : Pattern()
-    data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
-    data class RefOf(val element: Pattern, override val id: Id) : Pattern()
-    data class Refl(override val id: Id) : Pattern()
-    data class Unit(override val id: Id) : Pattern()
-    data class Bool(override val id: Id) : Pattern()
-    data class Byte(override val id: Id) : Pattern()
-    data class Short(override val id: Id) : Pattern()
-    data class Int(override val id: Id) : Pattern()
-    data class Long(override val id: Id) : Pattern()
-    data class Float(override val id: Id) : Pattern()
-    data class Double(override val id: Id) : Pattern()
-    data class String(override val id: Id) : Pattern()
-    data class ByteArray(override val id: Id) : Pattern()
-    data class IntArray(override val id: Id) : Pattern()
-    data class LongArray(override val id: Id) : Pattern()
+    data class Var(val name: KString, override val id: Id) : Pat()
+    data class UnitOf(override val id: Id) : Pat()
+    data class BoolOf(val value: KBoolean, override val id: Id) : Pat()
+    data class ByteOf(val value: KByte, override val id: Id) : Pat()
+    data class ShortOf(val value: KShort, override val id: Id) : Pat()
+    data class IntOf(val value: KInt, override val id: Id) : Pat()
+    data class LongOf(val value: KLong, override val id: Id) : Pat()
+    data class FloatOf(val value: KFloat, override val id: Id) : Pat()
+    data class DoubleOf(val value: KDouble, override val id: Id) : Pat()
+    data class StringOf(val value: KString, override val id: Id) : Pat()
+    data class ByteArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
+    data class IntArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
+    data class LongArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
+    data class ListOf(val elements: KList<Pat>, override val id: Id) : Pat()
+    data class CompoundOf(val elements: LinkedHashMap<Name, Pat>, override val id: Id) : Pat()
+    data class BoxOf(val content: Pat, val tag: Pat, override val id: Id) : Pat()
+    data class RefOf(val element: Pat, override val id: Id) : Pat()
+    data class Refl(override val id: Id) : Pat()
+    data class Unit(override val id: Id) : Pat()
+    data class Bool(override val id: Id) : Pat()
+    data class Byte(override val id: Id) : Pat()
+    data class Short(override val id: Id) : Pat()
+    data class Int(override val id: Id) : Pat()
+    data class Long(override val id: Id) : Pat()
+    data class Float(override val id: Id) : Pat()
+    data class Double(override val id: Id) : Pat()
+    data class String(override val id: Id) : Pat()
+    data class ByteArray(override val id: Id) : Pat()
+    data class IntArray(override val id: Id) : Pat()
+    data class LongArray(override val id: Id) : Pat()
 }
 
-sealed class Effect {
-    data class Name(val name: KString) : Effect()
+sealed class Eff {
+    data class Name(val name: KString) : Eff()
 }

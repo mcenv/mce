@@ -9,24 +9,24 @@ import mce.phase.*
 import mce.util.State
 import mce.util.run
 import mce.util.toLinkedHashMap
-import mce.ast.core.Effect as CEffect
+import mce.ast.core.Eff as CEff
 import mce.ast.core.Entry as CEntry
 import mce.ast.core.Item as CItem
 import mce.ast.core.Modifier as CModifier
 import mce.ast.core.Module as CModule
-import mce.ast.core.Parameter as CParameter
-import mce.ast.core.Pattern as CPattern
+import mce.ast.core.Param as CParam
+import mce.ast.core.Pat as CPat
 import mce.ast.core.Signature as CSignature
 import mce.ast.core.Term as CTerm
 import mce.ast.core.VModule as CVModule
 import mce.ast.core.VSignature as CVSignature
 import mce.ast.core.VTerm as CVTerm
-import mce.ast.surface.Effect as SEffect
+import mce.ast.surface.Eff as SEff
 import mce.ast.surface.Item as SItem
 import mce.ast.surface.Modifier as SModifier
 import mce.ast.surface.Module as SModule
-import mce.ast.surface.Parameter as SParameter
-import mce.ast.surface.Pattern as SPattern
+import mce.ast.surface.Param as SParam
+import mce.ast.surface.Pat as SPat
 import mce.ast.surface.Signature as SSignature
 import mce.ast.surface.Term as STerm
 
@@ -43,14 +43,14 @@ class Elab private constructor(
      * Infers the signature of the [item].
      */
     private fun inferItem(item: SItem): State<Context, Pair<CItem, CVSignature>> = {
-        val modifiers = item.modifiers.mapTo(mutableSetOf()) { elaborateModifier(it) }
+        val modifiers = item.modifiers.mapTo(mutableSetOf()) { elabModifier(it) }
         when (item) {
             is SItem.Def -> {
                 !modify { copy(meta = item.modifiers.contains(SModifier.META), termRelevant = false, typeRelevant = true) }
-                val parameters = !bindParameters(item.parameters)
+                val params = !bindParams(item.params)
                 val resultant = !checkTerm(item.resultant, TYPE)
                 val vResultant = !lift({ normalizer }, evalTerm(resultant))
-                val effects = item.effects.map { elaborateEffect(it) }.toSet()
+                val effs = item.effs.map { elabEff(it) }.toSet()
                 val body = if (item.modifiers.contains(SModifier.BUILTIN)) {
                     CTerm.Hole(item.body.id)
                 } else {
@@ -58,7 +58,7 @@ class Elab private constructor(
                     !checkTerm(item.body, vResultant)
                 }
                 (!get()).checkPhase(item.body.id, vResultant)
-                CItem.Def(item.imports, item.exports, modifiers, item.name, parameters, resultant, effects, body, item.id) to CVSignature.Def(item.name, parameters, resultant, null)
+                CItem.Def(item.imports, item.exports, modifiers, item.name, params, resultant, effs, body, item.id) to CVSignature.Def(item.name, params, resultant, null)
             }
             is SItem.Mod -> {
                 val type = !checkModule(item.type, CVModule.Type(null))
@@ -79,7 +79,7 @@ class Elab private constructor(
     private fun checkItem(item: SItem, signature: CVSignature): State<Context, CItem> = {
         val (inferred, inferredSignature) = !inferItem(item)
         if (!(!lift({ Normalizer(persistentListOf(), items, solutions) }, unifySignatures(inferredSignature, signature)))) {
-            diagnose(Diagnostic.SignatureMismatch(item.id)) // TODO: serialize signatures
+            diagnose(Diagnostic.SigMismatch(item.id)) // TODO: serialize signatures
         }
         inferred
     }
@@ -87,25 +87,25 @@ class Elab private constructor(
     /**
      * Elaborates the [modifier].
      */
-    private fun elaborateModifier(modifier: SModifier): CModifier = when (modifier) {
+    private fun elabModifier(modifier: SModifier): CModifier = when (modifier) {
         SModifier.BUILTIN -> CModifier.BUILTIN
         SModifier.META -> CModifier.META
     }
 
     /**
-     * Binds the [parameters] to the context.
+     * Binds the [params] to the context.
      */
-    private fun bindParameters(parameters: List<SParameter>): State<Context, List<CParameter>> = {
-        !parameters.mapM { parameter ->
+    private fun bindParams(params: List<SParam>): State<Context, List<CParam>> = {
+        !params.mapM { param ->
             {
-                val type = !checkTerm(parameter.type, TYPE)
+                val type = !checkTerm(param.type, TYPE)
                 val vType = !lift({ normalizer }, evalTerm(type))
-                val lower = parameter.lower?.let { !checkTerm(it, vType) }
+                val lower = param.lower?.let { !checkTerm(it, vType) }
                 val vLower = lower?.let { !lift({ normalizer }, evalTerm(it)) }
-                val upper = parameter.upper?.let { !checkTerm(it, vType) }
+                val upper = param.upper?.let { !checkTerm(it, vType) }
                 val vUpper = upper?.let { !lift({ normalizer }, evalTerm(it)) }
-                !modify { bind(parameter.id, Entry(parameter.termRelevant, parameter.name, vLower, vUpper, parameter.typeRelevant, vType, stage)) }
-                CParameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
+                !modify { bind(param.id, Entry(param.termRelevant, param.name, vLower, vUpper, param.typeRelevant, vType, stage)) }
+                CParam(param.termRelevant, param.name, lower, upper, param.typeRelevant, type, param.id)
             }
         }
     }
@@ -127,7 +127,7 @@ class Elab private constructor(
                 CModule.Str(items, module.id) to CVModule.Sig(signatures, null)
             }
             is SModule.Sig -> {
-                val signatures = !module.signatures.mapM { elaborateSignature(it) }
+                val signatures = !module.signatures.mapM { elabSignature(it) }
                 CModule.Sig(signatures, module.id) to CVModule.Type(null)
             }
             is SModule.Type -> CModule.Type(module.id) to CVModule.Type(null)
@@ -146,7 +146,7 @@ class Elab private constructor(
             else -> {
                 val (inferred, inferredType) = !inferModule(module)
                 if (!(!lift({ normalizer }, unifyModules(inferredType, type)))) {
-                    diagnose(Diagnostic.ModuleMismatch(module.id))
+                    diagnose(Diagnostic.ModMismatch(module.id))
                 }
                 inferred
             }
@@ -177,9 +177,9 @@ class Elab private constructor(
             is CVSignature.Def ->
                 signature2 is CVSignature.Def &&
                         signature1.name == signature2.name &&
-                        signature1.parameters.size == signature2.parameters.size &&
-                        !(signature1.parameters zip signature2.parameters).allM { (parameter1, parameter2) ->
-                            unifyTerms(!evalTerm(parameter2.type), !evalTerm(parameter1.type)).also {
+                        signature1.params.size == signature2.params.size &&
+                        !(signature1.params zip signature2.params).allM { (param1, param2) ->
+                            unifyTerms(!evalTerm(param2.type), !evalTerm(param1.type)).also {
                                 !modify { bind(lazyOf(CVTerm.Var("", size))) }
                             }
                         } &&
@@ -197,14 +197,14 @@ class Elab private constructor(
     /**
      * Elaborates the [signature] under the context.
      */
-    private fun elaborateSignature(signature: SSignature): State<Context, CSignature> = {
+    private fun elabSignature(signature: SSignature): State<Context, CSignature> = {
         when (signature) {
             is SSignature.Def ->
                 !restore {
                     !modify { copy(termRelevant = false, typeRelevant = true) }
-                    val parameters = !bindParameters(signature.parameters)
+                    val params = !bindParams(signature.params)
                     val resultant = !checkTerm(signature.resultant, TYPE)
-                    CSignature.Def(signature.name, parameters, resultant, signature.id)
+                    CSignature.Def(signature.name, params, resultant, signature.id)
                 }
             is SSignature.Mod -> {
                 val type = !checkModule(signature.type, CVModule.Type(null))
@@ -246,7 +246,7 @@ class Elab private constructor(
                             if (stage != entry.stage) type = diagnose(Diagnostic.StageMismatch(stage, entry.stage, term.id))
                             if (termRelevant && !entry.termRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
                             if (typeRelevant && !entry.typeRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
-                            normalizer.checkRepresentation(term.id, type)
+                            normalizer.checkRepr(term.id, type)
                             type
                         }
                     }
@@ -385,8 +385,8 @@ class Elab private constructor(
             is STerm.Type -> Typing(CTerm.Type(term.id), TYPE)
             else -> {
                 val computation = !inferComputation(term)
-                if (computation.effects.isNotEmpty()) {
-                    diagnose(Diagnostic.EffectMismatch(emptyList(), computation.effects.map { printEffect(it) }, term.id))
+                if (computation.effs.isNotEmpty()) {
+                    diagnose(Diagnostic.EffMismatch(emptyList(), computation.effs.map { printEff(it) }, term.id))
                 }
                 computation
             }
@@ -402,19 +402,19 @@ class Elab private constructor(
         when (computation) {
             is STerm.Def -> when (val item = items[computation.name]) {
                 is CItem.Def -> {
-                    if (item.parameters.size != computation.arguments.size) {
-                        diagnose(Diagnostic.SizeMismatch(item.parameters.size, computation.arguments.size, computation.id))
+                    if (item.params.size != computation.arguments.size) {
+                        diagnose(Diagnostic.SizeMismatch(item.params.size, computation.arguments.size, computation.id))
                     }
                     !lift({ normalizer }) {
-                        val arguments = !(computation.arguments zip item.parameters).mapM { (argument, parameter) ->
+                        val arguments = !(computation.arguments zip item.params).mapM { (argument, param) ->
                             {
                                 val id = argument.id
-                                val argument = !checkTerm(argument, !evalTerm(parameter.type))
+                                val argument = !checkTerm(argument, !evalTerm(param.type))
                                 val vArgument = !evalTerm(argument)
-                                parameter.lower?.let { !evalTerm(it) }?.also { lower ->
+                                param.lower?.let { !evalTerm(it) }?.also { lower ->
                                     if (!(!subtypeTerms(lower, vArgument))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(vArgument)), printTerm(!quoteTerm(lower)), id))
                                 }
-                                parameter.upper?.let { !evalTerm(it) }?.also { upper ->
+                                param.upper?.let { !evalTerm(it) }?.also { upper ->
                                     if (!(!subtypeTerms(vArgument, upper))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(upper)), printTerm(!quoteTerm(vArgument)), id))
                                 }
                                 !modify { bind(lazyOf(vArgument)) }
@@ -422,7 +422,7 @@ class Elab private constructor(
                             }
                         }
                         val resultant = !evalTerm(item.resultant)
-                        Typing(CTerm.Def(computation.name, arguments, computation.id), resultant, item.effects)
+                        Typing(CTerm.Def(computation.name, arguments, computation.id), resultant, item.effs)
                     }
                 }
                 else -> Typing(CTerm.Def(computation.name, emptyList() /* TODO? */, computation.id), diagnose(Diagnostic.DefNotFound(computation.name, computation.id)))
@@ -432,33 +432,33 @@ class Elab private constructor(
                 !restore {
                     !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
                     val body = !inferComputation(computation.body)
-                    Typing(CTerm.Let(computation.name, init.term, body.term, computation.id), body.type, init.effects + body.effects)
+                    Typing(CTerm.Let(computation.name, init.term, body.term, computation.id), body.type, init.effs + body.effs)
                 }
             }
             is STerm.Match -> {
                 val type = !lift({ normalizer }, fresh(computation.id)) // TODO: use union of element types
                 val scrutinee = !inferTerm(computation.scrutinee)
-                val clauses = !computation.clauses.mapM { (pattern, body) ->
+                val clauses = !computation.clauses.mapM { (pat, body) ->
                     restore {
-                        val pattern = !checkPattern(pattern, scrutinee.type)
+                        val pat = !checkPat(pat, scrutinee.type)
                         val body = !checkTerm(body, type) /* TODO: effect */
-                        pattern to body
+                        pat to body
                     }
                 }
                 Typing(CTerm.Match(scrutinee.term, clauses, computation.id), type)
             }
             is STerm.FunOf -> {
-                val types = !lift({ normalizer }, { !computation.parameters.mapM { fresh(computation.id) } })
+                val types = !lift({ normalizer }, { !computation.params.mapM { fresh(computation.id) } })
                 !restore {
-                    !(computation.parameters zip types).forEachM { (parameter, type) ->
-                        modify { bind(parameter.id, Entry(true /* TODO */, parameter.text, END, ANY, true, type, stage)) }
+                    !(computation.params zip types).forEachM { (param, type) ->
+                        modify { bind(param.id, Entry(true /* TODO */, param.text, END, ANY, true, type, stage)) }
                     }
                     val body = !inferComputation(computation.body)
                     !lift({ normalizer }) {
-                        val parameters = (computation.parameters zip types).map { (parameter, type) ->
-                            CParameter(true /* TODO */, parameter.text, !quoteTerm(END), !quoteTerm(ANY), true, !quoteTerm(type), parameter.id)
+                        val params = (computation.params zip types).map { (param, type) ->
+                            CParam(true /* TODO */, param.text, !quoteTerm(END), !quoteTerm(ANY), true, !quoteTerm(type), param.id)
                         }
-                        Typing(CTerm.FunOf(computation.parameters, body.term, computation.id), CVTerm.Fun(parameters, !quoteTerm(body.type), body.effects))
+                        Typing(CTerm.FunOf(computation.params, body.term, computation.id), CVTerm.Fun(params, !quoteTerm(body.type), body.effs))
                     }
                 }
             }
@@ -468,29 +468,29 @@ class Elab private constructor(
                     when (val type = (!get()).force(function.type)) {
                         is CVTerm.Fun -> type
                         else -> {
-                            val parameters = computation.arguments.map {
-                                CParameter(true, "", null, null, true, !quoteTerm(!fresh(freshId())), freshId())
+                            val params = computation.arguments.map {
+                                CParam(true, "", null, null, true, !quoteTerm(!fresh(freshId())), freshId())
                             }
                             val vResultant = !fresh(freshId())
                             val resultant = !quoteTerm(vResultant)
-                            val effects = emptySet<CEffect>() // TODO
-                            !unifyTerms(type, CVTerm.Fun(parameters, resultant, effects, null))
-                            CVTerm.Fun(parameters, resultant, effects, type.id)
+                            val effs = emptySet<CEff>() // TODO
+                            !unifyTerms(type, CVTerm.Fun(params, resultant, effs, null))
+                            CVTerm.Fun(params, resultant, effs, type.id)
                         }
                     }
                 }
-                if (type.parameters.size != computation.arguments.size) {
-                    diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.arguments.size, computation.id))
+                if (type.params.size != computation.arguments.size) {
+                    diagnose(Diagnostic.SizeMismatch(type.params.size, computation.arguments.size, computation.id))
                 }
                 !lift({ normalizer }) {
-                    val arguments = !(computation.arguments zip type.parameters).mapM { (argument, parameter) ->
+                    val arguments = !(computation.arguments zip type.params).mapM { (argument, param) ->
                         {
-                            val tArgument = !checkTerm(argument, !evalTerm(parameter.type))
+                            val tArgument = !checkTerm(argument, !evalTerm(param.type))
                             val vArgument = !evalTerm(tArgument)
-                            parameter.lower?.let { !evalTerm(it) }?.also { lower ->
+                            param.lower?.let { !evalTerm(it) }?.also { lower ->
                                 if (!(!subtypeTerms(lower, vArgument))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(vArgument)), printTerm(!quoteTerm(lower)), argument.id))
                             }
-                            parameter.upper?.let { !evalTerm(it) }?.also { upper ->
+                            param.upper?.let { !evalTerm(it) }?.also { upper ->
                                 if (!(!subtypeTerms(vArgument, upper))) diagnose(Diagnostic.TermMismatch(printTerm(!quoteTerm(upper)), printTerm(!quoteTerm(vArgument)), argument.id))
                             }
                             !modify { bind(lazyOf(vArgument)) }
@@ -498,15 +498,15 @@ class Elab private constructor(
                         }
                     }
                     val resultant = !evalTerm(type.resultant)
-                    Typing(CTerm.Apply(function.term, arguments, computation.id), resultant, type.effects)
+                    Typing(CTerm.Apply(function.term, arguments, computation.id), resultant, type.effs)
                 }
             }
             is STerm.Fun ->
                 !restore {
-                    val parameters = !bindParameters(computation.parameters)
+                    val params = !bindParams(computation.params)
                     val resultant = !checkTerm(computation.resultant, TYPE) /* TODO: check effects */
-                    val effects = computation.effects.map { elaborateEffect(it) }.toSet()
-                    Typing(CTerm.Fun(parameters, resultant, effects, computation.id), TYPE)
+                    val effs = computation.effs.map { elabEff(it) }.toSet()
+                    Typing(CTerm.Fun(params, resultant, effs, computation.id), TYPE)
                 }
             else -> !inferTerm(computation)
         }
@@ -570,9 +570,9 @@ class Elab private constructor(
     }
 
     /**
-     * Checks the [computation] against the [type] and the [effects] under the context.
+     * Checks the [computation] against the [type] and the [effs] under the context.
      */
-    private fun checkComputation(computation: STerm, type: CVTerm, effects: Set<CEffect>): State<Context, Effecting> = {
+    private fun checkComputation(computation: STerm, type: CVTerm, effs: Set<CEff>): State<Context, Effecting> = {
         val type = !gets {
             normalizer.force(type).also {
                 types[computation.id] = it
@@ -583,38 +583,38 @@ class Elab private constructor(
                 !restore {
                     val init = !inferComputation(computation.init)
                     !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
-                    val body = !checkComputation(computation.body, type, effects)
-                    val effects = init.effects + body.effects
-                    Effecting(CTerm.Let(computation.name, init.term, body.term, computation.id), effects)
+                    val body = !checkComputation(computation.body, type, effs)
+                    val effs = init.effs + body.effs
+                    Effecting(CTerm.Let(computation.name, init.term, body.term, computation.id), effs)
                 }
             computation is STerm.Match -> {
                 val scrutinee = !inferTerm(computation.scrutinee)
-                val clauses = !computation.clauses.mapM { (pattern, body) ->
+                val clauses = !computation.clauses.mapM { (pat, body) ->
                     restore {
-                        val pattern = !checkPattern(pattern, scrutinee.type)
-                        val body = !checkComputation(body, type, effects)
-                        pattern to body
+                        val pat = !checkPat(pat, scrutinee.type)
+                        val body = !checkComputation(body, type, effs)
+                        pat to body
                     }
                 }
-                val effects = clauses.flatMap { (_, body) -> body.effects }.toSet()
-                Effecting(CTerm.Match(scrutinee.term, clauses.map { (pattern, body) -> pattern to body.term }, computation.id), effects)
+                val effs = clauses.flatMap { (_, body) -> body.effs }.toSet()
+                Effecting(CTerm.Match(scrutinee.term, clauses.map { (pat, body) -> pat to body.term }, computation.id), effs)
             }
             computation is STerm.FunOf && type is CVTerm.Fun -> {
-                if (type.parameters.size != computation.parameters.size) {
-                    diagnose(Diagnostic.SizeMismatch(type.parameters.size, computation.parameters.size, computation.id))
+                if (type.params.size != computation.params.size) {
+                    diagnose(Diagnostic.SizeMismatch(type.params.size, computation.params.size, computation.id))
                 }
                 !restore {
                     !modify { empty() }
-                    !(computation.parameters zip type.parameters).forEachM { (name, parameter) ->
+                    !(computation.params zip type.params).forEachM { (name, param) ->
                         {
-                            val lower = parameter.lower?.let { !lift({ normalizer }, evalTerm(it)) }
-                            val upper = parameter.upper?.let { !lift({ normalizer }, evalTerm(it)) }
-                            val type = !lift({ normalizer }, evalTerm(parameter.type))
-                            !modify { bind(name.id, Entry(parameter.termRelevant, name.text, lower, upper, parameter.typeRelevant, type, stage)) }
+                            val lower = param.lower?.let { !lift({ normalizer }, evalTerm(it)) }
+                            val upper = param.upper?.let { !lift({ normalizer }, evalTerm(it)) }
+                            val type = !lift({ normalizer }, evalTerm(param.type))
+                            !modify { bind(name.id, Entry(param.termRelevant, name.text, lower, upper, param.typeRelevant, type, stage)) }
                         }
                     }
-                    val resultant = !checkComputation(computation.body, !lift({ normalizer }, evalTerm(type.resultant)), effects)
-                    Effecting(CTerm.FunOf(computation.parameters, resultant.term, computation.id), emptySet())
+                    val resultant = !checkComputation(computation.body, !lift({ normalizer }, evalTerm(type.resultant)), effs)
+                    Effecting(CTerm.FunOf(computation.params, resultant.term, computation.id), emptySet())
                 }
             }
             else -> {
@@ -627,10 +627,10 @@ class Elab private constructor(
                     val actual = printTerm(!lift({ normalizer }, quoteTerm(computation.type)))
                     diagnose(Diagnostic.TermMismatch(expected, actual, id))
                 }
-                if (!(effects.containsAll(computation.effects))) {
-                    diagnose(Diagnostic.EffectMismatch(effects.map { printEffect(it) }, computation.effects.map { printEffect(it) }, id))
+                if (!(effs.containsAll(computation.effs))) {
+                    diagnose(Diagnostic.EffMismatch(effs.map { printEff(it) }, computation.effs.map { printEff(it) }, id))
                 }
-                Effecting(computation.term, computation.effects)
+                Effecting(computation.term, computation.effs)
             }
         }
     }
@@ -691,9 +691,9 @@ class Elab private constructor(
             value1 is CVTerm.RefOf && value2 is CVTerm.RefOf -> !unifyTerms(value1.element.value, value2.element.value)
             value1 is CVTerm.Refl && value2 is CVTerm.Refl -> true
             value1 is CVTerm.FunOf && value2 is CVTerm.FunOf ->
-                value1.parameters.size == value2.parameters.size && run {
-                    !value1.parameters.forEachM { parameter ->
-                        modify { bind(lazyOf(CVTerm.Var(parameter.text, size))) }
+                value1.params.size == value2.params.size && run {
+                    !value1.params.forEachM { param ->
+                        modify { bind(lazyOf(CVTerm.Var(param.text, size))) }
                     }
                     !unifyTerms(!evalTerm(value1.body), !evalTerm(value2.body))
                 }
@@ -735,12 +735,12 @@ class Elab private constructor(
                 !unifyTerms(value1.left.value, value2.left.value) &&
                         !unifyTerms(value1.right.value, value2.right.value)
             value1 is CVTerm.Fun && value2 is CVTerm.Fun ->
-                value1.parameters.size == value2.parameters.size &&
-                        value1.effects == value2.effects &&
-                        !(value1.parameters zip value2.parameters).allM { (parameter1, parameter2) ->
+                value1.params.size == value2.params.size &&
+                        value1.effs == value2.effs &&
+                        !(value1.params zip value2.params).allM { (param1, param2) ->
                             {
                                 !modify { bind(lazyOf(CVTerm.Var("", size))) }
-                                !(unifyTerms(!evalTerm(parameter2.type), !evalTerm(parameter1.type)))
+                                !(unifyTerms(!evalTerm(param2.type), !evalTerm(param1.type)))
                             }
                         } &&
                         !unifyTerms(!evalTerm(value1.resultant), !evalTerm(value2.resultant))
@@ -796,15 +796,15 @@ class Elab private constructor(
             term1 is CVTerm.Box && term2 is CVTerm.Box -> !subtypeTerms(term1.content.value, term2.content.value)
             term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !subtypeTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Fun && term2 is CVTerm.Fun ->
-                term1.parameters.size == term2.parameters.size &&
-                        term2.effects.containsAll(term1.effects) &&
+                term1.params.size == term2.params.size &&
+                        term2.effs.containsAll(term1.effs) &&
                         !restore {
-                            !(term1.parameters zip term2.parameters).allM { (parameter1, parameter2) ->
+                            !(term1.params zip term2.params).allM { (param1, param2) ->
                                 {
-                                    !modify { bindUnchecked(Entry(parameter1.termRelevant, "", null, null /* TODO */, parameter1.typeRelevant, TYPE, stage)) }
-                                    parameter1.termRelevant == parameter2.termRelevant &&
-                                            parameter1.typeRelevant == parameter2.typeRelevant &&
-                                            !subtypeTerms(!lift({ normalizer }, evalTerm(parameter2.type)), !lift({ normalizer }, evalTerm(parameter1.type)))
+                                    !modify { bindUnchecked(Entry(param1.termRelevant, "", null, null /* TODO */, param1.typeRelevant, TYPE, stage)) }
+                                    param1.termRelevant == param2.termRelevant &&
+                                            param1.typeRelevant == param2.typeRelevant &&
+                                            !subtypeTerms(!lift({ normalizer }, evalTerm(param2.type)), !lift({ normalizer }, evalTerm(param1.type)))
                                 }
                             } &&
                                     !(subtypeTerms(!lift({ normalizer }, evalTerm(term1.resultant)), !lift({ normalizer }, evalTerm(term2.resultant))))
@@ -815,148 +815,148 @@ class Elab private constructor(
     }
 
     /**
-     * Infers the type of the [pattern] under the context.
+     * Infers the type of the [pat] under the context.
      */
-    private fun inferPattern(pattern: SPattern): State<Context, Pair<CPattern, CVTerm>> = {
-        when (pattern) {
-            is SPattern.Var -> {
-                val type = !lift({ normalizer }, fresh(pattern.id))
-                !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, true, type, stage)) }
-                CPattern.Var(pattern.name, pattern.id) to type
+    private fun inferPat(pat: SPat): State<Context, Pair<CPat, CVTerm>> = {
+        when (pat) {
+            is SPat.Var -> {
+                val type = !lift({ normalizer }, fresh(pat.id))
+                !modify { bind(pat.id, Entry(true /* TODO */, pat.name, END, ANY, true, type, stage)) }
+                CPat.Var(pat.name, pat.id) to type
             }
-            is SPattern.UnitOf -> CPattern.UnitOf(pattern.id) to UNIT
-            is SPattern.BoolOf -> CPattern.BoolOf(pattern.value, pattern.id) to BOOL
-            is SPattern.ByteOf -> CPattern.ByteOf(pattern.value, pattern.id) to BYTE
-            is SPattern.ShortOf -> CPattern.ShortOf(pattern.value, pattern.id) to SHORT
-            is SPattern.IntOf -> CPattern.IntOf(pattern.value, pattern.id) to INT
-            is SPattern.LongOf -> CPattern.LongOf(pattern.value, pattern.id) to LONG
-            is SPattern.FloatOf -> CPattern.FloatOf(pattern.value, pattern.id) to FLOAT
-            is SPattern.DoubleOf -> CPattern.DoubleOf(pattern.value, pattern.id) to DOUBLE
-            is SPattern.StringOf -> CPattern.StringOf(pattern.value, pattern.id) to STRING
-            is SPattern.ByteArrayOf -> {
-                val elements = !pattern.elements.mapM { element -> checkPattern(element, BYTE) }
-                CPattern.ByteArrayOf(elements, pattern.id) to BYTE_ARRAY
+            is SPat.UnitOf -> CPat.UnitOf(pat.id) to UNIT
+            is SPat.BoolOf -> CPat.BoolOf(pat.value, pat.id) to BOOL
+            is SPat.ByteOf -> CPat.ByteOf(pat.value, pat.id) to BYTE
+            is SPat.ShortOf -> CPat.ShortOf(pat.value, pat.id) to SHORT
+            is SPat.IntOf -> CPat.IntOf(pat.value, pat.id) to INT
+            is SPat.LongOf -> CPat.LongOf(pat.value, pat.id) to LONG
+            is SPat.FloatOf -> CPat.FloatOf(pat.value, pat.id) to FLOAT
+            is SPat.DoubleOf -> CPat.DoubleOf(pat.value, pat.id) to DOUBLE
+            is SPat.StringOf -> CPat.StringOf(pat.value, pat.id) to STRING
+            is SPat.ByteArrayOf -> {
+                val elements = !pat.elements.mapM { element -> checkPat(element, BYTE) }
+                CPat.ByteArrayOf(elements, pat.id) to BYTE_ARRAY
             }
-            is SPattern.IntArrayOf -> {
-                val elements = !pattern.elements.mapM { element -> checkPattern(element, INT) }
-                CPattern.IntArrayOf(elements, pattern.id) to INT_ARRAY
+            is SPat.IntArrayOf -> {
+                val elements = !pat.elements.mapM { element -> checkPat(element, INT) }
+                CPat.IntArrayOf(elements, pat.id) to INT_ARRAY
             }
-            is SPattern.LongArrayOf -> {
-                val elements = !pattern.elements.mapM { element -> checkPattern(element, LONG) }
-                CPattern.LongArrayOf(elements, pattern.id) to LONG_ARRAY
+            is SPat.LongArrayOf -> {
+                val elements = !pat.elements.mapM { element -> checkPat(element, LONG) }
+                CPat.LongArrayOf(elements, pat.id) to LONG_ARRAY
             }
-            is SPattern.ListOf -> {
-                if (pattern.elements.isEmpty()) {
-                    CPattern.ListOf(emptyList(), pattern.id) to END
+            is SPat.ListOf -> {
+                if (pat.elements.isEmpty()) {
+                    CPat.ListOf(emptyList(), pat.id) to END
                 } else { // TODO: use union of element types
-                    val (head, headType) = !inferPattern(pattern.elements.first())
-                    val elements = !pattern.elements.drop(1).mapM { element -> checkPattern(element, headType) }
+                    val (head, headType) = !inferPat(pat.elements.first())
+                    val elements = !pat.elements.drop(1).mapM { element -> checkPat(element, headType) }
                     val size = CVTerm.IntOf(elements.size)
-                    CPattern.ListOf(listOf(head) + elements, pattern.id) to CVTerm.List(lazyOf(headType), lazyOf(size))
+                    CPat.ListOf(listOf(head) + elements, pat.id) to CVTerm.List(lazyOf(headType), lazyOf(size))
                 }
             }
-            is SPattern.CompoundOf -> {
-                val elements = !pattern.elements.mapM { (name, element) ->
+            is SPat.CompoundOf -> {
+                val elements = !pat.elements.mapM { (name, element) ->
                     {
-                        val (element, elementType) = !inferPattern(element)
+                        val (element, elementType) = !inferPat(element)
                         Triple(name, element, elementType)
                     }
                 }
                 val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
                 val elementTypes = elements.map { (name, _, type) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
-                CPattern.CompoundOf(elementTerms, pattern.id) to CVTerm.Compound(elementTypes)
+                CPat.CompoundOf(elementTerms, pat.id) to CVTerm.Compound(elementTypes)
             }
-            is SPattern.BoxOf -> {
-                val tag = !checkPattern(pattern.tag, TYPE)
-                val vTag = tag.toType() ?: !lift({ normalizer }, fresh(pattern.id))
-                val content = !checkPattern(pattern.content, vTag)
-                CPattern.BoxOf(content, tag, pattern.id) to CVTerm.Box(lazyOf(vTag))
+            is SPat.BoxOf -> {
+                val tag = !checkPat(pat.tag, TYPE)
+                val vTag = tag.toType() ?: !lift({ normalizer }, fresh(pat.id))
+                val content = !checkPat(pat.content, vTag)
+                CPat.BoxOf(content, tag, pat.id) to CVTerm.Box(lazyOf(vTag))
             }
-            is SPattern.RefOf -> {
-                val (element, elementType) = !inferPattern(pattern.element)
-                CPattern.RefOf(element, pattern.id) to CVTerm.Ref(lazyOf(elementType))
+            is SPat.RefOf -> {
+                val (element, elementType) = !inferPat(pat.element)
+                CPat.RefOf(element, pat.id) to CVTerm.Ref(lazyOf(elementType))
             }
-            is SPattern.Refl -> {
-                val left = lazy { !lift({ normalizer }, fresh(pattern.id)) }
-                CPattern.Refl(pattern.id) to CVTerm.Eq(left, left)
+            is SPat.Refl -> {
+                val left = lazy { !lift({ normalizer }, fresh(pat.id)) }
+                CPat.Refl(pat.id) to CVTerm.Eq(left, left)
             }
-            is SPattern.Unit -> CPattern.Unit(pattern.id) to UNIT
-            is SPattern.Bool -> CPattern.Bool(pattern.id) to TYPE
-            is SPattern.Byte -> CPattern.Byte(pattern.id) to TYPE
-            is SPattern.Short -> CPattern.Short(pattern.id) to TYPE
-            is SPattern.Int -> CPattern.Int(pattern.id) to TYPE
-            is SPattern.Long -> CPattern.Long(pattern.id) to TYPE
-            is SPattern.Float -> CPattern.Float(pattern.id) to TYPE
-            is SPattern.Double -> CPattern.Double(pattern.id) to TYPE
-            is SPattern.String -> CPattern.String(pattern.id) to TYPE
-            is SPattern.ByteArray -> CPattern.ByteArray(pattern.id) to TYPE
-            is SPattern.IntArray -> CPattern.IntArray(pattern.id) to TYPE
-            is SPattern.LongArray -> CPattern.LongArray(pattern.id) to TYPE
+            is SPat.Unit -> CPat.Unit(pat.id) to UNIT
+            is SPat.Bool -> CPat.Bool(pat.id) to TYPE
+            is SPat.Byte -> CPat.Byte(pat.id) to TYPE
+            is SPat.Short -> CPat.Short(pat.id) to TYPE
+            is SPat.Int -> CPat.Int(pat.id) to TYPE
+            is SPat.Long -> CPat.Long(pat.id) to TYPE
+            is SPat.Float -> CPat.Float(pat.id) to TYPE
+            is SPat.Double -> CPat.Double(pat.id) to TYPE
+            is SPat.String -> CPat.String(pat.id) to TYPE
+            is SPat.ByteArray -> CPat.ByteArray(pat.id) to TYPE
+            is SPat.IntArray -> CPat.IntArray(pat.id) to TYPE
+            is SPat.LongArray -> CPat.LongArray(pat.id) to TYPE
         }.also { (_, type) ->
-            types[pattern.id] = type
+            types[pat.id] = type
         }
     }
 
     /**
-     * Checks the [pattern] against the [type] under the context.
+     * Checks the [pat] against the [type] under the context.
      */
-    private fun checkPattern(pattern: SPattern, type: CVTerm): State<Context, CPattern> = {
+    private fun checkPat(pat: SPat, type: CVTerm): State<Context, CPat> = {
         val type = !gets {
             normalizer.force(type).also {
-                types[pattern.id] = it
+                types[pat.id] = it
             }
         }
         when {
-            pattern is SPattern.Var -> {
-                !modify { bind(pattern.id, Entry(true /* TODO */, pattern.name, END, ANY, true, type, stage)) }
-                CPattern.Var(pattern.name, pattern.id)
+            pat is SPat.Var -> {
+                !modify { bind(pat.id, Entry(true /* TODO */, pat.name, END, ANY, true, type, stage)) }
+                CPat.Var(pat.name, pat.id)
             }
-            pattern is SPattern.ListOf && type is CVTerm.List -> {
-                val elements = !pattern.elements.mapM { element ->
-                    checkPattern(element, type.element.value)
+            pat is SPat.ListOf && type is CVTerm.List -> {
+                val elements = !pat.elements.mapM { element ->
+                    checkPat(element, type.element.value)
                 }
                 when (val size = !gets { normalizer.force(type.size.value) }) {
-                    is CVTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pattern.id))
+                    is CVTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, pat.id))
                     else -> {}
                 }
-                CPattern.ListOf(elements, pattern.id)
+                CPat.ListOf(elements, pat.id)
             }
-            pattern is SPattern.CompoundOf && type is CVTerm.Compound -> {
-                val elements = !(pattern.elements zip type.elements.entries).mapM { (element, entry) ->
+            pat is SPat.CompoundOf && type is CVTerm.Compound -> {
+                val elements = !(pat.elements zip type.elements.entries).mapM { (element, entry) ->
                     {
                         val type = !lift({ normalizer }, evalTerm(entry.value.type))
-                        val pattern = !checkPattern(element.second, type)
-                        element.first to pattern
+                        val pat = !checkPat(element.second, type)
+                        element.first to pat
                     }
                 }
-                CPattern.CompoundOf(elements.toLinkedHashMap(), pattern.id)
+                CPat.CompoundOf(elements.toLinkedHashMap(), pat.id)
             }
-            pattern is SPattern.BoxOf && type is CVTerm.Box -> {
-                val tag = !checkPattern(pattern.tag, TYPE)
+            pat is SPat.BoxOf && type is CVTerm.Box -> {
+                val tag = !checkPat(pat.tag, TYPE)
                 val vTag = tag.toType() ?: type.content.value
-                val content = !checkPattern(pattern.content, vTag)
-                CPattern.BoxOf(content, tag, pattern.id)
+                val content = !checkPat(pat.content, vTag)
+                CPat.BoxOf(content, tag, pat.id)
             }
-            pattern is SPattern.RefOf && type is CVTerm.Ref -> {
-                val element = !checkPattern(pattern.element, type.element.value)
-                CPattern.RefOf(element, pattern.id)
+            pat is SPat.RefOf && type is CVTerm.Ref -> {
+                val element = !checkPat(pat.element, type.element.value)
+                CPat.RefOf(element, pat.id)
             }
-            pattern is SPattern.Refl && type is CVTerm.Eq -> {
+            pat is SPat.Refl && type is CVTerm.Eq -> {
                 val normalizer = !lift({ normalizer }, {
                     !match(type.left.value, type.right.value)
                     !get()
                 })
                 !modify { copy(normalizer = normalizer) }
-                CPattern.Refl(pattern.id)
+                CPat.Refl(pat.id)
             }
             else -> {
-                val (inferred, inferredType) = !inferPattern(pattern)
+                val (inferred, inferredType) = !inferPat(pat)
                 val isSubtype = !subtypeTerms(inferredType, type)
                 if (!isSubtype) {
-                    types[pattern.id] = END
+                    types[pat.id] = END
                     val expected = printTerm(!lift({ normalizer }, quoteTerm(type)))
                     val actual = printTerm(!lift({ normalizer }, quoteTerm(inferredType)))
-                    diagnose(Diagnostic.TermMismatch(expected, actual, pattern.id))
+                    diagnose(Diagnostic.TermMismatch(expected, actual, pat.id))
                 }
                 inferred
             }
@@ -966,19 +966,19 @@ class Elab private constructor(
     /**
      * Converts this pattern to a semantic term.
      */
-    private fun CPattern.toType(): CVTerm? = when (this) {
-        is CPattern.Unit -> UNIT
-        is CPattern.Bool -> BOOL
-        is CPattern.Byte -> BYTE
-        is CPattern.Short -> SHORT
-        is CPattern.Int -> INT
-        is CPattern.Long -> LONG
-        is CPattern.Float -> FLOAT
-        is CPattern.Double -> DOUBLE
-        is CPattern.String -> STRING
-        is CPattern.ByteArray -> BYTE_ARRAY
-        is CPattern.IntArray -> INT_ARRAY
-        is CPattern.LongArray -> LONG_ARRAY
+    private fun CPat.toType(): CVTerm? = when (this) {
+        is CPat.Unit -> UNIT
+        is CPat.Bool -> BOOL
+        is CPat.Byte -> BYTE
+        is CPat.Short -> SHORT
+        is CPat.Int -> INT
+        is CPat.Long -> LONG
+        is CPat.Float -> FLOAT
+        is CPat.Double -> DOUBLE
+        is CPat.String -> STRING
+        is CPat.ByteArray -> BYTE_ARRAY
+        is CPat.IntArray -> INT_ARRAY
+        is CPat.LongArray -> LONG_ARRAY
         else -> null
     }
 
@@ -1007,16 +1007,16 @@ class Elab private constructor(
     }
 
     /**
-     * Elaborates the [effect].
+     * Elaborates the [eff].
      */
-    private fun elaborateEffect(effect: SEffect): CEffect = when (effect) {
-        is SEffect.Name -> CEffect.Name(effect.name)
+    private fun elabEff(eff: SEff): CEff = when (eff) {
+        is SEff.Name -> CEff.Name(eff.name)
     }
 
     /**
      * Ensures that the representation of the [type] is monomorphic under this normalizer.
      */
-    private fun Normalizer.checkRepresentation(id: Id, type: CVTerm) {
+    private fun Normalizer.checkRepr(id: Id, type: CVTerm) {
         fun join(term1: CVTerm, term2: CVTerm): Boolean {
             val term1 = force(term1)
             val term2 = force(term2)
@@ -1047,15 +1047,15 @@ class Elab private constructor(
         }
 
         when (type) {
-            is CVTerm.Var -> diagnose(Diagnostic.PolymorphicRepresentation(id))
+            is CVTerm.Var -> diagnose(Diagnostic.PolyRepr(id))
             is CVTerm.Or -> if (type.variants.size >= 2) {
                 val first = type.variants.first().value
                 if (!type.variants.drop(1).all { join(first, it.value) }) {
-                    diagnose(Diagnostic.PolymorphicRepresentation(id))
+                    diagnose(Diagnostic.PolyRepr(id))
                 }
             }
             is CVTerm.And -> if (type.variants.isEmpty()) {
-                diagnose(Diagnostic.PolymorphicRepresentation(id))
+                diagnose(Diagnostic.PolyRepr(id))
             }
             else -> {}
         }
@@ -1077,12 +1077,12 @@ class Elab private constructor(
     private data class Typing(
         val term: CTerm,
         val type: CVTerm,
-        val effects: Set<CEffect> = emptySet(),
+        val effs: Set<CEff> = emptySet(),
     )
 
     private data class Effecting(
         val term: CTerm,
-        val effects: Set<CEffect>,
+        val effs: Set<CEff>,
     )
 
     private data class Entry(

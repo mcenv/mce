@@ -6,7 +6,7 @@ import mce.util.toLinkedHashMap
 abstract class Map {
     open fun mapItem(item: Item): Item = mapItemInternal(item)
 
-    open fun mapParameter(parameter: Parameter): Parameter = mapParameterInternal(parameter)
+    open fun mapParam(param: Param): Param = mapParamInternal(param)
 
     open fun mapModule(module: Module): Module = mapModuleInternal(module)
 
@@ -16,9 +16,9 @@ abstract class Map {
 
     protected fun mapItemInternal(item: Item): Item = when (item) {
         is Item.Def -> {
-            val parameters = item.parameters.map { mapParameter(it) }
+            val parameters = item.params.map { mapParam(it) }
             val body = mapTerm(item.body)
-            Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effects, body, item.id)
+            Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effs, body, item.id)
         }
         is Item.Mod -> {
             val body = mapModule(item.body)
@@ -30,11 +30,11 @@ abstract class Map {
         }
     }
 
-    protected fun mapParameterInternal(parameter: Parameter): Parameter {
-        val lower = parameter.lower?.let { mapTerm(it) }
-        val upper = parameter.upper?.let { mapTerm(it) }
-        val type = mapTerm(parameter.type)
-        return Parameter(parameter.termRelevant, parameter.name, lower, upper, parameter.typeRelevant, type, parameter.id)
+    protected fun mapParamInternal(param: Param): Param {
+        val lower = param.lower?.let { mapTerm(it) }
+        val upper = param.upper?.let { mapTerm(it) }
+        val type = mapTerm(param.type)
+        return Param(param.termRelevant, param.name, lower, upper, param.typeRelevant, type, param.id)
     }
 
     protected fun mapModuleInternal(module: Module): Module = when (module) {
@@ -52,7 +52,7 @@ abstract class Map {
 
     protected fun mapSignatureInternal(signature: Signature): Signature = when (signature) {
         is Signature.Def -> {
-            val parameters = signature.parameters.map { mapParameter(it) }
+            val parameters = signature.params.map { mapParam(it) }
             val resultant = mapTerm(signature.resultant)
             Signature.Def(signature.name, parameters, resultant, signature.id)
         }
@@ -87,7 +87,7 @@ abstract class Map {
         is Term.BoxOf -> Term.BoxOf(mapTerm(term.content), mapTerm(term.tag), term.id)
         is Term.RefOf -> Term.RefOf(mapTerm(term.element), term.id)
         is Term.Refl -> term
-        is Term.FunOf -> Term.FunOf(term.parameters, mapTerm(term.body), term.id)
+        is Term.FunOf -> Term.FunOf(term.params, mapTerm(term.body), term.id)
         is Term.Apply -> Term.Apply(mapTerm(term.function), term.arguments.map { mapTerm(it) }, term.id)
         is Term.CodeOf -> Term.CodeOf(mapTerm(term.element), term.id)
         is Term.Splice -> Term.Splice(mapTerm(term.element), term.id)
@@ -110,7 +110,7 @@ abstract class Map {
         is Term.Box -> Term.Box(mapTerm(term.content), term.id)
         is Term.Ref -> Term.Ref(mapTerm(term.element), term.id)
         is Term.Eq -> Term.Eq(mapTerm(term.left), mapTerm(term.right), term.id)
-        is Term.Fun -> Term.Fun(term.parameters.map { mapParameter(it) }, mapTerm(term.resultant), term.effects, term.id)
+        is Term.Fun -> Term.Fun(term.params.map { mapParam(it) }, mapTerm(term.resultant), term.effs, term.id)
         is Term.Code -> Term.Code(mapTerm(term.element), term.id)
         is Term.Type -> term
     }

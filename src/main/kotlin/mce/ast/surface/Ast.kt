@@ -31,9 +31,9 @@ sealed class Item {
         override val exports: KList<KString>,
         override val modifiers: KList<Modifier>,
         override val name: KString,
-        val parameters: KList<Parameter>,
+        val params: KList<Param>,
         val resultant: Term,
-        val effects: KList<Effect>,
+        val effs: KList<Eff>,
         val body: Term,
         override val id: Id,
     ) : Item()
@@ -67,7 +67,7 @@ enum class Modifier {
 }
 
 @Serializable
-data class Parameter(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
+data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
 
 @Serializable
 data class Entry(val relevant: KBoolean, val name: Name, val type: Term, val id: Id)
@@ -94,7 +94,7 @@ sealed class Signature {
     abstract val id: Id
 
     @Serializable
-    data class Def(val name: KString, val parameters: KList<Parameter>, val resultant: Term, override val id: Id) : Signature()
+    data class Def(val name: KString, val params: KList<Param>, val resultant: Term, override val id: Id) : Signature()
 
     @Serializable
     data class Mod(val name: KString, val type: Module, override val id: Id) : Signature()
@@ -126,7 +126,7 @@ sealed class Term {
     data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
 
     @Serializable
-    data class Match(val scrutinee: Term, val clauses: KList<Pair<Pattern, Term>>, override val id: Id) : Term()
+    data class Match(val scrutinee: Term, val clauses: KList<Pair<Pat, Term>>, override val id: Id) : Term()
 
     @Serializable
     data class UnitOf(override val id: Id) : Term()
@@ -180,7 +180,7 @@ sealed class Term {
     data class Refl(override val id: Id) : Term()
 
     @Serializable
-    data class FunOf(val parameters: KList<Name>, val body: Term, override val id: Id) : Term()
+    data class FunOf(val params: KList<Name>, val body: Term, override val id: Id) : Term()
 
     @Serializable
     data class Apply(val function: Term, val arguments: KList<Term>, override val id: Id) : Term()
@@ -249,7 +249,7 @@ sealed class Term {
     data class Eq(val left: Term, val right: Term, override val id: Id) : Term()
 
     @Serializable
-    data class Fun(val parameters: KList<Parameter>, val resultant: Term, val effects: KList<Effect>, override val id: Id) : Term()
+    data class Fun(val params: KList<Param>, val resultant: Term, val effs: KList<Eff>, override val id: Id) : Term()
 
     @Serializable
     data class Code(val element: Term, override val id: Id) : Term()
@@ -259,102 +259,102 @@ sealed class Term {
 }
 
 @Serializable
-sealed class Pattern {
+sealed class Pat {
     abstract val id: Id
 
     @Serializable
-    data class Var(val name: KString, override val id: Id) : Pattern()
+    data class Var(val name: KString, override val id: Id) : Pat()
 
     @Serializable
-    data class UnitOf(override val id: Id) : Pattern()
+    data class UnitOf(override val id: Id) : Pat()
 
     @Serializable
-    data class BoolOf(val value: KBoolean, override val id: Id) : Pattern()
+    data class BoolOf(val value: KBoolean, override val id: Id) : Pat()
 
     @Serializable
-    data class ByteOf(val value: KByte, override val id: Id) : Pattern()
+    data class ByteOf(val value: KByte, override val id: Id) : Pat()
 
     @Serializable
-    data class ShortOf(val value: KShort, override val id: Id) : Pattern()
+    data class ShortOf(val value: KShort, override val id: Id) : Pat()
 
     @Serializable
-    data class IntOf(val value: KInt, override val id: Id) : Pattern()
+    data class IntOf(val value: KInt, override val id: Id) : Pat()
 
     @Serializable
-    data class LongOf(val value: KLong, override val id: Id) : Pattern()
+    data class LongOf(val value: KLong, override val id: Id) : Pat()
 
     @Serializable
-    data class FloatOf(val value: KFloat, override val id: Id) : Pattern()
+    data class FloatOf(val value: KFloat, override val id: Id) : Pat()
 
     @Serializable
-    data class DoubleOf(val value: KDouble, override val id: Id) : Pattern()
+    data class DoubleOf(val value: KDouble, override val id: Id) : Pat()
 
     @Serializable
-    data class StringOf(val value: KString, override val id: Id) : Pattern()
+    data class StringOf(val value: KString, override val id: Id) : Pat()
 
     @Serializable
-    data class ByteArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+    data class ByteArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
-    data class IntArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+    data class IntArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
-    data class LongArrayOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+    data class LongArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
-    data class ListOf(val elements: KList<Pattern>, override val id: Id) : Pattern()
+    data class ListOf(val elements: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
-    data class CompoundOf(val elements: KList<Pair<Name, Pattern>>, override val id: Id) : Pattern()
+    data class CompoundOf(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
 
     @Serializable
-    data class BoxOf(val content: Pattern, val tag: Pattern, override val id: Id) : Pattern()
+    data class BoxOf(val content: Pat, val tag: Pat, override val id: Id) : Pat()
 
     @Serializable
-    data class RefOf(val element: Pattern, override val id: Id) : Pattern()
+    data class RefOf(val element: Pat, override val id: Id) : Pat()
 
     @Serializable
-    data class Refl(override val id: Id) : Pattern()
+    data class Refl(override val id: Id) : Pat()
 
     @Serializable
-    data class Unit(override val id: Id) : Pattern()
+    data class Unit(override val id: Id) : Pat()
 
     @Serializable
-    data class Bool(override val id: Id) : Pattern()
+    data class Bool(override val id: Id) : Pat()
 
     @Serializable
-    data class Byte(override val id: Id) : Pattern()
+    data class Byte(override val id: Id) : Pat()
 
     @Serializable
-    data class Short(override val id: Id) : Pattern()
+    data class Short(override val id: Id) : Pat()
 
     @Serializable
-    data class Int(override val id: Id) : Pattern()
+    data class Int(override val id: Id) : Pat()
 
     @Serializable
-    data class Long(override val id: Id) : Pattern()
+    data class Long(override val id: Id) : Pat()
 
     @Serializable
-    data class Float(override val id: Id) : Pattern()
+    data class Float(override val id: Id) : Pat()
 
     @Serializable
-    data class Double(override val id: Id) : Pattern()
+    data class Double(override val id: Id) : Pat()
 
     @Serializable
-    data class String(override val id: Id) : Pattern()
+    data class String(override val id: Id) : Pat()
 
     @Serializable
-    data class ByteArray(override val id: Id) : Pattern()
+    data class ByteArray(override val id: Id) : Pat()
 
     @Serializable
-    data class IntArray(override val id: Id) : Pattern()
+    data class IntArray(override val id: Id) : Pat()
 
     @Serializable
-    data class LongArray(override val id: Id) : Pattern()
+    data class LongArray(override val id: Id) : Pat()
 }
 
 @Serializable
-sealed class Effect {
+sealed class Eff {
     @Serializable
-    data class Name(val name: KString) : Effect()
+    data class Name(val name: KString) : Eff()
 }

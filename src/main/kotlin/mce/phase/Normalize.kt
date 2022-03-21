@@ -161,7 +161,7 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             VTerm.RefOf(element, term.id)
         }
         is Term.Refl -> VTerm.Refl(term.id)
-        is Term.FunOf -> VTerm.FunOf(term.parameters, term.body, term.id)
+        is Term.FunOf -> VTerm.FunOf(term.params, term.body, term.id)
         is Term.Apply -> {
             val arguments = term.arguments.map { lazy { !evalTerm(it) } }
             when (val function = !evalTerm(term.function)) {
@@ -219,7 +219,7 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             val right = lazy { !evalTerm(term.right) }
             VTerm.Eq(left, right, term.id)
         }
-        is Term.Fun -> VTerm.Fun(term.parameters, term.resultant, term.effects, term.id)
+        is Term.Fun -> VTerm.Fun(term.params, term.resultant, term.effs, term.id)
         is Term.Code -> {
             val element = lazy { !evalTerm(term.element) }
             VTerm.Code(element, term.id)
@@ -228,64 +228,64 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
     }
 }
 
-private fun match(pattern: Pattern, term: VTerm): State<Normalizer, Boolean> = {
+private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
     when {
-        pattern is Pattern.Var -> {
+        pat is Pat.Var -> {
             !modify { bind(lazyOf(term)) }
             true
         }
-        pattern is Pattern.UnitOf && term is VTerm.UnitOf -> true
-        pattern is Pattern.BoolOf && term is VTerm.BoolOf -> term.value == pattern.value
-        pattern is Pattern.ByteOf && term is VTerm.ByteOf -> term.value == pattern.value
-        pattern is Pattern.ShortOf && term is VTerm.ShortOf -> term.value == pattern.value
-        pattern is Pattern.IntOf && term is VTerm.IntOf -> term.value == pattern.value
-        pattern is Pattern.LongOf && term is VTerm.LongOf -> term.value == pattern.value
-        pattern is Pattern.FloatOf && term is VTerm.FloatOf -> term.value == pattern.value
-        pattern is Pattern.DoubleOf && term is VTerm.DoubleOf -> term.value == pattern.value
-        pattern is Pattern.StringOf && term is VTerm.StringOf -> term.value == pattern.value
-        pattern is Pattern.ByteArrayOf && term is VTerm.ByteArrayOf ->
-            if (pattern.elements.size == term.elements.size) {
-                !(pattern.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+        pat is Pat.UnitOf && term is VTerm.UnitOf -> true
+        pat is Pat.BoolOf && term is VTerm.BoolOf -> term.value == pat.value
+        pat is Pat.ByteOf && term is VTerm.ByteOf -> term.value == pat.value
+        pat is Pat.ShortOf && term is VTerm.ShortOf -> term.value == pat.value
+        pat is Pat.IntOf && term is VTerm.IntOf -> term.value == pat.value
+        pat is Pat.LongOf && term is VTerm.LongOf -> term.value == pat.value
+        pat is Pat.FloatOf && term is VTerm.FloatOf -> term.value == pat.value
+        pat is Pat.DoubleOf && term is VTerm.DoubleOf -> term.value == pat.value
+        pat is Pat.StringOf && term is VTerm.StringOf -> term.value == pat.value
+        pat is Pat.ByteArrayOf && term is VTerm.ByteArrayOf ->
+            if (pat.elements.size == term.elements.size) {
+                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
             } else false
-        pattern is Pattern.IntArrayOf && term is VTerm.IntArrayOf ->
-            if (pattern.elements.size == term.elements.size) {
-                !(pattern.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+        pat is Pat.IntArrayOf && term is VTerm.IntArrayOf ->
+            if (pat.elements.size == term.elements.size) {
+                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
             } else false
-        pattern is Pattern.LongArrayOf && term is VTerm.LongArrayOf ->
-            if (pattern.elements.size == term.elements.size) {
-                !(pattern.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+        pat is Pat.LongArrayOf && term is VTerm.LongArrayOf ->
+            if (pat.elements.size == term.elements.size) {
+                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
             } else false
-        pattern is Pattern.ListOf && term is VTerm.ListOf ->
-            if (pattern.elements.size == term.elements.size) {
-                !(pattern.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+        pat is Pat.ListOf && term is VTerm.ListOf ->
+            if (pat.elements.size == term.elements.size) {
+                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
             } else false
-        pattern is Pattern.CompoundOf && term is VTerm.CompoundOf ->
-            if (pattern.elements.size == term.elements.size) {
-                !(pattern.elements.entries zip term.elements.entries).allM { (pattern, value) ->
+        pat is Pat.CompoundOf && term is VTerm.CompoundOf ->
+            if (pat.elements.size == term.elements.size) {
+                !(pat.elements.entries zip term.elements.entries).allM { (pattern, value) ->
                     {
                         !match(pattern.value, value.value.value) && pattern.key.text == value.key.text
                     }
                 }
             } else false
-        pattern is Pattern.BoxOf && term is VTerm.BoxOf -> {
-            val matched = !match(pattern.content, term.content.value)
+        pat is Pat.BoxOf && term is VTerm.BoxOf -> {
+            val matched = !match(pat.content, term.content.value)
             if (matched) {
-                !match(pattern.tag, term.tag.value)
+                !match(pat.tag, term.tag.value)
             } else false
         }
-        pattern is Pattern.RefOf && term is VTerm.RefOf -> !match(pattern.element, term.element.value)
-        pattern is Pattern.Refl && term is VTerm.Refl -> true
-        pattern is Pattern.Bool && term is VTerm.Bool -> true
-        pattern is Pattern.Byte && term is VTerm.Byte -> true
-        pattern is Pattern.Short && term is VTerm.Short -> true
-        pattern is Pattern.Int && term is VTerm.Int -> true
-        pattern is Pattern.Long && term is VTerm.Long -> true
-        pattern is Pattern.Float && term is VTerm.Float -> true
-        pattern is Pattern.Double && term is VTerm.Double -> true
-        pattern is Pattern.String && term is VTerm.String -> true
-        pattern is Pattern.ByteArray && term is VTerm.ByteArray -> true
-        pattern is Pattern.IntArray && term is VTerm.IntArray -> true
-        pattern is Pattern.LongArray && term is VTerm.LongArray -> true
+        pat is Pat.RefOf && term is VTerm.RefOf -> !match(pat.element, term.element.value)
+        pat is Pat.Refl && term is VTerm.Refl -> true
+        pat is Pat.Bool && term is VTerm.Bool -> true
+        pat is Pat.Byte && term is VTerm.Byte -> true
+        pat is Pat.Short && term is VTerm.Short -> true
+        pat is Pat.Int && term is VTerm.Int -> true
+        pat is Pat.Long && term is VTerm.Long -> true
+        pat is Pat.Float && term is VTerm.Float -> true
+        pat is Pat.Double && term is VTerm.Double -> true
+        pat is Pat.String && term is VTerm.String -> true
+        pat is Pat.ByteArray && term is VTerm.ByteArray -> true
+        pat is Pat.IntArray && term is VTerm.IntArray -> true
+        pat is Pat.LongArray && term is VTerm.LongArray -> true
         else -> false
     }
 }
@@ -352,11 +352,11 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
         }
         is VTerm.Refl -> Term.Refl(term.id)
         is VTerm.FunOf -> {
-            !term.parameters.forEachM { parameter ->
+            !term.params.forEachM { parameter ->
                 modify { bind(lazyOf(VTerm.Var(parameter.text, size, freshId()))) }
             }
             val body = !normTerm(term.body)
-            Term.FunOf(term.parameters, body, term.id)
+            Term.FunOf(term.params, body, term.id)
         }
         is VTerm.Apply -> {
             val function = !quoteTerm(term.function)
@@ -411,11 +411,11 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
             Term.Eq(left, right, term.id)
         }
         is VTerm.Fun -> {
-            !term.parameters.forEachM { parameter ->
+            !term.params.forEachM { parameter ->
                 modify { bind(lazyOf(VTerm.Var(parameter.name, size, freshId()))) }
             }
             val resultant = !normTerm(term.resultant)
-            Term.Fun(term.parameters, resultant, term.effects, term.id)
+            Term.Fun(term.params, resultant, term.effs, term.id)
         }
         is VTerm.Code -> {
             val element = !quoteTerm(term.element.value)
@@ -453,7 +453,7 @@ fun evalModule(module: Module): State<Normalizer, VModule> = {
  */
 fun evalSignature(signature: Signature): State<Normalizer, VSignature> = {
     when (signature) {
-        is Signature.Def -> VSignature.Def(signature.name, signature.parameters, signature.resultant, signature.id)
+        is Signature.Def -> VSignature.Def(signature.name, signature.params, signature.resultant, signature.id)
         is Signature.Mod -> {
             val type = !evalModule(signature.type)
             VSignature.Mod(signature.name, type, signature.id)
