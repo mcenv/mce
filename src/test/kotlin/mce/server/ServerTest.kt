@@ -1,6 +1,7 @@
 package mce.server
 
 import kotlinx.coroutines.runBlocking
+import mce.ast.Id
 import mce.ast.surface.Term
 import java.util.*
 import kotlin.test.Test
@@ -18,7 +19,7 @@ class ServerTest {
     fun hover() {
         runServer {
             val name = "server"
-            val id = UUID(0, 0)
+            val id = Id(UUID(0, 0))
             assertIs<Term.Bool>(hover(name, id).type)
         }
     }
@@ -27,7 +28,7 @@ class ServerTest {
     fun counter() {
         runServer {
             val name = "server"
-            val id = UUID(0, 0)
+            val id = Id(UUID(0, 0))
             hover(name, id)
             assertEquals(1, getCount(Key.ElabResult(name)))
             hover(name, id)
@@ -39,7 +40,7 @@ class ServerTest {
     fun completion() {
         runServer {
             val name = "completion"
-            val id = UUID(0, 0)
+            val id = Id(UUID(0, 0))
             val item = completion(name, id).first()
             assertEquals("a", item.name)
             assertIs<Term.Int>(item.type)

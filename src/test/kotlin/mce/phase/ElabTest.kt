@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.ast.Id
 import mce.ast.core.VTerm
 import mce.ast.surface.Eff
 import mce.fetch
@@ -21,8 +22,8 @@ class ElabTest {
     @Test
     fun elaborate() {
         val result = elaborate("elaborate").success()
-        assertIs<VTerm.Type>(result.types[UUID(0, 0)])
-        assertIs<VTerm.Bool>(result.types[UUID(0, 1)])
+        assertIs<VTerm.Type>(result.types[Id(UUID(0, 0))])
+        assertIs<VTerm.Bool>(result.types[Id(UUID(0, 1))])
     }
 
     @Test
@@ -48,7 +49,7 @@ class ElabTest {
     @Test
     fun functionClosed() {
         val result = elaborate("function_closed")
-        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
     }
 
     @Test
@@ -59,13 +60,13 @@ class ElabTest {
     @Test
     fun letEscape() {
         val result = elaborate("let_escape")
-        assertContains(result.diagnostics, Diagnostic.VarNotFound("b", UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("b", Id(UUID(0, 0))))
     }
 
     @Test
     fun varNotFound() {
         val result = elaborate("var_not_found")
-        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
     }
 
     @Test
@@ -86,19 +87,19 @@ class ElabTest {
     @Test
     fun stageMismatch() {
         val result = elaborate("stage_mismatch")
-        assertContains(result.diagnostics, Diagnostic.StageMismatch(1, 0, UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.StageMismatch(1, 0, Id(UUID(0, 0))))
     }
 
     @Test
     fun phaseMismatch() {
         val result = elaborate("phase_mismatch")
-        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Id(UUID(0, 0))))
     }
 
     @Test
     fun phaseMismatchLocal() {
         val result = elaborate("phase_mismatch_local")
-        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Id(UUID(0, 0))))
     }
 
     @Test
@@ -114,7 +115,7 @@ class ElabTest {
     @Test
     fun matchEscape() {
         val result = elaborate("match_escape")
-        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
     }
 
     @Test
@@ -296,13 +297,13 @@ class ElabTest {
     @Test
     fun arityMismatch() {
         val result = elaborate("arity_mismatch")
-        assertContains(result.diagnostics, Diagnostic.SizeMismatch(2, 1, UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.SizeMismatch(2, 1, Id(UUID(0, 0))))
     }
 
     @Test
     fun impureDef() {
         val result = elaborate("impure_def")
-        assertContains(result.diagnostics, Diagnostic.EffMismatch(emptyList(), listOf(Eff.Name("a")), UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.EffMismatch(emptyList(), listOf(Eff.Name("a")), Id(UUID(0, 0))))
     }
 
     @Test
@@ -318,19 +319,19 @@ class ElabTest {
     @Test
     fun polyVar() {
         val result = elaborate("poly_var")
-        assertContains(result.diagnostics, Diagnostic.PolyRepr(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PolyRepr(Id(UUID(0, 0))))
     }
 
     @Test
     fun anyVar() {
         val result = elaborate("any_var")
-        assertContains(result.diagnostics, Diagnostic.PolyRepr(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PolyRepr(Id(UUID(0, 0))))
     }
 
     @Test
     fun orInvalidJoinVar() {
         val result = elaborate("or_invalid_join_var")
-        assertContains(result.diagnostics, Diagnostic.PolyRepr(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PolyRepr(Id(UUID(0, 0))))
     }
 
     @Test
@@ -373,7 +374,7 @@ class ElabTest {
     @Test
     fun relevanceMismatch() {
         val result = elaborate("relevance_mismatch")
-        assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(Id(UUID(0, 0))))
     }
 
     @Test
@@ -419,7 +420,7 @@ class ElabTest {
     @Test
     fun evalError() {
         val result = elaborate("eval_error")
-        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
     }
 
     @Test
@@ -476,6 +477,6 @@ class ElabTest {
     @Test
     fun typeRelevanceMismatch() {
         val result = elaborate("type_relevance_mismatch")
-        assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(UUID(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(Id(UUID(0, 0))))
     }
 }

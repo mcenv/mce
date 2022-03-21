@@ -11,12 +11,13 @@ import java.util.*
 /**
  * A unique identifier for a node.
  */
-typealias Id = UUID
+@JvmInline
+value class Id(val id: UUID)
 
 /**
  * Creates a fresh [Id].
  */
-fun freshId(): Id = UUID.randomUUID()
+fun freshId(): Id = Id(UUID.randomUUID())
 
 object IdSerializer : KSerializer<Id> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Id", PrimitiveKind.STRING)
@@ -25,5 +26,5 @@ object IdSerializer : KSerializer<Id> {
         encoder.encodeString(value.toString())
     }
 
-    override fun deserialize(decoder: Decoder): Id = UUID.fromString(decoder.decodeString())
+    override fun deserialize(decoder: Decoder): Id = Id(UUID.fromString(decoder.decodeString()))
 }

@@ -149,7 +149,7 @@ class Parse private constructor(
             skip()
             if (peekChar() == '#') {
                 skip()
-                parseTerm(UUID.fromString(readWord()))
+                parseTerm(Id(UUID.fromString(readWord())))
             } else {
                 val left = parseTerm()
                 when (peekChar()) {

@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.ast.Id
 import mce.ast.core.VTerm
 import mce.fetch
 import mce.phase.frontend.Diagnostic
@@ -21,6 +22,6 @@ class ZonkTest {
     @Test
     fun unsolvedMeta() {
         val result = zonk("unsolved_meta")
-        assert(result.diagnostics.contains(Diagnostic.UnsolvedMeta(UUID(0, 0))))
+        assert(result.diagnostics.contains(Diagnostic.UnsolvedMeta(Id(UUID(0, 0)))))
     }
 }

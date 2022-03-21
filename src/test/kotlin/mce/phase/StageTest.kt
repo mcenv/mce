@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.ast.Id
 import mce.ast.core.Item
 import mce.ast.core.Term
 import mce.fetch
@@ -16,6 +17,6 @@ class StageTest {
     fun reduce() {
         val result = stage("code_elim")
         val def = result.item as Item.Def
-        assertEquals(Term.BoolOf(false, UUID(0, 0)), def.body)
+        assertEquals(Term.BoolOf(false, Id(UUID(0, 0))), def.body)
     }
 }
