@@ -19,3 +19,7 @@ jobs:
           cache: "gradle"
       - uses: gradle/wrapper-validation-action@v1
       - run: ./gradlew test
+      - uses: actions/upload-artifact@v3
+        with:
+          name: "reports"
+          path: build/reports/benchmarks/main/*/test.json
