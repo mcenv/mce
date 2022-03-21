@@ -1,6 +1,10 @@
+import kotlinx.benchmark.gradle.JvmBenchmarkTarget
+
 plugins {
     kotlin("jvm") version "1.6.10"
+    kotlin("plugin.allopen") version "1.6.0"
     kotlin("plugin.serialization") version "1.6.10"
+    id("org.jetbrains.kotlinx.benchmark") version "0.4.2"
     application
 }
 
@@ -25,4 +29,32 @@ tasks.test {
 
 application {
     mainClass.set("mce.cli.MainKt")
+}
+
+allOpen {
+    annotation("org.openjdk.jmh.annotations.State")
+}
+
+sourceSets {
+    register("benchmarks")
+}
+
+kotlin {
+    sourceSets {
+        val benchmarks by existing {
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.2")
+            }
+        }
+    }
+}
+
+benchmark {
+    targets {
+        register("benchmarks") {
+            if (this is JvmBenchmarkTarget) {
+                jmhVersion = "1.34"
+            }
+        }
+    }
 }
