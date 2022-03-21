@@ -31,7 +31,7 @@ import mce.ast.surface.Signature as SSignature
 import mce.ast.surface.Term as STerm
 
 @Suppress("NAME_SHADOWING")
-class Elaborate private constructor(
+class Elab private constructor(
     private val items: Map<String, CItem>,
 ) {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
@@ -1144,7 +1144,7 @@ class Elaborate private constructor(
         private val ANY = CVTerm.And(emptyList())
         private val TYPE = CVTerm.Type()
 
-        operator fun invoke(item: SItem, items: Map<String, CItem>): Result = Elaborate(items).run {
+        operator fun invoke(item: SItem, items: Map<String, CItem>): Result = Elab(items).run {
             val normalizer = Normalizer(persistentListOf(), items, solutions)
             val (item, _) = inferItem(item).run(Context(persistentListOf(), normalizer, false, 0, true, true))
             Result(item, types, normalizer, diagnostics, completions)

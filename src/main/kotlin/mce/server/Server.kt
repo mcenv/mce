@@ -9,7 +9,7 @@ import mce.ast.surface.Modifier
 import mce.phase.backend.Defun
 import mce.phase.backend.Pack
 import mce.phase.backend.Stage
-import mce.phase.frontend.Elaborate
+import mce.phase.frontend.Elab
 import mce.phase.frontend.Parse
 import mce.phase.frontend.Zonk
 import mce.phase.frontend.printTerm
@@ -27,19 +27,19 @@ class Server {
             when (key) {
                 is Key.Source -> read(key.name) as V
                 is Key.SurfaceItem -> Parse(key.name, fetch(Key.Source(key.name))) as V
-                is Key.ElaborateResult -> {
+                is Key.ElabResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
                     val items = surfaceItem.imports
                         .filter { visible(fetch(Key.SurfaceItem(it)), surfaceItem.name) }
-                        .map { async { fetch(Key.ElaborateResult(it)).item } }
+                        .map { async { fetch(Key.ElabResult(it)).item } }
                         .awaitAll()
                         .associateBy { it.name }
-                    Elaborate(surfaceItem, items) as V
+                    Elab(surfaceItem, items) as V
                 }
-                is Key.ZonkResult -> Zonk(fetch(Key.ElaborateResult(key.name))) as V
+                is Key.ZonkResult -> Zonk(fetch(Key.ElabResult(key.name))) as V
                 is Key.StageResult -> Stage(fetch(Key.ZonkResult(key.name))) as V
-                is Key.DefunctionalizeResult -> Defun(fetch(Key.StageResult(key.name))) as V
-                is Key.Datapack -> Pack(fetch(Key.DefunctionalizeResult(key.name))) as V
+                is Key.DefunResult -> Defun(fetch(Key.StageResult(key.name))) as V
+                is Key.Datapack -> Pack(fetch(Key.DefunResult(key.name))) as V
             }.also {
                 setValue(key, it)
             }
@@ -53,13 +53,13 @@ class Server {
     private fun visible(item: Item, name: String): Boolean = item.modifiers.contains(Modifier.BUILTIN) || item.exports.contains("*") || item.exports.contains(name)
 
     suspend fun hover(name: String, id: Id): HoverItem {
-        val output = fetch(Key.ElaborateResult(name))
+        val output = fetch(Key.ElabResult(name))
         val type = printTerm(quoteTerm(output.types[id]!!).run(output.normalizer))
         return HoverItem(type)
     }
 
     suspend fun completion(name: String, id: Id): List<CompletionItem> {
-        val output = fetch(Key.ElaborateResult(name))
+        val output = fetch(Key.ElabResult(name))
         return output.completions[id]?.let { completions ->
             completions.map { (name, type) -> CompletionItem(name, printTerm(quoteTerm(type).run(output.normalizer))) }
         } ?: emptyList()

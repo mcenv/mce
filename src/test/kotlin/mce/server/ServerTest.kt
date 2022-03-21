@@ -29,9 +29,9 @@ class ServerTest {
             val name = "server"
             val id = UUID(0, 0)
             hover(name, id)
-            assertEquals(1, getCount(Key.ElaborateResult(name)))
+            assertEquals(1, getCount(Key.ElabResult(name)))
             hover(name, id)
-            assertEquals(1, getCount(Key.ElaborateResult(name)))
+            assertEquals(1, getCount(Key.ElabResult(name)))
         }
     }
 

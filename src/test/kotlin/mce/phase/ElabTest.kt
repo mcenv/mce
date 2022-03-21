@@ -4,17 +4,17 @@ import mce.ast.core.VTerm
 import mce.ast.surface.Effect
 import mce.fetch
 import mce.phase.frontend.Diagnostic
-import mce.phase.frontend.Elaborate
+import mce.phase.frontend.Elab
 import mce.server.Key
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertIs
 
-class ElaborateTest {
-    private fun elaborate(name: String): Elaborate.Result = fetch(Key.ElaborateResult(name))
+class ElabTest {
+    private fun elaborate(name: String): Elab.Result = fetch(Key.ElabResult(name))
 
-    private fun Elaborate.Result.success(): Elaborate.Result = apply {
+    private fun Elab.Result.success(): Elab.Result = apply {
         assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
     }
 

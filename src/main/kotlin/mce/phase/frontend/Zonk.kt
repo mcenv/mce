@@ -36,7 +36,7 @@ class Zonk private constructor(
     )
 
     companion object {
-        operator fun invoke(input: Elaborate.Result): Result = Zonk(input.normalizer).run {
+        operator fun invoke(input: Elab.Result): Result = Zonk(input.normalizer).run {
             Result(mapItem(input.item), input.types, normalizer, input.diagnostics + diagnostics)
         }
     }
