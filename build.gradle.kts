@@ -21,6 +21,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.4")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.3.2")
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.2")
 }
 
 tasks.test {
@@ -35,23 +36,9 @@ allOpen {
     annotation("org.openjdk.jmh.annotations.State")
 }
 
-sourceSets {
-    register("benchmarks")
-}
-
-kotlin {
-    sourceSets {
-        val benchmarks by existing {
-            dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.2")
-            }
-        }
-    }
-}
-
 benchmark {
     targets {
-        register("benchmarks") {
+        register("test") {
             if (this is JvmBenchmarkTarget) {
                 jmhVersion = "1.34"
             }
