@@ -23,7 +23,7 @@ object IdSerializer : KSerializer<Id> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Id", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: Id) {
-        encoder.encodeString(value.toString())
+        encoder.encodeString(value.id.toString())
     }
 
     override fun deserialize(decoder: Decoder): Id = Id(UUID.fromString(decoder.decodeString()))
