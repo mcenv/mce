@@ -58,17 +58,17 @@ class Elab private constructor(
                     !checkTerm(item.body, vResultant)
                 }
                 (!get()).checkPhase(item.body.id, vResultant)
-                CItem.Def(item.imports, item.exports, modifiers, item.name, params, resultant, effs, body, item.id) to CVSignature.Def(item.name, params, resultant, null)
+                CItem.Def(modifiers, item.name, params, resultant, effs, body, item.id) to CVSignature.Def(item.name, params, resultant, null)
             }
             is SItem.Mod -> {
                 val type = !checkModule(item.type, CVModule.Type(null))
                 val vType = !lift({ normalizer }, evalModule(type))
                 val body = !checkModule(item.body, vType)
-                CItem.Mod(item.imports, item.exports, modifiers, item.name, vType, body, item.id) to CVSignature.Mod(item.name, vType, null)
+                CItem.Mod(modifiers, item.name, vType, body, item.id) to CVSignature.Mod(item.name, vType, null)
             }
             is SItem.Test -> {
                 val body = !checkTerm(item.body, BOOL)
-                CItem.Test(item.imports, item.exports, modifiers, item.name, body, item.id) to CVSignature.Test(item.name, null)
+                CItem.Test(modifiers, item.name, body, item.id) to CVSignature.Test(item.name, null)
             }
         }
     }

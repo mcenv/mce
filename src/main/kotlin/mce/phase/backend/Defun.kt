@@ -32,15 +32,15 @@ class Defun private constructor() {
             is CItem.Def -> {
                 val params = item.params.map { defunParam(it) }
                 val body = defunTerm(item.body)
-                DItem.Def(item.imports, item.exports, modifiers, item.name, params, body, item.id)
+                DItem.Def(modifiers, item.name, params, body, item.id)
             }
             is CItem.Mod -> {
                 val body = defunModule(item.body)
-                DItem.Mod(item.imports, item.exports, modifiers, item.name, body, item.id)
+                DItem.Mod(modifiers, item.name, body, item.id)
             }
             is CItem.Test -> {
                 val body = defunTerm(item.body)
-                DItem.Test(item.imports, item.exports, modifiers, item.name, body, item.id)
+                DItem.Test(modifiers, item.name, body, item.id)
             }
         }
     }

@@ -14,15 +14,11 @@ import kotlin.collections.List as KList
 import kotlin.collections.Set as KSet
 
 sealed class Item {
-    abstract val imports: KList<KString>
-    abstract val exports: KList<KString>
     abstract val modifiers: KSet<Modifier>
     abstract val name: KString
     abstract val id: Id
 
     data class Def(
-        override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KSet<Modifier>,
         override val name: KString,
         val params: KList<Param>,
@@ -31,8 +27,6 @@ sealed class Item {
     ) : Item()
 
     data class Mod(
-        override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KSet<Modifier>,
         override val name: KString,
         val body: Module,
@@ -40,8 +34,6 @@ sealed class Item {
     ) : Item()
 
     data class Test(
-        override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KSet<Modifier>,
         override val name: KString,
         val body: Term,

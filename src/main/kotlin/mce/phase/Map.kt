@@ -18,15 +18,15 @@ abstract class Map {
         is Item.Def -> {
             val parameters = item.params.map { mapParam(it) }
             val body = mapTerm(item.body)
-            Item.Def(item.imports, item.exports, item.modifiers, item.name, parameters, item.resultant, item.effs, body, item.id)
+            Item.Def(item.modifiers, item.name, parameters, item.resultant, item.effs, body, item.id)
         }
         is Item.Mod -> {
             val body = mapModule(item.body)
-            Item.Mod(item.imports, item.exports, item.modifiers, item.name, item.type, body, item.id)
+            Item.Mod(item.modifiers, item.name, item.type, body, item.id)
         }
         is Item.Test -> {
             val body = mapTerm(item.body)
-            Item.Test(item.imports, item.exports, item.modifiers, item.name, body, item.id)
+            Item.Test(item.modifiers, item.name, body, item.id)
         }
     }
 
