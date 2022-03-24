@@ -1,6 +1,7 @@
 package mce.phase
 
 import mce.ast.pack.*
+import mce.ast.pack.Command.Append
 import mce.ast.pack.Command.GetData
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run

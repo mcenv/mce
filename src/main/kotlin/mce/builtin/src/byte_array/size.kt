@@ -2,6 +2,7 @@ package mce.builtin.src.byte_array
 
 import mce.ast.core.VTerm
 import mce.ast.pack.*
+import mce.ast.pack.Command.Append
 import mce.ast.pack.Command.CheckMatchingData
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run

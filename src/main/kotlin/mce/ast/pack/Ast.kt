@@ -26,6 +26,8 @@ sealed class Command {
     data class GetNumeric(val target: ResourceLocation, val path: NbtPath, val scale: KDouble) : Command()
     data class RemoveData(val target: ResourceLocation, val path: NbtPath) : Command()
     data class InsertAtIndex(val target: ResourceLocation, val path: NbtPath, val index: KInt, val source: SourceProvider) : Command()
+    data class Prepend(val target: ResourceLocation, val path: NbtPath, val source: SourceProvider) : Command()
+    data class Append(val target: ResourceLocation, val path: NbtPath, val source: SourceProvider) : Command()
     data class SetData(val target: ResourceLocation, val path: NbtPath, val source: SourceProvider) : Command()
     data class MergeData(val target: ResourceLocation, val path: NbtPath, val source: SourceProvider) : Command()
     data class RunFunction(val name: ResourceLocation) : Command()

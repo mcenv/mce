@@ -36,6 +36,8 @@ class Executor(
         is Command.GetNumeric -> getNumeric(command.target, command.path, command.scale)
         is Command.RemoveData -> removeData(command.target, command.path)
         is Command.InsertAtIndex -> insertAtIndex(command.target, command.path, command.index, command.source)
+        is Command.Prepend -> insertAtIndex(command.target, command.path, 0, command.source)
+        is Command.Append -> insertAtIndex(command.target, command.path, -1, command.source)
         is Command.SetData -> setData(command.target, command.path, command.source)
         is Command.MergeData -> mergeData(command.target, command.path, command.source)
         is Command.RunFunction -> runFunction(command.name)

@@ -2,13 +2,15 @@ package mce.builtin.src.int
 
 import mce.ast.core.VTerm
 import mce.ast.pack.*
-import mce.ast.pack.Command.GetData
+import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
-import mce.ast.pack.Execute.*
+import mce.ast.pack.Execute.Run
+import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.Eq
 import mce.ast.pack.SourceProvider.Value
 import mce.builtin.BuiltinDef2
 import mce.builtin.commuter
+import mce.ast.pack.Execute as E
 
 @Suppress("ClassName")
 object eq : BuiltinDef2("int/eq") {
@@ -20,11 +22,11 @@ object eq : BuiltinDef2("int/eq") {
     }
 
     override fun pack(): List<Command> = listOf(
-        Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
+        Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
         Pop(STACKS, INT),
-        Command.Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
+        Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
         Pop(STACKS, INT),
-        Command.Execute(CheckScore(false, REGISTER_1, REGISTERS, Eq(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(0)))))),
-        Command.Execute(CheckScore(true, REGISTER_1, REGISTERS, Eq(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(1)))))),
+        Execute(E.CheckScore(false, REGISTER_1, REGISTERS, Eq(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(0)))))),
+        Execute(E.CheckScore(true, REGISTER_1, REGISTERS, Eq(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(1)))))),
     )
 }

@@ -2,7 +2,8 @@ package mce.builtin.src.int_array
 
 import mce.ast.core.VTerm
 import mce.ast.pack.*
-import mce.ast.pack.Command.CheckMatchingData
+import mce.ast.pack.Command.*
+import mce.ast.pack.Command.Execute
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreData
@@ -18,6 +19,6 @@ object size : BuiltinDef1("int_array/size") {
 
     override fun pack(): List<Command> = listOf(
         Append(STACKS, INT, Value(Nbt.Int(0))),
-        Command.Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, STACKS, INT_ARRAY[-1]())))),
+        Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, STACKS, INT_ARRAY[-1]())))),
     )
 }
