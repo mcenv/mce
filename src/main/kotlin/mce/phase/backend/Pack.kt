@@ -9,7 +9,7 @@ import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
-import mce.ast.pack.SourceComparator.Matches
+import mce.ast.pack.SourceComparator.*
 import mce.ast.pack.SourceProvider.From
 import mce.ast.pack.SourceProvider.Value
 import mce.ast.core.VTerm as Type
@@ -31,7 +31,7 @@ class Pack private constructor(
             terms.forEach { (tag, term) ->
                 val name = ResourceLocation("$tag")
                 +Context(name).apply { packTerm(term) }
-                +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, Matches(tag, tag), Run(RunFunction(name))))
+                +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, EqConst(tag), Run(RunFunction(name))))
             }
         }
 
@@ -214,8 +214,8 @@ class Pack private constructor(
                         packTerm(term)
                         +SetScore(REGISTER_0, REGISTERS, 1) // TODO: avoid register restoration when possible
                     }
-                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, Matches(min = 1), Run(RunFunction(arm))))
-                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, Matches(max = 0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
+                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, GeConst(1), Run(RunFunction(arm))))
+                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
                 } else {
                     packTerm(term)
                 }

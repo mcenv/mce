@@ -64,15 +64,14 @@ class Executor(
 
     private fun checkScore(success: Boolean, target: ScoreHolder, targetObjective: Objective, source: SourceComparator): Boolean {
         return when (source) {
-            is SourceComparator.Eq -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a == b }
-            is SourceComparator.Lt -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a < b }
-            is SourceComparator.Le -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a <= b }
-            is SourceComparator.Gt -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a > b }
-            is SourceComparator.Ge -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a >= b }
-            is SourceComparator.Matches -> scoreboard.hasScore(target, targetObjective) && run {
-                val score = scoreboard[target, targetObjective]
-                (source.min?.let { it <= score } ?: true) && (source.max?.let { score <= it } ?: true)
-            }
+            is SourceComparator.EqScore -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a == b }
+            is SourceComparator.LtScore -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a < b }
+            is SourceComparator.LeScore -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a <= b }
+            is SourceComparator.GtScore -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a > b }
+            is SourceComparator.GeScore -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a >= b }
+            is SourceComparator.EqConst -> scoreboard.hasScore(target, targetObjective) && scoreboard[target, targetObjective] == source.value
+            is SourceComparator.LeConst -> scoreboard.hasScore(target, targetObjective) && scoreboard[target, targetObjective] <= source.value
+            is SourceComparator.GeConst -> scoreboard.hasScore(target, targetObjective) && scoreboard[target, targetObjective] >= source.value
         } == success
     }
 

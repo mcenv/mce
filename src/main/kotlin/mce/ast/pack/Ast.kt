@@ -116,12 +116,14 @@ enum class Operation {
 }
 
 sealed class SourceComparator {
-    data class Eq(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
-    data class Lt(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
-    data class Le(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
-    data class Gt(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
-    data class Ge(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
-    data class Matches(val min: KInt? = null, val max: KInt? = null) : SourceComparator()
+    data class EqScore(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+    data class LtScore(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+    data class LeScore(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+    data class GtScore(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+    data class GeScore(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
+    data class EqConst(val value: KInt) : SourceComparator()
+    data class LeConst(val value: KInt) : SourceComparator()
+    data class GeConst(val value: KInt) : SourceComparator()
 }
 
 enum class Consumer {

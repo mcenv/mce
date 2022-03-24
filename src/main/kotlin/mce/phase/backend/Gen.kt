@@ -400,45 +400,50 @@ class Gen(
 
     private fun ZipOutputStream.genSourceComparator(comparator: SourceComparator) {
         when (comparator) {
-            is SourceComparator.Eq -> {
+            is SourceComparator.EqScore -> {
                 write("= ")
                 genScoreHolder(comparator.source)
                 write(' ')
                 genObjective(comparator.sourceObjective)
             }
-            is SourceComparator.Lt -> {
+            is SourceComparator.LtScore -> {
                 write("< ")
                 genScoreHolder(comparator.source)
                 write(' ')
                 genObjective(comparator.sourceObjective)
             }
-            is SourceComparator.Le -> {
+            is SourceComparator.LeScore -> {
                 write("<= ")
                 genScoreHolder(comparator.source)
                 write(' ')
                 genObjective(comparator.sourceObjective)
             }
-            is SourceComparator.Gt -> {
+            is SourceComparator.GtScore -> {
                 write("> ")
                 genScoreHolder(comparator.source)
                 write(' ')
                 genObjective(comparator.sourceObjective)
             }
-            is SourceComparator.Ge -> {
+            is SourceComparator.GeScore -> {
                 write(">= ")
                 genScoreHolder(comparator.source)
                 write(' ')
                 genObjective(comparator.sourceObjective)
             }
-            is SourceComparator.Matches -> {
+            is SourceComparator.EqConst -> {
                 write("matches ")
-                comparator.min?.let {
-                    write(it.toString())
-                }
+                write(comparator.value.toString())
                 write("..")
-                comparator.max?.let {
-                    write(it.toString())
-                }
+                write(comparator.value.toString())
+            }
+            is SourceComparator.LeConst -> {
+                write("matches ..")
+                write(comparator.value.toString())
+            }
+            is SourceComparator.GeConst -> {
+                write("matches ")
+                write(comparator.value.toString())
+                write("..")
             }
         }
     }

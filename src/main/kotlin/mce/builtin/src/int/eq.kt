@@ -6,7 +6,7 @@ import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
-import mce.ast.pack.SourceComparator.Eq
+import mce.ast.pack.SourceComparator.EqScore
 import mce.ast.pack.SourceProvider.Value
 import mce.builtin.BuiltinDef2
 import mce.builtin.commuter
@@ -26,7 +26,7 @@ object eq : BuiltinDef2("int/eq") {
         Pop(STACKS, INT),
         Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
         Pop(STACKS, INT),
-        Execute(E.CheckScore(false, REGISTER_1, REGISTERS, Eq(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(0)))))),
-        Execute(E.CheckScore(true, REGISTER_1, REGISTERS, Eq(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(1)))))),
+        Execute(E.CheckScore(false, REGISTER_1, REGISTERS, EqScore(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(0)))))),
+        Execute(E.CheckScore(true, REGISTER_1, REGISTERS, EqScore(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(1)))))),
     )
 }
