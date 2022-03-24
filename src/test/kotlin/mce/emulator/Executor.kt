@@ -67,7 +67,10 @@ class Executor(
             is SourceComparator.Le -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a <= b }
             is SourceComparator.Gt -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a > b }
             is SourceComparator.Ge -> checkScore(target, targetObjective, source.source, source.sourceObjective) { a, b -> a >= b }
-            is SourceComparator.Matches -> scoreboard.hasScore(target, targetObjective) && scoreboard[target, targetObjective] in source.range
+            is SourceComparator.Matches -> scoreboard.hasScore(target, targetObjective) && run {
+                val score = scoreboard[target, targetObjective]
+                (source.min?.let { it <= score } ?: true) && (source.max?.let { score <= it } ?: true)
+            }
         } == success
     }
 

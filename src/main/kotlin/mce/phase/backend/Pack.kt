@@ -2,17 +2,18 @@ package mce.phase.backend
 
 import mce.ast.Id
 import mce.ast.defun.Item
+import mce.ast.defun.Pat
 import mce.ast.defun.Term
 import mce.ast.pack.*
 import mce.ast.pack.Command.*
 import mce.ast.pack.Consumer.RESULT
-import mce.ast.pack.Execute
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.Matches
 import mce.ast.pack.SourceProvider.From
 import mce.ast.pack.SourceProvider.Value
 import mce.ast.core.VTerm as Type
+import mce.ast.pack.Execute as E
 import mce.ast.pack.Function as PFunction
 
 @Suppress("NAME_SHADOWING")
@@ -20,33 +21,31 @@ class Pack private constructor(
     types: Map<Id, Type>,
 ) {
     private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
+    private val functions: MutableList<PFunction> = mutableListOf()
 
-    private fun pack(functions: Map<Int, Term>, item: Item): Datapack {
-        val functions = functions.mapValues { (tag, term) ->
-            Context().run {
-                packTerm(term)
-                PFunction(ResourceLocation("$tag"), commands)
+    private fun pack(terms: Map<Int, Term>, item: Item): Datapack {
+        +Context(APPLY).apply {
+            +Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1]))))
+            +Pop(STACKS, INT)
+            // TODO: use 4-ary search
+            terms.forEach { (tag, term) ->
+                val name = ResourceLocation("$tag")
+                +Context(name).apply { packTerm(term) }
+                +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, Matches(tag, tag), Run(RunFunction(name))))
             }
         }
-        val dispatch = PFunction(APPLY, mutableListOf<Command>().apply {
-            add(Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))))
-            add(Pop(STACKS, INT))
-            // TODO: use 4-ary search
-            functions.forEach { (tag, function) ->
-                add(Command.Execute(Execute.CheckScore(true, REGISTER_0, REGISTERS, Matches(tag..tag), Run(RunFunction(function.name)))))
-            }
-        })
-        val item = packItem(item)
-        return Datapack(functions.values + dispatch + item)
+
+        packItem(item)
+
+        return Datapack(functions)
     }
 
-    private fun packItem(item: Item): PFunction = when (item) {
-        is Item.Def -> Context().run {
-            packTerm(item.body)
-            PFunction(ResourceLocation(item.name), commands)
+    private fun packItem(item: Item) {
+        when (item) {
+            is Item.Def -> +Context(ResourceLocation(item.name)).apply { packTerm(item.body) }
+            is Item.Mod -> TODO()
+            is Item.Test -> TODO()
         }
-        is Item.Mod -> TODO()
-        is Item.Test -> TODO()
     }
 
     private fun Context.packTerm(term: Term) {
@@ -70,7 +69,7 @@ class Pack private constructor(
             }
             is Term.Match -> {
                 packTerm(term.scrutinee)
-                TODO()
+                +RunFunction(packMatch(term.clauses))
             }
             is Term.UnitOf -> +Append(STACKS, BYTE, Value(Nbt.Byte(0)))
             is Term.BoolOf -> +Append(STACKS, BYTE, Value(Nbt.Byte(if (term.value) 1 else 0)))
@@ -201,14 +200,66 @@ class Pack private constructor(
         }
     }
 
+    private fun Context.packPat(pat: Pat) {
+        // TODO: store 1 in [REGISTER_0] if matched
+    }
+
+    private fun Context.packMatch(clauses: List<Pair<Pat, Term>>): ResourceLocation {
+        clauses.windowed(2, partialWindows = true).forEachIndexed { index, clauses ->
+            val (pat, term) = clauses[0]
+            +withName(ResourceLocation("${name.path}-$index")).apply {
+                if (clauses.size == 2) {
+                    packPat(pat)
+
+                    val arm = name.copy(path = "${name.path}-0")
+                    +withName(arm).apply {
+                        packTerm(term)
+                        +SetScore(REGISTER_0, REGISTERS, 1) // TODO: avoid register restoration when possible
+                    }
+                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, Matches(min = 1), Run(RunFunction(arm))))
+                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, Matches(max = 0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
+                } else {
+                    packTerm(term)
+                }
+            }
+        }
+        return ResourceLocation("${name.path}-0")
+    }
+
     private fun getType(id: Id): NbtType = types[id]!!
 
-    companion object {
-        /**
-         * A resource location of the apply function.
-         */
-        val APPLY = ResourceLocation("apply")
+    private operator fun Context.unaryPlus() {
+        functions += toFunction()
+    }
 
+    private data class Context(
+        val name: ResourceLocation,
+        private val commands: MutableList<Command> = mutableListOf(),
+        private val entries: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() },
+    ) {
+        operator fun Command.unaryPlus() {
+            commands += this
+        }
+
+        fun getIndex(type: NbtType, name: String): Int {
+            val entry = entries[type]!!
+            return entry.lastIndexOf(name) - entry.size
+        }
+
+        fun bind(type: NbtType, name: String) {
+            entries[type]!! += name
+        }
+
+        fun pop(type: NbtType) {
+            entries[type]!!.removeLast()
+        }
+
+        fun withName(name: ResourceLocation): Context = copy(name = name, commands = mutableListOf())
+
+        fun toFunction(): PFunction = PFunction(name, commands)
+    }
+
+    companion object {
         private fun erase(type: Type): NbtType = when (type) {
             is Type.Hole -> throw Error()
             is Type.Meta -> throw Error()
@@ -273,30 +324,6 @@ class Pack private constructor(
             NbtType.COMPOUND -> COMPOUND
             NbtType.INT_ARRAY -> INT_ARRAY
             NbtType.LONG_ARRAY -> LONG_ARRAY
-        }
-
-        private class Context(
-            private val _commands: MutableList<Command> = mutableListOf(),
-            private val entries: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() }
-        ) {
-            val commands: List<Command> get() = _commands
-
-            operator fun Command.unaryPlus() {
-                _commands.add(this)
-            }
-
-            fun getIndex(type: NbtType, name: String): Int {
-                val entry = entries[type]!!
-                return entry.lastIndexOf(name) - entry.size
-            }
-
-            fun bind(type: NbtType, name: String) {
-                entries[type]!! += name
-            }
-
-            fun pop(type: NbtType) {
-                entries[type]!!.removeLast()
-            }
         }
 
         operator fun invoke(input: Defun.Result): Datapack = Pack(input.types).pack(input.functions, input.item)

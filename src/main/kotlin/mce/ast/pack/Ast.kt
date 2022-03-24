@@ -123,9 +123,7 @@ sealed class SourceComparator {
     data class Le(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
     data class Gt(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
     data class Ge(val source: ScoreHolder, val sourceObjective: Objective) : SourceComparator()
-    data class Matches(val range: IntRange) : SourceComparator() {
-        constructor(value: KInt) : this(value..value)
-    }
+    data class Matches(val min: KInt? = null, val max: KInt? = null) : SourceComparator()
 }
 
 enum class Consumer {

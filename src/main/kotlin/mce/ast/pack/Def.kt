@@ -31,3 +31,8 @@ val REGISTERS = Objective("0")
 
 val REGISTER_0 = ScoreHolder("0")
 val REGISTER_1 = ScoreHolder("1")
+
+/**
+ * A resource location of the apply function.
+ */
+val APPLY = ResourceLocation("apply")
