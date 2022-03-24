@@ -1,6 +1,6 @@
 package mce.phase
 
-import mce.ast.core.*
+import mce.phase.frontend.elab.*
 import mce.util.toLinkedHashMap
 
 abstract class Map {

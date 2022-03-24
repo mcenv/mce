@@ -3,10 +3,8 @@ package mce.phase
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
-import mce.ast.Id
-import mce.ast.core.*
-import mce.ast.freshId
-import mce.builtin.builtins
+import mce.phase.builtin.builtins
+import mce.phase.frontend.elab.*
 import mce.util.State
 import mce.util.toLinkedHashMap
 import kotlin.collections.Map

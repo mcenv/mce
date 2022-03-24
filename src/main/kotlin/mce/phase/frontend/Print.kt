@@ -1,14 +1,14 @@
 package mce.phase.frontend
 
-import mce.ast.freshId
-import mce.ast.core.Eff as CEff
-import mce.ast.core.Pat as CPat
-import mce.ast.core.Term as CTerm
-import mce.ast.surface.Eff as SEff
-import mce.ast.surface.Entry as SEntry
-import mce.ast.surface.Param as SParam
-import mce.ast.surface.Pat as SPat
-import mce.ast.surface.Term as STerm
+import mce.phase.freshId
+import mce.phase.frontend.elab.Eff as CEff
+import mce.phase.frontend.elab.Pat as CPat
+import mce.phase.frontend.elab.Term as CTerm
+import mce.phase.frontend.parse.Eff as SEff
+import mce.phase.frontend.parse.Entry as SEntry
+import mce.phase.frontend.parse.Param as SParam
+import mce.phase.frontend.parse.Pat as SPat
+import mce.phase.frontend.parse.Term as STerm
 
 fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Hole -> STerm.Hole(term.id ?: freshId())

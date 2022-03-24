@@ -1,7 +1,7 @@
 package mce.emulator
 
-import mce.ast.pack.Objective
-import mce.ast.pack.ScoreHolder
+import mce.phase.backend.pack.Objective
+import mce.phase.backend.pack.ScoreHolder
 
 class Scoreboard(
     private val objectives: MutableMap<String, Objective> = mutableMapOf(),

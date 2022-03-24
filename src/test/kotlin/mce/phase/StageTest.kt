@@ -1,10 +1,9 @@
 package mce.phase
 
-import mce.ast.Id
-import mce.ast.core.Item
-import mce.ast.core.Term
 import mce.fetch
-import mce.phase.backend.Stage
+import mce.phase.backend.stage.Stage
+import mce.phase.frontend.elab.Item
+import mce.phase.frontend.elab.Term
 import mce.server.Key
 import org.junit.jupiter.api.Test
 import java.util.*

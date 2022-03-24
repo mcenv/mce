@@ -1,8 +1,8 @@
 package mce.server
 
 import kotlinx.coroutines.runBlocking
-import mce.ast.Id
-import mce.ast.surface.Term
+import mce.phase.Id
+import mce.phase.frontend.parse.Term
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals

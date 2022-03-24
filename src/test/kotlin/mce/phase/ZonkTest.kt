@@ -1,10 +1,9 @@
 package mce.phase
 
-import mce.ast.Id
-import mce.ast.core.VTerm
 import mce.fetch
 import mce.phase.frontend.Diagnostic
-import mce.phase.frontend.Zonk
+import mce.phase.frontend.elab.VTerm
+import mce.phase.frontend.zonk.Zonk
 import mce.server.Key
 import java.util.*
 import kotlin.test.Test

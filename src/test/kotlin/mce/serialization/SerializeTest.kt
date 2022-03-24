@@ -1,8 +1,8 @@
 package mce.serialization
 
 import kotlinx.serialization.serializer
-import mce.ast.freshId
-import mce.ast.surface.Term
+import mce.phase.freshId
+import mce.phase.frontend.parse.Term
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream

@@ -1,7 +1,7 @@
 package mce.phase
 
-import mce.ast.surface.Item
 import mce.fetch
+import mce.phase.frontend.parse.Item
 import mce.server.Key
 import kotlin.test.Test
 import kotlin.test.assertFails

@@ -1,8 +1,8 @@
 package mce.emulator
 
-import mce.ast.pack.Nbt
-import mce.ast.pack.NbtNode
-import mce.ast.pack.NbtPath
+import mce.phase.backend.pack.Nbt
+import mce.phase.backend.pack.NbtNode
+import mce.phase.backend.pack.NbtPath
 
 object NbtLens {
     fun NbtPath.get(target: MutableNbt): List<MutableNbt> =

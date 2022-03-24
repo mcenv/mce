@@ -3,17 +3,17 @@ package mce.server
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import mce.ast.Id
-import mce.ast.surface.Item
-import mce.ast.surface.Modifier
-import mce.phase.backend.Defun
-import mce.phase.backend.Gen
-import mce.phase.backend.Pack
-import mce.phase.backend.Stage
-import mce.phase.frontend.Elab
-import mce.phase.frontend.Parse
-import mce.phase.frontend.Zonk
+import mce.phase.Id
+import mce.phase.backend.defun.Defun
+import mce.phase.backend.gen.Gen
+import mce.phase.backend.pack.Pack
+import mce.phase.backend.stage.Stage
+import mce.phase.frontend.elab.Elab
+import mce.phase.frontend.parse.Item
+import mce.phase.frontend.parse.Modifier
+import mce.phase.frontend.parse.Parse
 import mce.phase.frontend.printTerm
+import mce.phase.frontend.zonk.Zonk
 import mce.phase.quoteTerm
 import mce.util.run
 

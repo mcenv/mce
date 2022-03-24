@@ -1,6 +1,6 @@
 package mce.server
 
-import mce.ast.surface.Term
+import mce.phase.frontend.parse.Term
 
 data class HoverItem(
     val type: Term,
