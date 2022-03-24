@@ -9,10 +9,6 @@ import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
 
-data class Datapack(
-    val functions: KList<Function>,
-)
-
 data class Function(
     val name: ResourceLocation,
     val commands: KList<Command>,

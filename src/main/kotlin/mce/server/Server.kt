@@ -7,6 +7,7 @@ import mce.ast.Id
 import mce.ast.surface.Item
 import mce.ast.surface.Modifier
 import mce.phase.backend.Defun
+import mce.phase.backend.Gen
 import mce.phase.backend.Pack
 import mce.phase.backend.Stage
 import mce.phase.frontend.Elab
@@ -39,7 +40,15 @@ class Server {
                 is Key.ZonkResult -> Zonk(fetch(Key.ElabResult(key.name))) as V
                 is Key.StageResult -> Stage(fetch(Key.ZonkResult(key.name))) as V
                 is Key.DefunResult -> Defun(fetch(Key.StageResult(key.name))) as V
-                is Key.Datapack -> Pack(fetch(Key.DefunResult(key.name))) as V
+                is Key.PackResult -> Pack(fetch(Key.DefunResult(key.name))) as V
+                is Key.Gen -> {
+                    val surfaceItem = fetch(Key.SurfaceItem(key.name))
+                    val functions = (surfaceItem.imports + key.name)
+                        .map { async { fetch(Key.PackResult(it)).functions } }
+                        .awaitAll()
+                        .flatten()
+                    Gen(key.name, functions) as V
+                }
             }.also {
                 setValue(key, it)
             }

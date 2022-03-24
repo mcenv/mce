@@ -9,17 +9,18 @@ import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.Function
 import mce.ast.pack.SourceProvider.Value
 import mce.fetch
+import mce.phase.backend.Pack
 import mce.server.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PackTest {
-    private fun pack(name: String): Datapack = fetch(Key.Datapack(name))
+    private fun pack(name: String): Pack.Result = fetch(Key.PackResult(name))
 
     @Test
     fun byte() {
         assertEquals(
-            Datapack(
+            Pack.Result(
                 listOf(
                     Function(
                         ResourceLocation("apply"),

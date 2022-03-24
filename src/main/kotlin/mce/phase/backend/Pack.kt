@@ -23,7 +23,7 @@ class Pack private constructor(
     private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
     private val functions: MutableList<PFunction> = mutableListOf()
 
-    private fun pack(terms: Map<Int, Term>, item: Item): Datapack {
+    private fun pack(terms: Map<Int, Term>, item: Item) {
         +Context(APPLY).apply {
             +Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1]))))
             +Pop(STACKS, INT)
@@ -36,8 +36,6 @@ class Pack private constructor(
         }
 
         packItem(item)
-
-        return Datapack(functions)
     }
 
     private fun packItem(item: Item) {
@@ -259,6 +257,10 @@ class Pack private constructor(
         fun toFunction(): PFunction = PFunction(name, commands)
     }
 
+    data class Result(
+        val functions: List<PFunction>,
+    )
+
     companion object {
         private fun erase(type: Type): NbtType = when (type) {
             is Type.Hole -> throw Error()
@@ -326,6 +328,9 @@ class Pack private constructor(
             NbtType.LONG_ARRAY -> LONG_ARRAY
         }
 
-        operator fun invoke(input: Defun.Result): Datapack = Pack(input.types).pack(input.functions, input.item)
+        operator fun invoke(input: Defun.Result): Result = Pack(input.types).run {
+            pack(input.functions, input.item)
+            Result(functions)
+        }
     }
 }

@@ -1,10 +1,10 @@
 package mce.server
 
 import mce.phase.backend.Defun
+import mce.phase.backend.Pack
 import mce.phase.backend.Stage
 import mce.phase.frontend.Elab
 import mce.phase.frontend.Zonk
-import mce.ast.pack.Datapack as PDatapack
 import mce.ast.surface.Item as SItem
 
 sealed class Key<V> {
@@ -16,5 +16,6 @@ sealed class Key<V> {
     data class ZonkResult(override val name: String) : Key<Zonk.Result>()
     data class StageResult(override val name: String) : Key<Stage.Result>()
     data class DefunResult(override val name: String) : Key<Defun.Result>()
-    data class Datapack(override val name: String) : Key<PDatapack>()
+    data class PackResult(override val name: String) : Key<Pack.Result>()
+    data class Gen(override val name: String) : Key<Unit>()
 }
