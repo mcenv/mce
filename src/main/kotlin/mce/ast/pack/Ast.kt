@@ -38,10 +38,10 @@ sealed class Command {
 
 sealed class Execute {
     data class Run(val command: Command) : Execute()
-    data class CheckScore(val success: Boolean, val target: ScoreHolder, val targetObjective: Objective, val source: SourceComparator, val command: Execute) : Execute()
-    data class CheckMatchingData(val success: Boolean, val source: ResourceLocation, val path: NbtPath, val command: Execute) : Execute()
-    data class StoreValue(val consumer: Consumer, val targets: ScoreHolder, val objective: Objective, val command: Execute) : Execute()
-    data class StoreData(val consumer: Consumer, val target: ResourceLocation, val path: NbtPath, val type: StoreType, val scale: KDouble, val command: Execute) : Execute()
+    data class CheckScore(val success: Boolean, val target: ScoreHolder, val targetObjective: Objective, val source: SourceComparator, val execute: Execute) : Execute()
+    data class CheckMatchingData(val success: Boolean, val source: ResourceLocation, val path: NbtPath, val execute: Execute) : Execute()
+    data class StoreValue(val consumer: Consumer, val targets: ScoreHolder, val objective: Objective, val execute: Execute) : Execute()
+    data class StoreData(val consumer: Consumer, val target: ResourceLocation, val path: NbtPath, val type: StoreType, val scale: KDouble, val execute: Execute) : Execute()
 }
 
 enum class StoreType {

@@ -52,10 +52,10 @@ class Executor(
 
     private fun runExecute(execute: Execute): Int = when (execute) {
         is Execute.Run -> runCommand(execute.command)
-        is Execute.CheckScore -> if (checkScore(execute.success, execute.target, execute.targetObjective, execute.source)) runExecute(execute.command) else throw Exception()
-        is Execute.CheckMatchingData -> if (checkMatchingData(execute.success, execute.source, execute.path)) runExecute(execute.command) else throw Exception()
-        is Execute.StoreValue -> storeValue(execute.consumer, execute.targets, execute.objective, execute.command)
-        is Execute.StoreData -> storeData(execute.consumer, execute.target, execute.path, execute.type, execute.scale, execute.command)
+        is Execute.CheckScore -> if (checkScore(execute.success, execute.target, execute.targetObjective, execute.source)) runExecute(execute.execute) else throw Exception()
+        is Execute.CheckMatchingData -> if (checkMatchingData(execute.success, execute.source, execute.path)) runExecute(execute.execute) else throw Exception()
+        is Execute.StoreValue -> storeValue(execute.consumer, execute.targets, execute.objective, execute.execute)
+        is Execute.StoreData -> storeData(execute.consumer, execute.target, execute.path, execute.type, execute.scale, execute.execute)
     }
 
     private inline fun checkScore(target: ScoreHolder, targetObjective: Objective, source: ScoreHolder, sourceObjective: Objective, comparator: (Int, Int) -> Boolean): Boolean {
