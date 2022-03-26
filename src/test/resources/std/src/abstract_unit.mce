@@ -1,5 +1,5 @@
 {abstract}
 
-export {abstract_not_unfolded}
+export {*}
 
 def abstract_unit [] : unit ≔ ⟨⟩

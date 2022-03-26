@@ -1,0 +1,3 @@
+import {abstract_unit}
+
+def abstract_eq [] : ((abstract_unit []) = (abstract_unit [])) ≔ refl

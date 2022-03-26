@@ -85,7 +85,13 @@ class ElabTest {
         "test_success",
         "identity_test",
         "irrelevant_compound_entries",
-    ).map { dynamicTest(it) { elaborate(it).success() } }
+        "abstract_eq",
+    ).map {
+        dynamicTest(it) {
+            val result = elaborate(it)
+            assert(result.diagnostics.isEmpty()) { result.diagnostics.joinToString("\n") }
+        }
+    }
 
     @Test
     fun elaborate() {
