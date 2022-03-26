@@ -67,6 +67,7 @@ sealed class Item {
 }
 
 enum class Modifier {
+    ABSTRACT,
     BUILTIN,
     STATIC,
 }

@@ -55,6 +55,7 @@ class Parse private constructor(
     }
 
     private fun parseModifier(): Modifier = when (val word = readWord()) {
+        "abstract" -> Modifier.ABSTRACT
         "builtin" -> Modifier.BUILTIN
         "static" -> Modifier.STATIC
         else -> error("unexpected modifier '$word'")

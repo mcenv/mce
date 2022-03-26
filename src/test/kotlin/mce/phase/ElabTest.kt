@@ -237,4 +237,10 @@ class ElabTest {
         val result = elaborate("type_relevance_mismatch")
         assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(Id(UUID(0, 0))))
     }
+
+    @Test
+    fun abstract_not_unfolded() {
+        val result = elaborate("abstract_not_unfolded")
+        println(result)
+    }
 }

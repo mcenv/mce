@@ -89,6 +89,7 @@ class Elab private constructor(
      * Elaborates the [modifier].
      */
     private fun elabModifier(modifier: SModifier): CModifier = when (modifier) {
+        SModifier.ABSTRACT -> CModifier.ABSTRACT
         SModifier.BUILTIN -> CModifier.BUILTIN
         SModifier.STATIC -> CModifier.STATIC
     }

@@ -84,11 +84,16 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
         is Term.Var -> !gets { lookup(term.level) }
         is Term.Def -> {
             val item = !gets { getItem(term.name)!! } as Item.Def;
-            !term.arguments.forEachM { argument -> modify { bind(lazy { !evalTerm(argument) }) } }
-            if (item.modifiers.contains(Modifier.BUILTIN)) {
-                !gets { with(builtins[term.name]!!) { eval() } }
+            if (item.modifiers.contains(Modifier.ABSTRACT)) {
+                val arguments = !term.arguments.mapM { { lazy { !evalTerm(it) } } }
+                VTerm.Def(term.name, arguments, term.id)
             } else {
-                !evalTerm(item.body)
+                !term.arguments.forEachM { argument -> modify { bind(lazy { !evalTerm(argument) }) } }
+                if (item.modifiers.contains(Modifier.BUILTIN)) {
+                    !gets { with(builtins[term.name]!!) { eval() } }
+                } else {
+                    !evalTerm(item.body)
+                }
             }
         }
         is Term.Let -> {

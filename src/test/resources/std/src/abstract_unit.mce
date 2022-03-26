@@ -1,0 +1,5 @@
+{abstract}
+
+export {abstract_not_unfolded}
+
+def abstract_unit [] : unit ≔ ⟨⟩

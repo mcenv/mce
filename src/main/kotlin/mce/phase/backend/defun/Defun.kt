@@ -47,6 +47,7 @@ class Defun private constructor() {
     }
 
     private fun defunModifier(modifier: CModifier): DModifier = when (modifier) {
+        CModifier.ABSTRACT -> DModifier.ABSTRACT
         CModifier.BUILTIN -> DModifier.BUILTIN
         CModifier.STATIC -> throw Error()
     }
