@@ -298,7 +298,10 @@ class Parse private constructor(
                 val content = parseTerm()
                 Term.Box(content, id)
             }
-            "ref" -> Term.Ref(parseTerm(), id)
+            "ref" -> {
+                val element = parseTerm()
+                Term.Ref(element, id)
+            }
             "fun" -> {
                 val parameters = parseList('[', ']') { parseParam() }
                 expectString("→")
@@ -334,6 +337,11 @@ class Parse private constructor(
                     val right = parsePat()
                     Pat.BoxOf(left, right, id)
                 }
+                '=' -> {
+                    skip()
+                    val right = parsePat()
+                    Pat.Eq(left, right, id)
+                }
                 else -> error("unexpected operator '$char'")
             }.also { expect(')') }
         }
@@ -366,6 +374,16 @@ class Parse private constructor(
             "false" -> Pat.BoolOf(false, id)
             "true" -> Pat.BoolOf(true, id)
             "refl" -> Pat.Refl(id)
+            "or" -> {
+                val variants = parseList('{', '}') { parsePat() }
+                Pat.Or(variants, id)
+            }
+            "end" -> Pat.Or(emptyList(), id)
+            "and" -> {
+                val variants = parseList('{', '}') { parsePat() }
+                Pat.And(variants, id)
+            }
+            "any" -> Pat.And(emptyList(), id)
             "unit" -> Pat.Unit(id)
             "bool" -> Pat.Bool(id)
             "byte" -> Pat.Byte(id)
@@ -378,6 +396,15 @@ class Parse private constructor(
             "byte_array" -> Pat.ByteArray(id)
             "int_array" -> Pat.IntArray(id)
             "long_array" -> Pat.LongArray(id)
+            "box" -> {
+                val content = parsePat()
+                Pat.Box(content, id)
+            }
+            "ref" -> {
+                val element = parsePat()
+                Pat.Ref(element, id)
+            }
+            "type" -> Pat.Type(id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> Pat.ByteOf(word.dropLast(1).toByte(), id)
                 SHORT_EXPRESSION.matches(word) -> Pat.ShortOf(word.dropLast(1).toShort(), id)

@@ -233,6 +233,8 @@ sealed class Pat {
     data class BoxOf(val content: Pat, val tag: Pat, override val id: Id) : Pat()
     data class RefOf(val element: Pat, override val id: Id) : Pat()
     data class Refl(override val id: Id) : Pat()
+    data class Or(val variants: KList<Pat>, override val id: Id) : Pat()
+    data class And(val variants: KList<Pat>, override val id: Id) : Pat()
     data class Unit(override val id: Id) : Pat()
     data class Bool(override val id: Id) : Pat()
     data class Byte(override val id: Id) : Pat()
@@ -245,6 +247,10 @@ sealed class Pat {
     data class ByteArray(override val id: Id) : Pat()
     data class IntArray(override val id: Id) : Pat()
     data class LongArray(override val id: Id) : Pat()
+    data class Box(val content: Pat, override val id: Id) : Pat()
+    data class Ref(val element: Pat, override val id: Id) : Pat()
+    data class Eq(val left: Pat, val right: Pat, override val id: Id) : Pat()
+    data class Type(override val id: Id) : Pat()
 }
 
 sealed class Eff {

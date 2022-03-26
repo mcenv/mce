@@ -398,51 +398,81 @@ sealed class Pat {
 
     @Serializable
     @SerialName("18")
-    data class Unit(override val id: Id) : Pat()
+    data class Or(val variants: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
     @SerialName("19")
-    data class Bool(override val id: Id) : Pat()
+    data class And(val variants: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
     @SerialName("20")
-    data class Byte(override val id: Id) : Pat()
+    data class Unit(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("21")
-    data class Short(override val id: Id) : Pat()
+    data class Bool(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("22")
-    data class Int(override val id: Id) : Pat()
+    data class Byte(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("23")
-    data class Long(override val id: Id) : Pat()
+    data class Short(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("24")
-    data class Float(override val id: Id) : Pat()
+    data class Int(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("25")
-    data class Double(override val id: Id) : Pat()
+    data class Long(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("26")
-    data class String(override val id: Id) : Pat()
+    data class Float(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("27")
-    data class ByteArray(override val id: Id) : Pat()
+    data class Double(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("28")
-    data class IntArray(override val id: Id) : Pat()
+    data class String(override val id: Id) : Pat()
 
     @Serializable
     @SerialName("29")
+    data class ByteArray(override val id: Id) : Pat()
+
+    @Serializable
+    @SerialName("30")
+    data class IntArray(override val id: Id) : Pat()
+
+    @Serializable
+    @SerialName("31")
     data class LongArray(override val id: Id) : Pat()
+
+    // TODO: List
+
+    // TODO: Compound
+
+    @Serializable
+    @SerialName("32")
+    data class Box(val content: Pat, override val id: Id) : Pat()
+
+    @Serializable
+    @SerialName("33")
+    data class Ref(val element: Pat, override val id: Id) : Pat()
+
+    @Serializable
+    @SerialName("34")
+    data class Eq(val left: Pat, val right: Pat, override val id: Id) : Pat()
+
+    // TODO: Fun?
+
+    @Serializable
+    @SerialName("35")
+    data class Type(override val id: Id) : Pat()
 }
 
 @Serializable

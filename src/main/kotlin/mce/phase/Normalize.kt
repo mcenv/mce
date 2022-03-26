@@ -273,6 +273,9 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
         }
         pat is Pat.RefOf && term is VTerm.RefOf -> !match(pat.element, term.element.value)
         pat is Pat.Refl && term is VTerm.Refl -> true
+        // TODO: Or
+        // TODO: And
+        pat is Pat.Unit && term is VTerm.Unit -> true
         pat is Pat.Bool && term is VTerm.Bool -> true
         pat is Pat.Byte && term is VTerm.Byte -> true
         pat is Pat.Short && term is VTerm.Short -> true
@@ -284,6 +287,10 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
         pat is Pat.ByteArray && term is VTerm.ByteArray -> true
         pat is Pat.IntArray && term is VTerm.IntArray -> true
         pat is Pat.LongArray && term is VTerm.LongArray -> true
+        pat is Pat.Box && term is VTerm.Box -> !match(pat.content, term.content.value)
+        pat is Pat.Ref && term is VTerm.Ref -> !match(pat.element, term.element.value)
+        pat is Pat.Eq && term is VTerm.Eq -> !match(pat.left, term.left.value) && !match(pat.right, term.right.value)
+        pat is Pat.Type && term is VTerm.Type -> true
         else -> false
     }
 }

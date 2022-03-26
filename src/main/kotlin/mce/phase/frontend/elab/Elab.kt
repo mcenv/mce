@@ -910,7 +910,15 @@ class Elab private constructor(
                 val left = lazy { !lift({ normalizer }, fresh(pat.id)) }
                 CPat.Refl(pat.id) to CVTerm.Eq(left, left)
             }
-            is SPat.Unit -> CPat.Unit(pat.id) to UNIT
+            is SPat.Or -> {
+                val variants = !pat.variants.mapM { checkPat(it, TYPE) }
+                CPat.Or(variants, pat.id) to TYPE
+            }
+            is SPat.And -> {
+                val variants = !pat.variants.mapM { checkPat(it, TYPE) }
+                CPat.And(variants, pat.id) to TYPE
+            }
+            is SPat.Unit -> CPat.Unit(pat.id) to TYPE
             is SPat.Bool -> CPat.Bool(pat.id) to TYPE
             is SPat.Byte -> CPat.Byte(pat.id) to TYPE
             is SPat.Short -> CPat.Short(pat.id) to TYPE
@@ -922,6 +930,20 @@ class Elab private constructor(
             is SPat.ByteArray -> CPat.ByteArray(pat.id) to TYPE
             is SPat.IntArray -> CPat.IntArray(pat.id) to TYPE
             is SPat.LongArray -> CPat.LongArray(pat.id) to TYPE
+            is SPat.Box -> {
+                val content = !checkPat(pat.content, TYPE)
+                CPat.Box(content, pat.id) to TYPE
+            }
+            is SPat.Ref -> {
+                val element = !checkPat(pat.element, TYPE)
+                CPat.Ref(element, pat.id) to TYPE
+            }
+            is SPat.Eq -> {
+                val left = !inferPat(pat.left)
+                val right = !checkPat(pat.right, left.second)
+                CPat.Eq(left.first, right, pat.id) to TYPE
+            }
+            is SPat.Type -> CPat.Type(pat.id) to TYPE
         }.also { (_, type) ->
             types[pat.id] = type
         }
@@ -997,6 +1019,8 @@ class Elab private constructor(
      * Converts this pattern to a semantic term.
      */
     private fun CPat.toType(): CVTerm? = when (this) {
+        // TODO: Or
+        // TODO: And
         is CPat.Unit -> UNIT
         is CPat.Bool -> BOOL
         is CPat.Byte -> BYTE
@@ -1009,6 +1033,10 @@ class Elab private constructor(
         is CPat.ByteArray -> BYTE_ARRAY
         is CPat.IntArray -> INT_ARRAY
         is CPat.LongArray -> LONG_ARRAY
+        // TODO: Box
+        // TODO: Ref
+        // TODO: Eq
+        is CPat.Type -> TYPE
         else -> null
     }
 

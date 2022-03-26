@@ -175,27 +175,27 @@ class Pack private constructor(
                 packTerm(term.function)
                 +RunFunction(APPLY)
             }
-            is Term.Or -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.And -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Unit -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Bool -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Byte -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Short -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.SHORT.ordinal.toByte())))
-            is Term.Int -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
-            is Term.Long -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.LONG.ordinal.toByte())))
-            is Term.Float -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.FLOAT.ordinal.toByte())))
-            is Term.Double -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.DOUBLE.ordinal.toByte())))
-            is Term.String -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.STRING.ordinal.toByte())))
-            is Term.ByteArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE_ARRAY.ordinal.toByte())))
-            is Term.IntArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT_ARRAY.ordinal.toByte())))
-            is Term.LongArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.LONG_ARRAY.ordinal.toByte())))
-            is Term.List -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.LIST.ordinal.toByte())))
-            is Term.Compound -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
-            is Term.Box -> +Append(MAIN, COMPOUND, Value(Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
-            is Term.Ref -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
-            is Term.Eq -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Fun -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
-            is Term.Type -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Or -> TODO()
+            is Term.And -> TODO()
+            is Term.Unit -> +Append(MAIN, BYTE, Value(Nbt.Byte(20)))
+            is Term.Bool -> +Append(MAIN, BYTE, Value(Nbt.Byte(21)))
+            is Term.Byte -> +Append(MAIN, BYTE, Value(Nbt.Byte(22)))
+            is Term.Short -> +Append(MAIN, BYTE, Value(Nbt.Byte(23)))
+            is Term.Int -> +Append(MAIN, BYTE, Value(Nbt.Byte(24)))
+            is Term.Long -> +Append(MAIN, BYTE, Value(Nbt.Byte(25)))
+            is Term.Float -> +Append(MAIN, BYTE, Value(Nbt.Byte(26)))
+            is Term.Double -> +Append(MAIN, BYTE, Value(Nbt.Byte(27)))
+            is Term.String -> +Append(MAIN, BYTE, Value(Nbt.Byte(28)))
+            is Term.ByteArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(29)))
+            is Term.IntArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(30)))
+            is Term.LongArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(31)))
+            is Term.List -> TODO()
+            is Term.Compound -> TODO()
+            is Term.Box -> TODO()
+            is Term.Ref -> TODO()
+            is Term.Eq -> TODO()
+            is Term.Fun -> TODO()
+            is Term.Type -> +Append(MAIN, BYTE, Value(Nbt.Byte(35)))
         }
     }
 
@@ -253,18 +253,76 @@ class Pack private constructor(
             is Pat.BoxOf -> TODO()
             is Pat.RefOf -> +SetScore(R0, REG, 1)
             is Pat.Refl -> TODO()
-            is Pat.Unit -> TODO()
-            is Pat.Bool -> TODO()
-            is Pat.Byte -> TODO()
-            is Pat.Short -> TODO()
-            is Pat.Int -> TODO()
-            is Pat.Long -> TODO()
-            is Pat.Float -> TODO()
-            is Pat.Double -> TODO()
-            is Pat.String -> TODO()
-            is Pat.ByteArray -> TODO()
-            is Pat.IntArray -> TODO()
-            is Pat.LongArray -> TODO()
+            is Pat.Or -> TODO()
+            is Pat.And -> TODO()
+            is Pat.Unit -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(20), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Bool -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(21), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Byte -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(22), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Short -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(23), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Int -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(24), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Long -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(25), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Float -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(26), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Double -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(27), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.String -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(28), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.ByteArray -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(29), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.IntArray -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(30), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.LongArray -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(31), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.Box -> TODO()
+            is Pat.Ref -> TODO()
+            is Pat.Eq -> TODO()
+            is Pat.Type -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(35), Run(SetScore(R0, REG, 1))))
+            }
         }
     }
 

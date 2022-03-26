@@ -86,6 +86,8 @@ fun printPat(pat: CPat): SPat = when (pat) {
     is CPat.BoxOf -> SPat.BoxOf(printPat(pat.content), printPat(pat.tag), pat.id)
     is CPat.RefOf -> SPat.RefOf(printPat(pat.element), pat.id)
     is CPat.Refl -> SPat.Refl(pat.id)
+    is CPat.Or -> SPat.Or(pat.variants.map { printPat(it) }, pat.id)
+    is CPat.And -> SPat.And(pat.variants.map { printPat(it) }, pat.id)
     is CPat.Unit -> SPat.Unit(pat.id)
     is CPat.Bool -> SPat.Bool(pat.id)
     is CPat.Byte -> SPat.Byte(pat.id)
@@ -98,6 +100,10 @@ fun printPat(pat: CPat): SPat = when (pat) {
     is CPat.ByteArray -> SPat.ByteArray(pat.id)
     is CPat.IntArray -> SPat.IntArray(pat.id)
     is CPat.LongArray -> SPat.LongArray(pat.id)
+    is CPat.Box -> SPat.Box(printPat(pat.content), pat.id)
+    is CPat.Ref -> SPat.Ref(printPat(pat.element), pat.id)
+    is CPat.Eq -> SPat.Eq(printPat(pat.left), printPat(pat.right), pat.id)
+    is CPat.Type -> SPat.Type(pat.id)
 }
 
 fun printEff(eff: CEff): SEff = when (eff) {

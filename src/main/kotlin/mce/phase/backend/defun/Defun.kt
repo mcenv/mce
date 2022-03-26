@@ -245,6 +245,14 @@ class Defun private constructor() {
             DPat.RefOf(element, pat.id)
         }
         is CPat.Refl -> DPat.Refl(pat.id)
+        is CPat.Or -> {
+            val variants = pat.variants.map { defunPat(it) }
+            DPat.Or(variants, pat.id)
+        }
+        is CPat.And -> {
+            val variants = pat.variants.map { defunPat(it) }
+            DPat.And(variants, pat.id)
+        }
         is CPat.Unit -> DPat.Unit(pat.id)
         is CPat.Bool -> DPat.Bool(pat.id)
         is CPat.Byte -> DPat.Byte(pat.id)
@@ -257,6 +265,20 @@ class Defun private constructor() {
         is CPat.ByteArray -> DPat.ByteArray(pat.id)
         is CPat.IntArray -> DPat.IntArray(pat.id)
         is CPat.LongArray -> DPat.LongArray(pat.id)
+        is CPat.Box -> {
+            val content = defunPat(pat.content)
+            DPat.Box(content, pat.id)
+        }
+        is CPat.Ref -> {
+            val element = defunPat(pat.element)
+            DPat.Ref(element, pat.id)
+        }
+        is CPat.Eq -> {
+            val left = defunPat(pat.left)
+            val right = defunPat(pat.right)
+            DPat.Eq(left, right, pat.id)
+        }
+        is CPat.Type -> DPat.Type(pat.id)
     }
 
     private fun defunEff(eff: CEff): DEff = when (eff) {
