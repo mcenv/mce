@@ -1,4 +1,4 @@
 def eq_elim [] : bool ≔
   match refl [
-    refl ⇒ false
+    refl ⇒ false,
   ]

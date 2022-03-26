@@ -1,4 +1,4 @@
 def box_elim [α : type, a : box α] : int ≔
   match a [
-    (a ∈ α) ⇒ 0
+    (a ∈ α) ⇒ 0,
   ]

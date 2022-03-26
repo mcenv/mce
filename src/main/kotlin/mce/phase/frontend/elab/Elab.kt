@@ -446,6 +446,7 @@ class Elab private constructor(
                         pat to body
                     }
                 }
+                !checkExhaustiveness(clauses.map { it.first }, scrutinee.type, computation.id)
                 Typing(CTerm.Match(scrutinee.term, clauses, computation.id), type)
             }
             is STerm.FunOf -> {
@@ -597,6 +598,7 @@ class Elab private constructor(
                         pat to body
                     }
                 }
+                !checkExhaustiveness(clauses.map { it.first }, scrutinee.type, computation.id)
                 val effs = clauses.flatMap { (_, body) -> body.effs }.toSet()
                 Effecting(CTerm.Match(scrutinee.term, clauses.map { (pat, body) -> pat to body.term }, computation.id), effs)
             }
@@ -812,6 +814,33 @@ class Elab private constructor(
                         }
             term1 is CVTerm.Code && term2 is CVTerm.Code -> !subtypeTerms(term1.element.value, term2.element.value)
             else -> !lift({ normalizer }, unifyTerms(term1, term2))
+        }
+    }
+
+    private fun checkExhaustiveness(patterns: List<CPat>, type: CVTerm, id: Id): State<Context, Unit> = {
+        fun check(patterns: List<CPat>, type: CVTerm): Boolean =
+            patterns.filterIsInstance<CPat.Var>().isNotEmpty() || (when (val type = !gets { normalizer.force(type) }) {
+                is CVTerm.Eq -> patterns.filterIsInstance<CPat.Refl>().isNotEmpty()
+                is CVTerm.Unit -> patterns.filterIsInstance<CPat.UnitOf>().isNotEmpty()
+                is CVTerm.Bool -> {
+                    val patterns = patterns.filterIsInstance<CPat.BoolOf>()
+                    patterns.find { it.value } != null &&
+                            patterns.find { !it.value } != null
+                }
+                is CVTerm.Box -> {
+                    val patterns = patterns.filterIsInstance<CPat.BoxOf>()
+                    check(patterns.map { it.content }, type.content.value) &&
+                            check(patterns.map { it.tag }, TYPE)
+                }
+                is CVTerm.Ref -> {
+                    val patterns = patterns.filterIsInstance<CPat.RefOf>()
+                    check(patterns.map { it.element }, type.element.value)
+                }
+                else -> false
+            })
+
+        if (!check(patterns, type)) {
+            diagnose(Diagnostic.NotExhausted(id))
         }
     }
 
