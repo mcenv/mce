@@ -6,6 +6,9 @@ import mce.phase.frontend.elab.Elab
 import mce.phase.frontend.elab.VTerm
 import mce.phase.frontend.parse.Eff
 import mce.server.Key
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -18,6 +21,72 @@ class ElabTest {
         assert(diagnostics.isEmpty()) { diagnostics.joinToString("\n") }
     }
 
+    @TestFactory
+    fun success(): List<DynamicTest> = listOf(
+        "apply",
+        "identity",
+        "function_intro",
+        "function_elim",
+        "let",
+        "compound",
+        "code_intro",
+        "code_elim",
+        "match_boolean",
+        "match_variable",
+        "nested_patterns",
+        "eq_intro",
+        "eq_elim",
+        "sym",
+        "trans",
+        "cong",
+        "inj",
+        "cast",
+        "unfold_def",
+        "subtype_trans",
+        "builtin",
+        "use_builtin",
+        "builtin_open",
+        "zero_add",
+        "add_zero",
+        "sub_zero",
+        "zero_mul",
+        "mul_zero",
+        "one_mul",
+        "mul_one",
+        "div_one",
+        "mod_one",
+        "add_comm",
+        "mul_comm",
+        "add_const_comm",
+        "sub_self",
+        "div_self",
+        "mod_self",
+        "homogeneous_list",
+        "heterogeneous_list",
+        "or_join_var",
+        "anno",
+        "box_intro",
+        "box_elim",
+        "irrelevant",
+        "wildcard_import",
+        "typecase",
+        "poly_discard",
+        "function_eval",
+        "match_eval",
+        "var_sized_list",
+        "list_size",
+        "box_inst",
+        "empty_module",
+        "non_empty_module",
+        "signature",
+        "structure",
+        "unit_intro",
+        "unit_elim",
+        "test_success",
+        "identity_test",
+        "irrelevant_compound_entries",
+    ).map { dynamicTest(it) { elaborate(it).success() } }
+
     @Test
     fun elaborate() {
         val result = elaborate("elaborate").success()
@@ -26,34 +95,9 @@ class ElabTest {
     }
 
     @Test
-    fun apply() {
-        elaborate("apply").success()
-    }
-
-    @Test
-    fun identity() {
-        elaborate("identity").success()
-    }
-
-    @Test
-    fun function_intro() {
-        elaborate("function_intro").success()
-    }
-
-    @Test
-    fun function_elim() {
-        elaborate("function_elim").success()
-    }
-
-    @Test
     fun function_closed() {
         val result = elaborate("function_closed")
         assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
-    }
-
-    @Test
-    fun let() {
-        elaborate("let").success()
     }
 
     @Test
@@ -66,21 +110,6 @@ class ElabTest {
     fun var_not_found() {
         val result = elaborate("var_not_found")
         assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
-    }
-
-    @Test
-    fun compound() {
-        elaborate("compound").success()
-    }
-
-    @Test
-    fun code_intro() {
-        elaborate("code_intro").success()
-    }
-
-    @Test
-    fun code_elim() {
-        elaborate("code_elim").success()
     }
 
     @Test
@@ -102,34 +131,9 @@ class ElabTest {
     }
 
     @Test
-    fun match_boolean() {
-        elaborate("match_boolean").success()
-    }
-
-    @Test
-    fun match_variable() {
-        elaborate("match_variable").success()
-    }
-
-    @Test
     fun match_escape() {
         val result = elaborate("match_escape")
         assertContains(result.diagnostics, Diagnostic.VarNotFound("a", Id(UUID(0, 0))))
-    }
-
-    @Test
-    fun nested_patterns() {
-        elaborate("nested_patterns").success()
-    }
-
-    @Test
-    fun eq_intro() {
-        elaborate("eq_intro").success()
-    }
-
-    @Test
-    fun eq_elim() {
-        elaborate("eq_elim").success()
     }
 
     @Test
@@ -145,19 +149,9 @@ class ElabTest {
     }
 
     @Test
-    fun sym() {
-        elaborate("sym").success()
-    }
-
-    @Test
     fun sym_bad() {
         val result = elaborate("sym_bad")
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
-    }
-
-    @Test
-    fun trans() {
-        elaborate("trans").success()
     }
 
     @Test
@@ -167,130 +161,15 @@ class ElabTest {
     }
 
     @Test
-    fun cong() {
-        elaborate("cong").success()
-    }
-
-    @Test
-    fun inj() {
-        elaborate("inj").success()
-    }
-
-    @Test
     fun invalid_import() {
         val result = elaborate("invalid_import")
         assert(result.diagnostics.any { it is Diagnostic.DefNotFound }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test
-    fun cast() {
-        elaborate("cast").success()
-    }
-
-    @Test
-    fun unfold_def() {
-        elaborate("unfold_def").success()
-    }
-
-    @Test
-    fun subtype_trans() {
-        elaborate("subtype_trans").success()
-    }
-
-    @Test
-    fun builtin() {
-        elaborate("builtin").success()
-    }
-
-    @Test
     fun builtin_ill_typed() {
         val result = elaborate("builtin_ill_typed")
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
-    }
-
-    @Test
-    fun use_builtin() {
-        elaborate("use_builtin").success()
-    }
-
-    @Test
-    fun builtin_open() {
-        elaborate("builtin_open").success()
-    }
-
-    @Test
-    fun zero_add() {
-        elaborate("zero_add").success()
-    }
-
-    @Test
-    fun add_zero() {
-        elaborate("add_zero").success()
-    }
-
-    @Test
-    fun sub_zero() {
-        elaborate("sub_zero").success()
-    }
-
-    @Test
-    fun zero_mul() {
-        elaborate("zero_mul").success()
-    }
-
-    @Test
-    fun mul_zero() {
-        elaborate("mul_zero").success()
-    }
-
-    @Test
-    fun one_mul() {
-        elaborate("one_mul").success()
-    }
-
-    @Test
-    fun mul_one() {
-        elaborate("mul_one").success()
-    }
-
-    @Test
-    fun div_one() {
-        elaborate("div_one").success()
-    }
-
-    @Test
-    fun mod_one() {
-        elaborate("mod_one").success()
-    }
-
-    @Test
-    fun add_comm() {
-        elaborate("add_comm").success()
-    }
-
-    @Test
-    fun mul_comm() {
-        elaborate("mul_comm").success()
-    }
-
-    @Test
-    fun add_const_comm() {
-        elaborate("add_const_comm").success()
-    }
-
-    @Test
-    fun sub_self() {
-        elaborate("sub_self").success()
-    }
-
-    @Test
-    fun div_self() {
-        elaborate("div_self").success()
-    }
-
-    @Test
-    fun mod_self() {
-        elaborate("mod_self").success()
     }
 
     @Test
@@ -303,16 +182,6 @@ class ElabTest {
     fun impure_def() {
         val result = elaborate("impure_def")
         assertContains(result.diagnostics, Diagnostic.EffMismatch(emptyList(), listOf(Eff.Name("a")), Id(UUID(0, 0))))
-    }
-
-    @Test
-    fun homogeneous_list() {
-        elaborate("homogeneous_list").success()
-    }
-
-    @Test
-    fun heterogeneous_list() {
-        elaborate("heterogeneous_list").success()
     }
 
     @Test
@@ -334,26 +203,6 @@ class ElabTest {
     }
 
     @Test
-    fun or_join_var() {
-        elaborate("or_join_var").success()
-    }
-
-    @Test
-    fun anno() {
-        elaborate("anno").success()
-    }
-
-    @Test
-    fun box_intro() {
-        elaborate("box_intro").success()
-    }
-
-    @Test
-    fun box_elim() {
-        elaborate("box_elim").success()
-    }
-
-    @Test
     fun box_ill_typed_content() {
         val result = elaborate("box_ill_typed_content")
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
@@ -366,54 +215,9 @@ class ElabTest {
     }
 
     @Test
-    fun irrelevant() {
-        elaborate("irrelevant").success()
-    }
-
-    @Test
     fun relevance_mismatch() {
         val result = elaborate("relevance_mismatch")
         assertContains(result.diagnostics, Diagnostic.RelevanceMismatch(Id(UUID(0, 0))))
-    }
-
-    @Test
-    fun wildcard_import() {
-        elaborate("wildcard_import").success()
-    }
-
-    @Test
-    fun typecase() {
-        elaborate("typecase").success()
-    }
-
-    @Test
-    fun poly_discard() {
-        elaborate("poly_discard").success()
-    }
-
-    @Test
-    fun function_eval() {
-        elaborate("function_eval").success()
-    }
-
-    @Test
-    fun match_eval() {
-        elaborate("match_eval").success()
-    }
-
-    @Test
-    fun var_sized_list() {
-        elaborate("var_sized_list").success()
-    }
-
-    @Test
-    fun list_size() {
-        elaborate("list_size").success()
-    }
-
-    @Test
-    fun box_inst() {
-        elaborate("box_inst").success()
     }
 
     @Test
@@ -423,54 +227,9 @@ class ElabTest {
     }
 
     @Test
-    fun empty_module() {
-        elaborate("empty_module").success()
-    }
-
-    @Test
-    fun non_empty_module() {
-        elaborate("non_empty_module").success()
-    }
-
-    @Test
-    fun signature() {
-        elaborate("signature").success()
-    }
-
-    @Test
-    fun structure() {
-        elaborate("structure").success()
-    }
-
-    @Test
-    fun unit_intro() {
-        elaborate("unit_intro").success()
-    }
-
-    @Test
-    fun unit_elim() {
-        elaborate("unit_elim").success()
-    }
-
-    @Test
-    fun test_success() {
-        elaborate("test_success").success()
-    }
-
-    @Test
     fun test_ill_typed() {
         val result = elaborate("test_ill_typed")
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
-    }
-
-    @Test
-    fun identity_test() {
-        elaborate("identity_test").success()
-    }
-
-    @Test
-    fun irrelevant_compound_entries() {
-        elaborate("irrelevant_compound_entries").success()
     }
 
     @Test
