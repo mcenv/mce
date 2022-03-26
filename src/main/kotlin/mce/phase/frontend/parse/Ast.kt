@@ -68,7 +68,7 @@ sealed class Item {
 
 enum class Modifier {
     BUILTIN,
-    META,
+    STATIC,
 }
 
 @Serializable

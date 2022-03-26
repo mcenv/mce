@@ -47,7 +47,7 @@ class Elab private constructor(
         val modifiers = item.modifiers.mapTo(mutableSetOf()) { elabModifier(it) }
         when (item) {
             is SItem.Def -> {
-                !modify { copy(meta = item.modifiers.contains(SModifier.META), termRelevant = false, typeRelevant = true) }
+                !modify { copy(meta = item.modifiers.contains(SModifier.STATIC), termRelevant = false, typeRelevant = true) }
                 val params = !bindParams(item.params)
                 val resultant = !checkTerm(item.resultant, TYPE)
                 val vResultant = !lift({ normalizer }, evalTerm(resultant))
@@ -90,7 +90,7 @@ class Elab private constructor(
      */
     private fun elabModifier(modifier: SModifier): CModifier = when (modifier) {
         SModifier.BUILTIN -> CModifier.BUILTIN
-        SModifier.META -> CModifier.META
+        SModifier.STATIC -> CModifier.STATIC
     }
 
     /**

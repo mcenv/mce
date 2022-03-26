@@ -46,7 +46,7 @@ sealed class Item {
 
 enum class Modifier {
     BUILTIN,
-    META,
+    STATIC,
 }
 
 data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
