@@ -1,6 +1,5 @@
 package mce.phase.backend.pack
 
-import mce.phase.Id
 import mce.phase.backend.defun.Defun
 import mce.phase.backend.defun.Item
 import mce.phase.backend.defun.Pat
@@ -18,10 +17,7 @@ import mce.phase.backend.pack.Function as PFunction
 import mce.phase.frontend.elab.VTerm as Type
 
 @Suppress("NAME_SHADOWING")
-class Pack private constructor(
-    types: Map<Id, Type>,
-) {
-    private val types: Map<Id, NbtType> = types.mapValues { erase(it.value) }
+class Pack private constructor() {
     private val functions: MutableList<PFunction> = mutableListOf()
 
     private fun pack(terms: Map<Int, Term>, item: Item) {
@@ -50,7 +46,7 @@ class Pack private constructor(
     private fun Context.packTerm(term: Term) {
         when (term) {
             is Term.Var -> {
-                val type = getType(term.id)
+                val type = eraseType(term.type)
                 val path = type.toPath()
                 val index = getIndex(type, term.name)
                 +Append(MAIN, path, From(MAIN, path[index]))
@@ -60,7 +56,7 @@ class Pack private constructor(
                 +RunFunction(ResourceLocation(term.name))
             }
             is Term.Let -> {
-                val type = getType(term.init.id)
+                val type = eraseType(term.init.type)
                 packTerm(term.init)
                 bind(type, term.name)
                 packTerm(term.body)
@@ -130,7 +126,7 @@ class Pack private constructor(
             is Term.ListOf -> {
                 +Append(MAIN, LIST, Value(Nbt.List(emptyList())))
                 if (term.elements.isNotEmpty()) {
-                    val type = getType(term.elements.first().id)
+                    val type = eraseType(term.elements.first().type)
                     val targetPath = LIST[if (type == NbtType.LIST) -2 else -1]
                     val sourcePath = type.toPath()[-1]
                     term.elements.forEach { element ->
@@ -144,7 +140,7 @@ class Pack private constructor(
                 +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
                 if (term.elements.isNotEmpty()) {
                     term.elements.entries.forEach { (name, element) ->
-                        val type = getType(element.id)
+                        val type = eraseType(element.type)
                         val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1][name.text]
                         val sourcePath = type.toPath()[-1]
                         packTerm(element)
@@ -157,7 +153,7 @@ class Pack private constructor(
                 +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
 
                 packTerm(term.content)
-                val contentType = getType(term.content.id)
+                val contentType = eraseType(term.content.type)
                 val contentPath = contentType.toPath()[-1]
                 +SetData(MAIN, COMPOUND[if (contentType == NbtType.COMPOUND) -2 else -1]["0"], From(MAIN, contentPath))
                 +RemoveData(MAIN, contentPath)
@@ -201,7 +197,7 @@ class Pack private constructor(
 
     // TODO: nested patterns
     private fun Context.packPat(pat: Pat) {
-        val scrutinee = getType(pat.id).toPath()[-1]
+        val scrutinee = eraseType(pat.type).toPath()[-1]
         when (pat) {
             is Pat.Var -> TODO()
             is Pat.UnitOf -> +SetScore(R0, REG, 1)
@@ -348,8 +344,6 @@ class Pack private constructor(
         return ResourceLocation("${name.path}-0")
     }
 
-    private fun getType(id: Id): NbtType = types[id]!!
-
     private operator fun Context.unaryPlus() {
         functions += toFunction()
     }
@@ -386,7 +380,7 @@ class Pack private constructor(
     )
 
     companion object {
-        private fun erase(type: Type): NbtType = when (type) {
+        private fun eraseType(type: Type): NbtType = when (type) {
             is Type.Hole -> throw Error()
             is Type.Meta -> throw Error()
             is Type.Var -> TODO()
@@ -452,7 +446,7 @@ class Pack private constructor(
             NbtType.LONG_ARRAY -> LONG_ARRAY
         }
 
-        operator fun invoke(input: Defun.Result): Result = Pack(input.types).run {
+        operator fun invoke(input: Defun.Result): Result = Pack().run {
             pack(input.functions, input.item)
             Result(functions)
         }

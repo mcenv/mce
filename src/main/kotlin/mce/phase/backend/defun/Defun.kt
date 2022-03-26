@@ -24,7 +24,9 @@ import mce.phase.frontend.elab.Term as CTerm
 import mce.phase.frontend.elab.VTerm as CVTerm
 
 @Suppress("NAME_SHADOWING")
-class Defun private constructor() {
+class Defun private constructor(
+    private val types: Map<Id, CVTerm>,
+) {
     private val functions: MutableMap<Int, DTerm> = mutableMapOf()
 
     private fun defunItem(item: CItem): DItem {
@@ -33,15 +35,15 @@ class Defun private constructor() {
             is CItem.Def -> {
                 val params = item.params.map { defunParam(it) }
                 val body = defunTerm(item.body)
-                DItem.Def(modifiers, item.name, params, body, item.id)
+                DItem.Def(modifiers, item.name, params, body)
             }
             is CItem.Mod -> {
                 val body = defunModule(item.body)
-                DItem.Mod(modifiers, item.name, body, item.id)
+                DItem.Mod(modifiers, item.name, body)
             }
             is CItem.Test -> {
                 val body = defunTerm(item.body)
-                DItem.Test(modifiers, item.name, body, item.id)
+                DItem.Test(modifiers, item.name, body)
             }
         }
     }
@@ -56,92 +58,92 @@ class Defun private constructor() {
         val lower = param.lower?.let { defunTerm(it) }
         val upper = param.upper?.let { defunTerm(it) }
         val type = defunTerm(param.type)
-        return DParam(param.termRelevant, param.name, lower, upper, param.typeRelevant, type, param.id)
+        return DParam(param.termRelevant, param.name, lower, upper, param.typeRelevant, type)
     }
 
     private fun defunModule(module: CModule): DModule = when (module) {
-        is CModule.Var -> DModule.Var(module.name, module.id)
+        is CModule.Var -> DModule.Var(module.name)
         is CModule.Str -> {
             val items = module.items.map { defunItem(it) }
-            DModule.Str(items, module.id!!)
+            DModule.Str(items)
         }
         is CModule.Sig -> {
             val signatures = module.signatures.map { defunSignature(it) }
-            DModule.Sig(signatures, module.id!!)
+            DModule.Sig(signatures)
         }
-        is CModule.Type -> DModule.Type(module.id)
+        is CModule.Type -> DModule.Type
     }
 
     private fun defunSignature(signature: CSignature): DSignature = when (signature) {
         is CSignature.Def -> {
             val params = signature.params.map { defunParam(it) }
             val resultant = defunTerm(signature.resultant)
-            DSignature.Def(signature.name, params, resultant, signature.id!!)
+            DSignature.Def(signature.name, params, resultant)
         }
         is CSignature.Mod -> {
             val type = defunModule(signature.type)
-            DSignature.Mod(signature.name, type, signature.id!!)
+            DSignature.Mod(signature.name, type)
         }
-        is CSignature.Test -> DSignature.Test(signature.name, signature.id!!)
+        is CSignature.Test -> DSignature.Test(signature.name)
     }
 
     private fun defunTerm(term: CTerm): DTerm = when (term) {
         is CTerm.Hole -> throw Error()
         is CTerm.Meta -> throw Error()
-        is CTerm.Var -> DTerm.Var(term.name, term.level, term.id!!)
-        is CTerm.Def -> DTerm.Def(term.name, term.arguments.map { defunTerm(it) }, term.id!!)
+        is CTerm.Var -> DTerm.Var(term.name, term.level, getType(term.id!!))
+        is CTerm.Def -> DTerm.Def(term.name, term.arguments.map { defunTerm(it) }, getType(term.id!!))
         is CTerm.Let -> {
             val init = defunTerm(term.init)
             val body = defunTerm(term.body)
-            DTerm.Let(term.name, init, body, term.id!!)
+            DTerm.Let(term.name, init, body, getType(term.id!!))
         }
         is CTerm.Match -> {
             val scrutinee = defunTerm(term.scrutinee)
             val clauses = term.clauses.map { defunPat(it.first) to defunTerm(it.second) }
-            DTerm.Match(scrutinee, clauses, term.id!!)
+            DTerm.Match(scrutinee, clauses, getType(term.id!!))
         }
-        is CTerm.UnitOf -> DTerm.UnitOf(term.id!!)
-        is CTerm.BoolOf -> DTerm.BoolOf(term.value, term.id!!)
-        is CTerm.ByteOf -> DTerm.ByteOf(term.value, term.id!!)
-        is CTerm.ShortOf -> DTerm.ShortOf(term.value, term.id!!)
-        is CTerm.IntOf -> DTerm.IntOf(term.value, term.id!!)
-        is CTerm.LongOf -> DTerm.LongOf(term.value, term.id!!)
-        is CTerm.FloatOf -> DTerm.FloatOf(term.value, term.id!!)
-        is CTerm.DoubleOf -> DTerm.DoubleOf(term.value, term.id!!)
-        is CTerm.StringOf -> DTerm.StringOf(term.value, term.id!!)
+        is CTerm.UnitOf -> DTerm.UnitOf(getType(term.id!!))
+        is CTerm.BoolOf -> DTerm.BoolOf(term.value, getType(term.id!!))
+        is CTerm.ByteOf -> DTerm.ByteOf(term.value, getType(term.id!!))
+        is CTerm.ShortOf -> DTerm.ShortOf(term.value, getType(term.id!!))
+        is CTerm.IntOf -> DTerm.IntOf(term.value, getType(term.id!!))
+        is CTerm.LongOf -> DTerm.LongOf(term.value, getType(term.id!!))
+        is CTerm.FloatOf -> DTerm.FloatOf(term.value, getType(term.id!!))
+        is CTerm.DoubleOf -> DTerm.DoubleOf(term.value, getType(term.id!!))
+        is CTerm.StringOf -> DTerm.StringOf(term.value, getType(term.id!!))
         is CTerm.ByteArrayOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.ByteArrayOf(elements, term.id!!)
+            DTerm.ByteArrayOf(elements, getType(term.id!!))
         }
         is CTerm.IntArrayOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.IntArrayOf(elements, term.id!!)
+            DTerm.IntArrayOf(elements, getType(term.id!!))
         }
         is CTerm.LongArrayOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.LongArrayOf(elements, term.id!!)
+            DTerm.LongArrayOf(elements, getType(term.id!!))
         }
         is CTerm.ListOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.ListOf(elements, term.id!!)
+            DTerm.ListOf(elements, getType(term.id!!))
         }
         is CTerm.CompoundOf -> {
             val elements = term.elements.map { (name, element) -> name to defunTerm(element) }
-            DTerm.CompoundOf(elements.toLinkedHashMap(), term.id!!)
+            DTerm.CompoundOf(elements.toLinkedHashMap(), getType(term.id!!))
         }
         is CTerm.BoxOf -> {
             val content = defunTerm(term.content)
             val tag = defunTerm(term.tag)
-            DTerm.BoxOf(content, tag, term.id!!)
+            DTerm.BoxOf(content, tag, getType(term.id!!))
         }
         is CTerm.RefOf -> {
             val element = defunTerm(term.element)
-            DTerm.RefOf(element, term.id!!)
+            DTerm.RefOf(element, getType(term.id!!))
         }
-        is CTerm.Refl -> DTerm.Refl(term.id!!)
+        is CTerm.Refl -> DTerm.Refl(getType(term.id!!))
         is CTerm.FunOf -> {
             val tag = freshTag()
-            DTerm.FunOf(tag, term.id!!).also {
+            DTerm.FunOf(tag, getType(term.id!!)).also {
                 val body = defunTerm(term.body)
                 functions[tag] = body
             }
@@ -149,146 +151,147 @@ class Defun private constructor() {
         is CTerm.Apply -> {
             val function = defunTerm(term.function)
             val arguments = term.arguments.map { defunTerm(it) }
-            DTerm.Apply(function, arguments, term.id!!)
+            DTerm.Apply(function, arguments, getType(term.id!!))
         }
         is CTerm.CodeOf -> throw Error()
         is CTerm.Splice -> throw Error()
         is CTerm.Or -> {
             val variants = term.variants.map { defunTerm(it) }
-            DTerm.Or(variants, term.id!!)
+            DTerm.Or(variants, getType(term.id!!))
         }
         is CTerm.And -> {
             val variants = term.variants.map { defunTerm(it) }
-            DTerm.And(variants, term.id!!)
+            DTerm.And(variants, getType(term.id!!))
         }
-        is CTerm.Unit -> DTerm.Unit(term.id!!)
-        is CTerm.Bool -> DTerm.Bool(term.id!!)
-        is CTerm.Byte -> DTerm.Byte(term.id!!)
-        is CTerm.Short -> DTerm.Short(term.id!!)
-        is CTerm.Int -> DTerm.Int(term.id!!)
-        is CTerm.Long -> DTerm.Long(term.id!!)
-        is CTerm.Float -> DTerm.Float(term.id!!)
-        is CTerm.Double -> DTerm.Double(term.id!!)
-        is CTerm.String -> DTerm.String(term.id!!)
-        is CTerm.ByteArray -> DTerm.ByteArray(term.id!!)
-        is CTerm.IntArray -> DTerm.IntArray(term.id!!)
-        is CTerm.LongArray -> DTerm.LongArray(term.id!!)
+        is CTerm.Unit -> DTerm.Unit(getType(term.id!!))
+        is CTerm.Bool -> DTerm.Bool(getType(term.id!!))
+        is CTerm.Byte -> DTerm.Byte(getType(term.id!!))
+        is CTerm.Short -> DTerm.Short(getType(term.id!!))
+        is CTerm.Int -> DTerm.Int(getType(term.id!!))
+        is CTerm.Long -> DTerm.Long(getType(term.id!!))
+        is CTerm.Float -> DTerm.Float(getType(term.id!!))
+        is CTerm.Double -> DTerm.Double(getType(term.id!!))
+        is CTerm.String -> DTerm.String(getType(term.id!!))
+        is CTerm.ByteArray -> DTerm.ByteArray(getType(term.id!!))
+        is CTerm.IntArray -> DTerm.IntArray(getType(term.id!!))
+        is CTerm.LongArray -> DTerm.LongArray(getType(term.id!!))
         is CTerm.List -> {
             val element = defunTerm(term.element)
             val size = defunTerm(term.size)
-            DTerm.List(element, size, term.id!!)
+            DTerm.List(element, size, getType(term.id!!))
         }
         is CTerm.Compound -> {
-            val elements = term.elements.map { (name, element) -> name to DEntry(element.relevant, defunTerm(element.type), element.id!!) }
-            DTerm.Compound(elements.toLinkedHashMap(), term.id!!)
+            val elements = term.elements.map { (name, element) -> name to DEntry(element.relevant, defunTerm(element.type)) }
+            DTerm.Compound(elements.toLinkedHashMap(), getType(term.id!!))
         }
         is CTerm.Box -> {
             val content = defunTerm(term.content)
-            DTerm.Box(content, term.id!!)
+            DTerm.Box(content, getType(term.id!!))
         }
         is CTerm.Ref -> {
             val element = defunTerm(term.element)
-            DTerm.Ref(element, term.id!!)
+            DTerm.Ref(element, getType(term.id!!))
         }
         is CTerm.Eq -> {
             val left = defunTerm(term.left)
             val right = defunTerm(term.right)
-            DTerm.Eq(left, right, term.id!!)
+            DTerm.Eq(left, right, getType(term.id!!))
         }
         is CTerm.Fun -> {
             val parameters = term.params.map { defunParam(it) }
             val resultant = defunTerm(term.resultant)
             val effects = term.effs.map { defunEff(it) }.toSet()
-            DTerm.Fun(parameters, resultant, effects, term.id!!)
+            DTerm.Fun(parameters, resultant, effects, getType(term.id!!))
         }
         is CTerm.Code -> throw Error()
-        is CTerm.Type -> DTerm.Type(term.id!!)
+        is CTerm.Type -> DTerm.Type(getType(term.id!!))
     }
 
     private fun defunPat(pat: CPat): DPat = when (pat) {
-        is CPat.Var -> DPat.Var(pat.name, pat.id)
-        is CPat.UnitOf -> DPat.UnitOf(pat.id)
-        is CPat.BoolOf -> DPat.BoolOf(pat.value, pat.id)
-        is CPat.ByteOf -> DPat.ByteOf(pat.value, pat.id)
-        is CPat.ShortOf -> DPat.ShortOf(pat.value, pat.id)
-        is CPat.IntOf -> DPat.IntOf(pat.value, pat.id)
-        is CPat.LongOf -> DPat.LongOf(pat.value, pat.id)
-        is CPat.FloatOf -> DPat.FloatOf(pat.value, pat.id)
-        is CPat.DoubleOf -> DPat.DoubleOf(pat.value, pat.id)
-        is CPat.StringOf -> DPat.StringOf(pat.value, pat.id)
+        is CPat.Var -> DPat.Var(pat.name, getType(pat.id))
+        is CPat.UnitOf -> DPat.UnitOf(getType(pat.id))
+        is CPat.BoolOf -> DPat.BoolOf(pat.value, getType(pat.id))
+        is CPat.ByteOf -> DPat.ByteOf(pat.value, getType(pat.id))
+        is CPat.ShortOf -> DPat.ShortOf(pat.value, getType(pat.id))
+        is CPat.IntOf -> DPat.IntOf(pat.value, getType(pat.id))
+        is CPat.LongOf -> DPat.LongOf(pat.value, getType(pat.id))
+        is CPat.FloatOf -> DPat.FloatOf(pat.value, getType(pat.id))
+        is CPat.DoubleOf -> DPat.DoubleOf(pat.value, getType(pat.id))
+        is CPat.StringOf -> DPat.StringOf(pat.value, getType(pat.id))
         is CPat.ByteArrayOf -> {
             val elements = pat.elements.map { defunPat(it) }
-            DPat.ByteArrayOf(elements, pat.id)
+            DPat.ByteArrayOf(elements, getType(pat.id))
         }
         is CPat.IntArrayOf -> {
             val elements = pat.elements.map { defunPat(it) }
-            DPat.IntArrayOf(elements, pat.id)
+            DPat.IntArrayOf(elements, getType(pat.id))
         }
         is CPat.LongArrayOf -> {
             val elements = pat.elements.map { defunPat(it) }
-            DPat.LongArrayOf(elements, pat.id)
+            DPat.LongArrayOf(elements, getType(pat.id))
         }
         is CPat.ListOf -> {
             val elements = pat.elements.map { defunPat(it) }
-            DPat.ListOf(elements, pat.id)
+            DPat.ListOf(elements, getType(pat.id))
         }
         is CPat.CompoundOf -> {
             val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
-            DPat.CompoundOf(elements.toLinkedHashMap(), pat.id)
+            DPat.CompoundOf(elements.toLinkedHashMap(), getType(pat.id))
         }
         is CPat.BoxOf -> {
             val content = defunPat(pat.content)
             val tag = defunPat(pat.tag)
-            DPat.BoxOf(content, tag, pat.id)
+            DPat.BoxOf(content, tag, getType(pat.id))
         }
         is CPat.RefOf -> {
             val element = defunPat(pat.element)
-            DPat.RefOf(element, pat.id)
+            DPat.RefOf(element, getType(pat.id))
         }
-        is CPat.Refl -> DPat.Refl(pat.id)
+        is CPat.Refl -> DPat.Refl(getType(pat.id))
         is CPat.Or -> {
             val variants = pat.variants.map { defunPat(it) }
-            DPat.Or(variants, pat.id)
+            DPat.Or(variants, getType(pat.id))
         }
         is CPat.And -> {
             val variants = pat.variants.map { defunPat(it) }
-            DPat.And(variants, pat.id)
+            DPat.And(variants, getType(pat.id))
         }
-        is CPat.Unit -> DPat.Unit(pat.id)
-        is CPat.Bool -> DPat.Bool(pat.id)
-        is CPat.Byte -> DPat.Byte(pat.id)
-        is CPat.Short -> DPat.Short(pat.id)
-        is CPat.Int -> DPat.Int(pat.id)
-        is CPat.Long -> DPat.Long(pat.id)
-        is CPat.Float -> DPat.Float(pat.id)
-        is CPat.Double -> DPat.Double(pat.id)
-        is CPat.String -> DPat.String(pat.id)
-        is CPat.ByteArray -> DPat.ByteArray(pat.id)
-        is CPat.IntArray -> DPat.IntArray(pat.id)
-        is CPat.LongArray -> DPat.LongArray(pat.id)
+        is CPat.Unit -> DPat.Unit(getType(pat.id))
+        is CPat.Bool -> DPat.Bool(getType(pat.id))
+        is CPat.Byte -> DPat.Byte(getType(pat.id))
+        is CPat.Short -> DPat.Short(getType(pat.id))
+        is CPat.Int -> DPat.Int(getType(pat.id))
+        is CPat.Long -> DPat.Long(getType(pat.id))
+        is CPat.Float -> DPat.Float(getType(pat.id))
+        is CPat.Double -> DPat.Double(getType(pat.id))
+        is CPat.String -> DPat.String(getType(pat.id))
+        is CPat.ByteArray -> DPat.ByteArray(getType(pat.id))
+        is CPat.IntArray -> DPat.IntArray(getType(pat.id))
+        is CPat.LongArray -> DPat.LongArray(getType(pat.id))
         is CPat.Box -> {
             val content = defunPat(pat.content)
-            DPat.Box(content, pat.id)
+            DPat.Box(content, getType(pat.id))
         }
         is CPat.Ref -> {
             val element = defunPat(pat.element)
-            DPat.Ref(element, pat.id)
+            DPat.Ref(element, getType(pat.id))
         }
         is CPat.Eq -> {
             val left = defunPat(pat.left)
             val right = defunPat(pat.right)
-            DPat.Eq(left, right, pat.id)
+            DPat.Eq(left, right, getType(pat.id))
         }
-        is CPat.Type -> DPat.Type(pat.id)
+        is CPat.Type -> DPat.Type(getType(pat.id))
     }
 
     private fun defunEff(eff: CEff): DEff = when (eff) {
         is CEff.Name -> DEff.Name(eff.name)
     }
 
+    private fun getType(id: Id): CVTerm = types[id]!!
+
     data class Result(
         val item: DItem,
-        val types: Map<Id, CVTerm>,
         val functions: Map<Int, DTerm>,
     )
 
@@ -297,8 +300,8 @@ class Defun private constructor() {
 
         private fun freshTag(): Int = tag.getAndIncrement()
 
-        operator fun invoke(input: Stage.Result): Result = Defun().run {
-            Result(defunItem(input.item), input.types, functions)
+        operator fun invoke(input: Stage.Result): Result = Defun(input.types).run {
+            Result(defunItem(input.item), functions)
         }
     }
 }
