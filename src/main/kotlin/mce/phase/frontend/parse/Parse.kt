@@ -194,9 +194,9 @@ class Parse private constructor(
             skip()
             Term.Meta(id)
         }
-        '⟨' -> {
+        '⋆' -> {
             skip()
-            Term.UnitOf(id).also { expect('⟩') }
+            Term.UnitOf(id)
         }
         '"' -> Term.StringOf(readString(), id)
         '[' -> when {
@@ -346,9 +346,9 @@ class Parse private constructor(
                 else -> error("unexpected operator '$char'")
             }.also { expect(')') }
         }
-        '⟨' -> {
+        '⋆' -> {
             skip()
-            Pat.UnitOf(id).also { expect('⟩') }
+            Pat.UnitOf(id)
         }
         '"' -> Pat.StringOf(readString(), id)
         '[' -> when {

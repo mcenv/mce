@@ -2,4 +2,4 @@
 
 export {*}
 
-def abstract_unit [] : unit ≔ ⟨⟩
+def abstract_unit [] : unit ≔ ⋆

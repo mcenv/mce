@@ -247,6 +247,6 @@ class ElabTest {
     @Test
     fun abstract_not_unfolded() {
         val result = elaborate("abstract_not_unfolded")
-        println(result)
+        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 }
