@@ -16,6 +16,7 @@ import mce.util.run
 class Stage private constructor(
     private val normalizer: Normalizer,
 ) : mce.phase.Map() {
+    // TODO: use specialized normalizer for staging.
     override fun mapTerm(term: Term): Term = when (term) {
         is Term.Hole -> throw Error()
         is Term.Meta -> throw Error()
