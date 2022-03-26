@@ -18,7 +18,7 @@ object size : BuiltinDef3("list/size") {
     }
 
     override fun pack(): List<Command> = listOf(
-        Append(STACKS, INT, Value(Nbt.Int(0))),
-        Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, STACKS, LIST[-1]())))),
+        Append(MAIN, INT, Value(Nbt.Int(0))),
+        Execute(StoreData(RESULT, MAIN, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, MAIN, LIST[-1]())))),
     )
 }

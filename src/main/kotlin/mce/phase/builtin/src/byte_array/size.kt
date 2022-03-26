@@ -18,7 +18,7 @@ object size : BuiltinDef1("byte_array/size") {
     }
 
     override fun pack(): List<Command> = listOf(
-        Append(STACKS, INT, Value(Nbt.Int(0))),
-        Command.Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, STACKS, BYTE_ARRAY[-1]())))),
+        Append(MAIN, INT, Value(Nbt.Int(0))),
+        Command.Execute(StoreData(RESULT, MAIN, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, MAIN, BYTE_ARRAY[-1]())))),
     )
 }

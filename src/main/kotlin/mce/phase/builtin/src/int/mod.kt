@@ -21,9 +21,9 @@ object mod : BuiltinDef2("int/mod") {
     }
 
     override fun pack(): List<Command> = listOf(
-        Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-        Pop(STACKS, INT),
-        Command.Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-        Command.Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(PerformOperation(REGISTER_1, REGISTERS, MOD_ASSIGN, REGISTER_0, REGISTERS))))
+        Command.Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
+        Pop(MAIN, INT),
+        Command.Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, INT[-1])))),
+        Command.Execute(StoreData(RESULT, MAIN, INT[-1], StoreType.INT, 1.0, Run(PerformOperation(R1, REG, MOD_ASSIGN, R0, REG))))
     )
 }

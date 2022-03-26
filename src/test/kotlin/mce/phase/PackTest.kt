@@ -24,14 +24,14 @@ class PackTest {
                     Function(
                         ResourceLocation("apply"),
                         listOf(
-                            Command.Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-                            Pop(STACKS, INT),
+                            Command.Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
+                            Pop(MAIN, INT),
                         ),
                     ),
                     Function(
                         ResourceLocation("const"),
                         listOf(
-                            Append(STACKS, BYTE, Value(Nbt.Byte(0))),
+                            Append(MAIN, BYTE, Value(Nbt.Byte(0))),
                         ),
                     ),
                 ),

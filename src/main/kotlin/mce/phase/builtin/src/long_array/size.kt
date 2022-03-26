@@ -18,7 +18,7 @@ object size : BuiltinDef1("long_array/size") {
     }
 
     override fun pack(): List<Command> = listOf(
-        Append(STACKS, INT, Value(Nbt.Int(0))),
-        Execute(StoreData(RESULT, STACKS, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, STACKS, LONG_ARRAY[-1]())))),
+        Append(MAIN, INT, Value(Nbt.Int(0))),
+        Execute(StoreData(RESULT, MAIN, INT[-1], StoreType.INT, 1.0, Run(CheckMatchingData(true, MAIN, LONG_ARRAY[-1]())))),
     )
 }

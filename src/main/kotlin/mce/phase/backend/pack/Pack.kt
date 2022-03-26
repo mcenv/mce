@@ -26,13 +26,13 @@ class Pack private constructor(
 
     private fun pack(terms: Map<Int, Term>, item: Item) {
         +Context(APPLY).apply {
-            +Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1]))))
-            +Pop(STACKS, INT)
+            +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1]))))
+            +Pop(MAIN, INT)
             // TODO: use 4-ary search
             terms.forEach { (tag, term) ->
                 val name = ResourceLocation("$tag")
                 +Context(name).apply { packTerm(term) }
-                +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, EqConst(tag), Run(RunFunction(name))))
+                +Execute(E.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
             }
         }
 
@@ -53,7 +53,7 @@ class Pack private constructor(
                 val type = getType(term.id)
                 val path = type.toPath()
                 val index = getIndex(type, term.name)
-                +Append(STACKS, path, From(STACKS, path[index]))
+                +Append(MAIN, path, From(MAIN, path[index]))
             }
             is Term.Def -> {
                 term.arguments.forEach { packTerm(it) }
@@ -70,15 +70,15 @@ class Pack private constructor(
                 packTerm(term.scrutinee)
                 +RunFunction(packMatch(term.clauses))
             }
-            is Term.UnitOf -> +Append(STACKS, BYTE, Value(Nbt.Byte(0)))
-            is Term.BoolOf -> +Append(STACKS, BYTE, Value(Nbt.Byte(if (term.value) 1 else 0)))
-            is Term.ByteOf -> +Append(STACKS, BYTE, Value(Nbt.Byte(term.value)))
-            is Term.ShortOf -> +Append(STACKS, SHORT, Value(Nbt.Short(term.value)))
-            is Term.IntOf -> +Append(STACKS, INT, Value(Nbt.Int(term.value)))
-            is Term.LongOf -> +Append(STACKS, LONG, Value(Nbt.Long(term.value)))
-            is Term.FloatOf -> +Append(STACKS, FLOAT, Value(Nbt.Float(term.value)))
-            is Term.DoubleOf -> +Append(STACKS, DOUBLE, Value(Nbt.Double(term.value)))
-            is Term.StringOf -> +Append(STACKS, STRING, Value(Nbt.String(term.value)))
+            is Term.UnitOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
+            is Term.BoolOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(if (term.value) 1 else 0)))
+            is Term.ByteOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(term.value)))
+            is Term.ShortOf -> +Append(MAIN, SHORT, Value(Nbt.Short(term.value)))
+            is Term.IntOf -> +Append(MAIN, INT, Value(Nbt.Int(term.value)))
+            is Term.LongOf -> +Append(MAIN, LONG, Value(Nbt.Long(term.value)))
+            is Term.FloatOf -> +Append(MAIN, FLOAT, Value(Nbt.Float(term.value)))
+            is Term.DoubleOf -> +Append(MAIN, DOUBLE, Value(Nbt.Double(term.value)))
+            is Term.StringOf -> +Append(MAIN, STRING, Value(Nbt.String(term.value)))
             is Term.ByteArrayOf -> {
                 val elements = term.elements.map {
                     when (it) {
@@ -86,12 +86,12 @@ class Pack private constructor(
                         else -> 0
                     }
                 }
-                +Append(STACKS, BYTE_ARRAY, Value(Nbt.ByteArray(elements)))
+                +Append(MAIN, BYTE_ARRAY, Value(Nbt.ByteArray(elements)))
                 term.elements.mapIndexed { index, element ->
                     if (element !is Term.ByteOf) {
                         packTerm(element)
-                        +SetData(STACKS, BYTE_ARRAY[-1][index], From(STACKS, BYTE[-1]))
-                        +Pop(STACKS, BYTE)
+                        +SetData(MAIN, BYTE_ARRAY[-1][index], From(MAIN, BYTE[-1]))
+                        +Pop(MAIN, BYTE)
                     }
                 }
             }
@@ -102,12 +102,12 @@ class Pack private constructor(
                         else -> 0
                     }
                 }
-                +Append(STACKS, INT_ARRAY, Value(Nbt.IntArray(elements)))
+                +Append(MAIN, INT_ARRAY, Value(Nbt.IntArray(elements)))
                 term.elements.mapIndexed { index, element ->
                     if (element !is Term.IntOf) {
                         packTerm(element)
-                        +SetData(STACKS, INT_ARRAY[-1][index], From(STACKS, INT[-1]))
-                        +Pop(STACKS, INT)
+                        +SetData(MAIN, INT_ARRAY[-1][index], From(MAIN, INT[-1]))
+                        +Pop(MAIN, INT)
                     }
                 }
             }
@@ -118,89 +118,154 @@ class Pack private constructor(
                         else -> 0
                     }
                 }
-                +Append(STACKS, LONG_ARRAY, Value(Nbt.LongArray(elements)))
+                +Append(MAIN, LONG_ARRAY, Value(Nbt.LongArray(elements)))
                 term.elements.mapIndexed { index, element ->
                     if (element !is Term.LongOf) {
                         packTerm(element)
-                        +SetData(STACKS, LONG_ARRAY[-1][index], From(STACKS, LONG[-1]))
-                        +Pop(STACKS, LONG)
+                        +SetData(MAIN, LONG_ARRAY[-1][index], From(MAIN, LONG[-1]))
+                        +Pop(MAIN, LONG)
                     }
                 }
             }
             is Term.ListOf -> {
-                +Append(STACKS, LIST, Value(Nbt.List(emptyList())))
+                +Append(MAIN, LIST, Value(Nbt.List(emptyList())))
                 if (term.elements.isNotEmpty()) {
                     val type = getType(term.elements.first().id)
                     val targetPath = LIST[if (type == NbtType.LIST) -2 else -1]
                     val sourcePath = type.toPath()[-1]
                     term.elements.forEach { element ->
                         packTerm(element)
-                        +Append(STACKS, targetPath, From(STACKS, sourcePath))
-                        +RemoveData(STACKS, sourcePath)
+                        +Append(MAIN, targetPath, From(MAIN, sourcePath))
+                        +RemoveData(MAIN, sourcePath)
                     }
                 }
             }
             is Term.CompoundOf -> {
-                +Append(STACKS, COMPOUND, Value(Nbt.Compound(emptyMap())))
+                +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
                 if (term.elements.isNotEmpty()) {
                     term.elements.entries.forEach { (name, element) ->
                         val type = getType(element.id)
                         val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1][name.text]
                         val sourcePath = type.toPath()[-1]
                         packTerm(element)
-                        +SetData(STACKS, targetPath, From(STACKS, sourcePath))
-                        +RemoveData(STACKS, sourcePath)
+                        +SetData(MAIN, targetPath, From(MAIN, sourcePath))
+                        +RemoveData(MAIN, sourcePath)
                     }
                 }
             }
             is Term.BoxOf -> {
-                +Append(STACKS, COMPOUND, Value(Nbt.Compound(emptyMap())))
+                +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
 
                 packTerm(term.content)
                 val contentType = getType(term.content.id)
                 val contentPath = contentType.toPath()[-1]
-                +SetData(STACKS, COMPOUND[if (contentType == NbtType.COMPOUND) -2 else -1]["0"], From(STACKS, contentPath))
-                +RemoveData(STACKS, contentPath)
+                +SetData(MAIN, COMPOUND[if (contentType == NbtType.COMPOUND) -2 else -1]["0"], From(MAIN, contentPath))
+                +RemoveData(MAIN, contentPath)
 
                 packTerm(term.tag)
                 val tagPath = BYTE[-1]
-                +SetData(STACKS, COMPOUND[-1]["1"], From(STACKS, tagPath))
-                +RemoveData(STACKS, tagPath)
+                +SetData(MAIN, COMPOUND[-1]["1"], From(MAIN, tagPath))
+                +RemoveData(MAIN, tagPath)
             }
             is Term.RefOf -> TODO()
-            is Term.Refl -> +Append(STACKS, BYTE, Value(Nbt.Byte(0)))
-            is Term.FunOf -> +Append(STACKS, INT, Value(Nbt.Int(term.tag)))
+            is Term.Refl -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
+            is Term.FunOf -> +Append(MAIN, INT, Value(Nbt.Int(term.tag)))
             is Term.Apply -> {
                 term.arguments.forEach { packTerm(it) }
                 packTerm(term.function)
                 +RunFunction(APPLY)
             }
-            is Term.Or -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.And -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Unit -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Bool -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Byte -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Short -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.SHORT.ordinal.toByte())))
-            is Term.Int -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
-            is Term.Long -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.LONG.ordinal.toByte())))
-            is Term.Float -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.FLOAT.ordinal.toByte())))
-            is Term.Double -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.DOUBLE.ordinal.toByte())))
-            is Term.String -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.STRING.ordinal.toByte())))
-            is Term.ByteArray -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE_ARRAY.ordinal.toByte())))
-            is Term.IntArray -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.INT_ARRAY.ordinal.toByte())))
-            is Term.LongArray -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.LONG_ARRAY.ordinal.toByte())))
-            is Term.List -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.LIST.ordinal.toByte())))
-            is Term.Compound -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
-            is Term.Box -> +Append(STACKS, COMPOUND, Value(Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
-            is Term.Ref -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
-            is Term.Eq -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
-            is Term.Fun -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
-            is Term.Type -> +Append(STACKS, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Or -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.And -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Unit -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Bool -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Byte -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Short -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.SHORT.ordinal.toByte())))
+            is Term.Int -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
+            is Term.Long -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.LONG.ordinal.toByte())))
+            is Term.Float -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.FLOAT.ordinal.toByte())))
+            is Term.Double -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.DOUBLE.ordinal.toByte())))
+            is Term.String -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.STRING.ordinal.toByte())))
+            is Term.ByteArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE_ARRAY.ordinal.toByte())))
+            is Term.IntArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT_ARRAY.ordinal.toByte())))
+            is Term.LongArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.LONG_ARRAY.ordinal.toByte())))
+            is Term.List -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.LIST.ordinal.toByte())))
+            is Term.Compound -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
+            is Term.Box -> +Append(MAIN, COMPOUND, Value(Nbt.Byte(NbtType.COMPOUND.ordinal.toByte())))
+            is Term.Ref -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
+            is Term.Eq -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
+            is Term.Fun -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.INT.ordinal.toByte())))
+            is Term.Type -> +Append(MAIN, BYTE, Value(Nbt.Byte(NbtType.BYTE.ordinal.toByte())))
         }
     }
 
+    // TODO: nested patterns
     private fun Context.packPat(pat: Pat) {
-        // TODO: store 1 in [REGISTER_0] if matched
+        val scrutinee = getType(pat.id).toPath()[-1]
+        when (pat) {
+            is Pat.Var -> TODO()
+            is Pat.UnitOf -> +SetScore(R0, REG, 1)
+            is Pat.BoolOf -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(if (pat.value) 1 else 0), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.ByteOf -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(pat.value.toInt()), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.ShortOf -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(pat.value.toInt()), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.IntOf -> {
+                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckScore(true, R0, REG, EqConst(pat.value), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.LongOf -> { // TODO: benchmark other methods
+                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Long(pat.value)))))), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.FloatOf -> {
+                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Float(pat.value)))))), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.DoubleOf -> {
+                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Double(pat.value)))))), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.StringOf -> {
+                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
+                +SetScore(R0, REG, 0)
+                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.String(pat.value)))))), Run(SetScore(R0, REG, 1))))
+            }
+            is Pat.ByteArrayOf -> TODO()
+            is Pat.IntArrayOf -> TODO()
+            is Pat.LongArrayOf -> TODO()
+            is Pat.ListOf -> TODO()
+            is Pat.CompoundOf -> TODO()
+            is Pat.BoxOf -> TODO()
+            is Pat.RefOf -> +SetScore(R0, REG, 1)
+            is Pat.Refl -> TODO()
+            is Pat.Unit -> TODO()
+            is Pat.Bool -> TODO()
+            is Pat.Byte -> TODO()
+            is Pat.Short -> TODO()
+            is Pat.Int -> TODO()
+            is Pat.Long -> TODO()
+            is Pat.Float -> TODO()
+            is Pat.Double -> TODO()
+            is Pat.String -> TODO()
+            is Pat.ByteArray -> TODO()
+            is Pat.IntArray -> TODO()
+            is Pat.LongArray -> TODO()
+        }
     }
 
     private fun Context.packMatch(clauses: List<Pair<Pat, Term>>): ResourceLocation {
@@ -213,10 +278,10 @@ class Pack private constructor(
                     val arm = name.copy(path = "${name.path}-0")
                     +withName(arm).apply {
                         packTerm(term)
-                        +SetScore(REGISTER_0, REGISTERS, 1) // TODO: avoid register restoration when possible
+                        +SetScore(R0, REG, 1) // TODO: avoid register restoration when possible
                     }
-                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, GeConst(1), Run(RunFunction(arm))))
-                    +Execute(E.CheckScore(true, REGISTER_0, REGISTERS, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
+                    +Execute(E.CheckScore(true, R0, REG, GeConst(1), Run(RunFunction(arm))))
+                    +Execute(E.CheckScore(true, R0, REG, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
                 } else {
                     packTerm(term)
                 }

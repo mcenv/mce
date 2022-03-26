@@ -20,11 +20,11 @@ object ne : BuiltinDef2("int/ne") {
     }
 
     override fun pack(): List<Command> = listOf(
-        Execute(StoreValue(RESULT, REGISTER_0, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-        Pop(STACKS, INT),
-        Execute(StoreValue(RESULT, REGISTER_1, REGISTERS, Run(GetData(STACKS, INT[-1])))),
-        Pop(STACKS, INT),
-        Execute(E.CheckScore(false, REGISTER_1, REGISTERS, EqScore(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(1)))))),
-        Execute(E.CheckScore(true, REGISTER_1, REGISTERS, EqScore(REGISTER_0, REGISTERS), Run(Append(STACKS, BYTE, Value(Nbt.Byte(0)))))),
+        Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
+        Pop(MAIN, INT),
+        Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, INT[-1])))),
+        Pop(MAIN, INT),
+        Execute(E.CheckScore(false, R1, REG, EqScore(R0, REG), Run(Append(MAIN, BYTE, Value(Nbt.Byte(1)))))),
+        Execute(E.CheckScore(true, R1, REG, EqScore(R0, REG), Run(Append(MAIN, BYTE, Value(Nbt.Byte(0)))))),
     )
 }
