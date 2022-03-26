@@ -643,89 +643,89 @@ class Elab private constructor(
      * Checks if the [term1] and the [term2] can be unified under the normalizer.
      */
     private fun unifyTerms(term1: CVTerm, term2: CVTerm): State<Normalizer, Boolean> = {
-        val (value1, value2) = !gets { force(term1) to force(term2) }
+        val (term1, term2) = !gets { force(term1) to force(term2) }
         when {
-            value1.id != null && value2.id != null && value1.id == value2.id -> true
-            value1 is CVTerm.Meta && value2 is CVTerm.Meta && value1.index == value2.index -> true
-            value1 is CVTerm.Meta ->
-                !(when (val solved1 = !gets { getSolution(value1.index) }) {
+            term1.id != null && term2.id != null && term1.id == term2.id -> true
+            term1 is CVTerm.Meta && term2 is CVTerm.Meta && term1.index == term2.index -> true
+            term1 is CVTerm.Meta ->
+                !(when (val solved1 = !gets { getSolution(term1.index) }) {
                     null ->
                         gets {
-                            solve(value1.index, value2)
+                            solve(term1.index, term2)
                             true
                         }
-                    else -> unifyTerms(solved1, value2)
+                    else -> unifyTerms(solved1, term2)
                 })
-            value2 is CVTerm.Meta -> !unifyTerms(value2, value1)
-            value1 is CVTerm.Var && value2 is CVTerm.Var -> value1.level == value2.level
-            value1 is CVTerm.Def && value2 is CVTerm.Def && value1.name == value2.name -> true
-            value1 is CVTerm.Match && value2 is CVTerm.Match -> false // TODO
-            value1 is CVTerm.UnitOf && value2 is CVTerm.UnitOf -> true
-            value1 is CVTerm.BoolOf && value2 is CVTerm.BoolOf -> value1.value == value2.value
-            value1 is CVTerm.ByteOf && value2 is CVTerm.ByteOf -> value1.value == value2.value
-            value1 is CVTerm.ShortOf && value2 is CVTerm.ShortOf -> value1.value == value2.value
-            value1 is CVTerm.IntOf && value2 is CVTerm.IntOf -> value1.value == value2.value
-            value1 is CVTerm.LongOf && value2 is CVTerm.LongOf -> value1.value == value2.value
-            value1 is CVTerm.FloatOf && value2 is CVTerm.FloatOf -> value1.value == value2.value
-            value1 is CVTerm.DoubleOf && value2 is CVTerm.DoubleOf -> value1.value == value2.value
-            value1 is CVTerm.StringOf && value2 is CVTerm.StringOf -> value1.value == value2.value
-            value1 is CVTerm.ByteArrayOf && value2 is CVTerm.ByteArrayOf ->
-                value1.elements.size == value2.elements.size &&
-                        !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is CVTerm.IntArrayOf && value2 is CVTerm.IntArrayOf ->
-                value1.elements.size == value2.elements.size &&
-                        !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is CVTerm.LongArrayOf && value2 is CVTerm.LongArrayOf ->
-                value1.elements.size == value2.elements.size &&
-                        !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is CVTerm.ListOf && value2 is CVTerm.ListOf ->
-                value1.elements.size == value2.elements.size &&
-                        !(value1.elements zip value2.elements).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is CVTerm.CompoundOf && value2 is CVTerm.CompoundOf ->
-                value1.elements.size == value2.elements.size &&
-                        !(value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
+            term2 is CVTerm.Meta -> !unifyTerms(term2, term1)
+            term1 is CVTerm.Var && term2 is CVTerm.Var -> term1.level == term2.level
+            term1 is CVTerm.Def && term2 is CVTerm.Def && term1.name == term2.name -> true
+            term1 is CVTerm.Match && term2 is CVTerm.Match -> false // TODO
+            term1 is CVTerm.UnitOf && term2 is CVTerm.UnitOf -> true
+            term1 is CVTerm.BoolOf && term2 is CVTerm.BoolOf -> term1.value == term2.value
+            term1 is CVTerm.ByteOf && term2 is CVTerm.ByteOf -> term1.value == term2.value
+            term1 is CVTerm.ShortOf && term2 is CVTerm.ShortOf -> term1.value == term2.value
+            term1 is CVTerm.IntOf && term2 is CVTerm.IntOf -> term1.value == term2.value
+            term1 is CVTerm.LongOf && term2 is CVTerm.LongOf -> term1.value == term2.value
+            term1 is CVTerm.FloatOf && term2 is CVTerm.FloatOf -> term1.value == term2.value
+            term1 is CVTerm.DoubleOf && term2 is CVTerm.DoubleOf -> term1.value == term2.value
+            term1 is CVTerm.StringOf && term2 is CVTerm.StringOf -> term1.value == term2.value
+            term1 is CVTerm.ByteArrayOf && term2 is CVTerm.ByteArrayOf ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements zip term2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            term1 is CVTerm.IntArrayOf && term2 is CVTerm.IntArrayOf ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements zip term2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            term1 is CVTerm.LongArrayOf && term2 is CVTerm.LongArrayOf ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements zip term2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            term1 is CVTerm.ListOf && term2 is CVTerm.ListOf ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements zip term2.elements).allM { unifyTerms(it.first.value, it.second.value) }
+            term1 is CVTerm.CompoundOf && term2 is CVTerm.CompoundOf ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements.entries zip term2.elements.entries).allM { (entry1, entry2) ->
                             {
                                 entry1.key.text == entry2.key.text &&
                                         !unifyTerms(entry1.value.value, entry2.value.value)
                             }
                         }
-            value1 is CVTerm.BoxOf && value2 is CVTerm.BoxOf ->
-                !unifyTerms(value1.content.value, value2.content.value) &&
-                        !unifyTerms(value1.tag.value, value2.tag.value)
-            value1 is CVTerm.RefOf && value2 is CVTerm.RefOf -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is CVTerm.Refl && value2 is CVTerm.Refl -> true
-            value1 is CVTerm.FunOf && value2 is CVTerm.FunOf ->
-                value1.params.size == value2.params.size && run {
-                    !value1.params.forEachM { param ->
+            term1 is CVTerm.BoxOf && term2 is CVTerm.BoxOf ->
+                !unifyTerms(term1.content.value, term2.content.value) &&
+                        !unifyTerms(term1.tag.value, term2.tag.value)
+            term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !unifyTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Refl && term2 is CVTerm.Refl -> true
+            term1 is CVTerm.FunOf && term2 is CVTerm.FunOf ->
+                term1.params.size == term2.params.size && run {
+                    !term1.params.forEachM { param ->
                         modify { bind(lazyOf(CVTerm.Var(param.text, size))) }
                     }
-                    !unifyTerms(!evalTerm(value1.body), !evalTerm(value2.body))
+                    !unifyTerms(!evalTerm(term1.body), !evalTerm(term2.body))
                 }
-            value1 is CVTerm.Apply && value2 is CVTerm.Apply ->
-                !unifyTerms(value1.function, value2.function) &&
-                        !(value1.arguments zip value2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
-            value1 is CVTerm.CodeOf && value2 is CVTerm.CodeOf -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is CVTerm.Splice && value2 is CVTerm.Splice -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is CVTerm.Or && value1.variants.isEmpty() && value2 is CVTerm.Or && value2.variants.isEmpty() -> true
-            value1 is CVTerm.And && value1.variants.isEmpty() && value2 is CVTerm.And && value2.variants.isEmpty() -> true
-            value1 is CVTerm.Unit && value2 is CVTerm.Unit -> true
-            value1 is CVTerm.Bool && value2 is CVTerm.Bool -> true
-            value1 is CVTerm.Byte && value2 is CVTerm.Byte -> true
-            value1 is CVTerm.Short && value2 is CVTerm.Short -> true
-            value1 is CVTerm.Int && value2 is CVTerm.Int -> true
-            value1 is CVTerm.Long && value2 is CVTerm.Long -> true
-            value1 is CVTerm.Float && value2 is CVTerm.Float -> true
-            value1 is CVTerm.Double && value2 is CVTerm.Double -> true
-            value1 is CVTerm.String && value2 is CVTerm.String -> true
-            value1 is CVTerm.ByteArray && value2 is CVTerm.ByteArray -> true
-            value1 is CVTerm.IntArray && value2 is CVTerm.IntArray -> true
-            value1 is CVTerm.LongArray && value2 is CVTerm.LongArray -> true
-            value1 is CVTerm.List && value2 is CVTerm.List ->
-                !unifyTerms(value1.element.value, value2.element.value) &&
-                        !unifyTerms(value1.size.value, value2.size.value)
-            value1 is CVTerm.Compound && value2 is CVTerm.Compound ->
-                value1.elements.size == value2.elements.size &&
-                        !(value1.elements.entries zip value2.elements.entries).allM { (entry1, entry2) ->
+            term1 is CVTerm.Apply && term2 is CVTerm.Apply ->
+                !unifyTerms(term1.function, term2.function) &&
+                        !(term1.arguments zip term2.arguments).allM { unifyTerms(it.first.value, it.second.value) }
+            term1 is CVTerm.CodeOf && term2 is CVTerm.CodeOf -> !unifyTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Splice && term2 is CVTerm.Splice -> !unifyTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Or && term1.variants.isEmpty() && term2 is CVTerm.Or && term2.variants.isEmpty() -> true
+            term1 is CVTerm.And && term1.variants.isEmpty() && term2 is CVTerm.And && term2.variants.isEmpty() -> true
+            term1 is CVTerm.Unit && term2 is CVTerm.Unit -> true
+            term1 is CVTerm.Bool && term2 is CVTerm.Bool -> true
+            term1 is CVTerm.Byte && term2 is CVTerm.Byte -> true
+            term1 is CVTerm.Short && term2 is CVTerm.Short -> true
+            term1 is CVTerm.Int && term2 is CVTerm.Int -> true
+            term1 is CVTerm.Long && term2 is CVTerm.Long -> true
+            term1 is CVTerm.Float && term2 is CVTerm.Float -> true
+            term1 is CVTerm.Double && term2 is CVTerm.Double -> true
+            term1 is CVTerm.String && term2 is CVTerm.String -> true
+            term1 is CVTerm.ByteArray && term2 is CVTerm.ByteArray -> true
+            term1 is CVTerm.IntArray && term2 is CVTerm.IntArray -> true
+            term1 is CVTerm.LongArray && term2 is CVTerm.LongArray -> true
+            term1 is CVTerm.List && term2 is CVTerm.List ->
+                !unifyTerms(term1.element.value, term2.element.value) &&
+                        !unifyTerms(term1.size.value, term2.size.value)
+            term1 is CVTerm.Compound && term2 is CVTerm.Compound ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements.entries zip term2.elements.entries).allM { (entry1, entry2) ->
                             {
                                 !modify { bind(lazyOf(CVTerm.Var(entry1.key.text, size))) }
                                 entry1.key.text == entry2.key.text &&
@@ -733,23 +733,23 @@ class Elab private constructor(
                                         !unifyTerms(!evalTerm(entry1.value.type), !evalTerm(entry2.value.type))
                             }
                         }
-            value1 is CVTerm.Box && value2 is CVTerm.Box -> !unifyTerms(value1.content.value, value2.content.value)
-            value1 is CVTerm.Ref && value2 is CVTerm.Ref -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is CVTerm.Eq && value2 is CVTerm.Eq ->
-                !unifyTerms(value1.left.value, value2.left.value) &&
-                        !unifyTerms(value1.right.value, value2.right.value)
-            value1 is CVTerm.Fun && value2 is CVTerm.Fun ->
-                value1.params.size == value2.params.size &&
-                        value1.effs == value2.effs &&
-                        !(value1.params zip value2.params).allM { (param1, param2) ->
+            term1 is CVTerm.Box && term2 is CVTerm.Box -> !unifyTerms(term1.content.value, term2.content.value)
+            term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !unifyTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Eq && term2 is CVTerm.Eq ->
+                !unifyTerms(term1.left.value, term2.left.value) &&
+                        !unifyTerms(term1.right.value, term2.right.value)
+            term1 is CVTerm.Fun && term2 is CVTerm.Fun ->
+                term1.params.size == term2.params.size &&
+                        term1.effs == term2.effs &&
+                        !(term1.params zip term2.params).allM { (param1, param2) ->
                             {
                                 !modify { bind(lazyOf(CVTerm.Var("", size))) }
                                 !(unifyTerms(!evalTerm(param2.type), !evalTerm(param1.type)))
                             }
                         } &&
-                        !unifyTerms(!evalTerm(value1.resultant), !evalTerm(value2.resultant))
-            value1 is CVTerm.Code && value2 is CVTerm.Code -> !unifyTerms(value1.element.value, value2.element.value)
-            value1 is CVTerm.Type && value2 is CVTerm.Type -> true
+                        !unifyTerms(!evalTerm(term1.resultant), !evalTerm(term2.resultant))
+            term1 is CVTerm.Code && term2 is CVTerm.Code -> !unifyTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Type && term2 is CVTerm.Type -> true
             else -> false
         }
     }
