@@ -2,7 +2,7 @@ def match_eval [] : (
   true
   =
   match true [
-    false ⇒ true,
-    a     ⇒ a,
+    false ⇒ true
+    a     ⇒ a
   ]
 ) ≔ refl

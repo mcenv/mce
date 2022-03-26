@@ -1,3 +1,3 @@
 def phase_mismatch_local [] : bool ≔
-  let b ≔ (#0-0-0-0-0 `false),
+  let b ≔ (#0-0-0-0-0 `false)
   false

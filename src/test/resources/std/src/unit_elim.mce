@@ -1,4 +1,4 @@
 def unit_elim [] : int ≔
   match ⋆ [
-    ⋆ ⇒ 0,
+    ⋆ ⇒ 0
   ]

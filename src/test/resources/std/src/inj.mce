@@ -1,4 +1,4 @@
 def inj [a : bool, b : bool, p : ([a] = [b])] : (a = b) ≔
   match p [
-    refl ⇒ refl,
+    refl ⇒ refl
   ]

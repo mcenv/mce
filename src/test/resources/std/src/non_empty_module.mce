@@ -1,7 +1,7 @@
 mod non_empty_module : sig {
-  def a [] : int,
-  def b [] : int,
+  def a [] : int
+  def b [] : int
 } ≔ {
-  def a [] : int ≔ 0,
-  def b [] : int ≔ 1,
+  def a [] : int ≔ 0
+  def b [] : int ≔ 1
 }

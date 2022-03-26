@@ -1,5 +1,5 @@
 import {signature}
 
 mod structure : signature ≔ {
-  def a [] : int ≔ 0,
+  def a [] : int ≔ 0
 }

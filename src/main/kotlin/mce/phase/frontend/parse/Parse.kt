@@ -239,7 +239,11 @@ class Parse private constructor(
                 val name = readWord()
                 expectString("≔")
                 val init = parseTerm()
-                expect(',')
+                skipSpace()
+                when (val delimiter = peek()) {
+                    ',', '\n' -> skip()
+                    else -> error("',' or '\\n' expected but '$delimiter' found")
+                }
                 val body = parseTerm()
                 Term.Let(name, init, body, id)
             }
@@ -439,7 +443,11 @@ class Parse private constructor(
         expect(begin)
         while (peekChar() != end) {
             it += parseA()
-            if (peekChar() == ',') skip() else break
+            skipSpace()
+            when (peek()) {
+                ',', '\n' -> skip()
+                else -> break
+            }
         }
         expect(end)
     }
@@ -450,6 +458,10 @@ class Parse private constructor(
 
     private fun skip(size: Int = 1) {
         cursor += size
+    }
+
+    private fun skipSpace() {
+        while (canRead() && Character.isSpaceChar(peek())) skip()
     }
 
     private fun skipWhitespace() {

@@ -1,3 +1,3 @@
 {static} def stage_mismatch [] : code bool ≔
-  let b ≔ false,
+  let b ≔ false
   `(#0-0-0-0-0 b)

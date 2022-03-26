@@ -1,5 +1,5 @@
 def box_inst [0 α : type, a : box α] : int ≔
   match a [
-    (a ∈ int) ⇒ a,
-    a         ⇒ -1,
+    (a ∈ int) ⇒ a
+    a         ⇒ -1
   ]

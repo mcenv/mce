@@ -1,5 +1,5 @@
 def match_boolean [] : bool ≔
   match false [
-    false ⇒ true,
-    true  ⇒ false,
+    false ⇒ true
+    true  ⇒ false
   ]

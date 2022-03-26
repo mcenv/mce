@@ -1,4 +1,4 @@
 def match_variable [] : bool ≔
   match false [
-    b ⇒ b,
+    b ⇒ b
   ]

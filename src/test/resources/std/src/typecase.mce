@@ -1,6 +1,6 @@
 def typecase [α : type] : string ≔
   match α [
-    bool ⇒ "bool",
-    byte ⇒ "byte",
-    else ⇒ "else",
+    bool ⇒ "bool"
+    byte ⇒ "byte"
+    else ⇒ "else"
   ]

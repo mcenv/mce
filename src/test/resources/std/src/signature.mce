@@ -1,5 +1,5 @@
 export {structure}
 
 mod signature : type ≔ sig {
-  def a [] : int,
+  def a [] : int
 }
