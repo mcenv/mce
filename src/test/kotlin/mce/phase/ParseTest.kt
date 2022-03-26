@@ -10,7 +10,7 @@ class ParseTest {
     private fun parse(name: String): Item = fetch(Key.SurfaceItem(name))
 
     @Test
-    fun infixNonAssociative() {
+    fun infix_non_associative() {
         assertFails {
             parse("infix_non_associative")
         }

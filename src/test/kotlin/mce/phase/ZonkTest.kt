@@ -19,7 +19,7 @@ class ZonkTest {
     }
 
     @Test
-    fun unsolvedMeta() {
+    fun unsolved_meta() {
         val result = zonk("unsolved_meta")
         assert(result.diagnostics.contains(Diagnostic.UnsolvedMeta(Id(UUID(0, 0)))))
     }
