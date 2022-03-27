@@ -137,5 +137,9 @@ data class ResourceLocation(
     val namespace: KString,
     val path: KString,
 ) {
-    constructor(path: KString) : this("minecraft", path)
+    constructor(path: KString) : this(DEFAULT, path)
+
+    companion object {
+        const val DEFAULT = "minecraft"
+    }
 }

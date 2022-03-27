@@ -449,8 +449,10 @@ class Gen(
     }
 
     private fun genResourceLocation(location: ResourceLocation) {
-        generator.write(location.namespace)
-        generator.write(':')
+        if (location.namespace != ResourceLocation.DEFAULT) {
+            generator.write(location.namespace)
+            generator.write(':')
+        }
         generator.write(location.path)
     }
 
