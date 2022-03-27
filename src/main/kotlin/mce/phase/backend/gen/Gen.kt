@@ -259,7 +259,7 @@ class Gen(
         genNbtNode(path.nodes.first())
         path.nodes.drop(1).forEach {
             when (it) {
-                is NbtNode.MatchElement, is NbtNode.AllElements -> Unit
+                is NbtNode.MatchElement, is NbtNode.AllElements, is NbtNode.IndexedElement -> Unit
                 else -> generator.write('.')
             }
             genNbtNode(it)
