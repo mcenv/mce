@@ -27,7 +27,10 @@ class Pack private constructor() {
             // TODO: use 4-ary search
             terms.forEach { (tag, term) ->
                 val name = ResourceLocation("$tag")
-                +Context(name).apply { packTerm(term) }
+                +Context(name).apply {
+                    packTerm(term)
+                    +SetScore(R0, REG, -1)
+                }
                 +Execute(E.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
             }
         }
