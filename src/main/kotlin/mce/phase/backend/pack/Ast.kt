@@ -99,9 +99,11 @@ enum class NbtType {
     LONG_ARRAY,
 }
 
-data class Objective(val name: KString)
+@JvmInline
+value class Objective(val name: KString)
 
-data class ScoreHolder(val name: KString)
+@JvmInline
+value class ScoreHolder(val name: KString)
 
 enum class Operation {
     ASSIGN,
