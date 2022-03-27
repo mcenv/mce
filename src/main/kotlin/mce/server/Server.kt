@@ -41,13 +41,13 @@ class Server {
                 is Key.StageResult -> Stage(fetch(Key.ZonkResult(key.name))) as V
                 is Key.DefunResult -> Defun(fetch(Key.StageResult(key.name))) as V
                 is Key.PackResult -> Pack(fetch(Key.DefunResult(key.name))) as V
-                is Key.Gen -> {
+                is Key.GenResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
                     val functions = (surfaceItem.imports + key.name)
                         .map { async { fetch(Key.PackResult(it)).functions } }
                         .awaitAll()
                         .flatten()
-                    ZipGenerator(key.name).use { Gen(functions)(it) } as V
+                    Gen(functions) as V
                 }
             }.also {
                 setValue(key, it)

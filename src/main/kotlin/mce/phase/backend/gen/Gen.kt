@@ -460,8 +460,12 @@ class Gen(
         generator.write('"')
     }
 
+    data class Result(
+        val generate: (Generator) -> Unit,
+    )
+
     companion object {
-        operator fun invoke(functions: List<PFunction>): (Generator) -> Unit = { generator ->
+        operator fun invoke(functions: List<PFunction>): Result = Result { generator ->
             val gen = Gen(generator)
             functions.forEach { gen.genFunction(it) }
         }

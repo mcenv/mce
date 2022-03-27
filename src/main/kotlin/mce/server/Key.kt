@@ -1,6 +1,7 @@
 package mce.server
 
 import mce.phase.backend.defun.Defun
+import mce.phase.backend.gen.Gen
 import mce.phase.backend.pack.Pack
 import mce.phase.backend.stage.Stage
 import mce.phase.frontend.elab.Elab
@@ -17,5 +18,5 @@ sealed class Key<V> {
     data class StageResult(override val name: String) : Key<Stage.Result>()
     data class DefunResult(override val name: String) : Key<Defun.Result>()
     data class PackResult(override val name: String) : Key<Pack.Result>()
-    data class Gen(override val name: String) : Key<Unit>()
+    data class GenResult(override val name: String) : Key<Gen.Result>()
 }
