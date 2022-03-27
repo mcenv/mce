@@ -5,7 +5,6 @@ import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.elab.VTerm
 import mce.phase.frontend.zonk.Zonk
 import mce.server.Key
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertIs
 
@@ -21,6 +20,6 @@ class ZonkTest {
     @Test
     fun unsolved_meta() {
         val result = zonk("unsolved_meta")
-        assert(result.diagnostics.contains(Diagnostic.UnsolvedMeta(Id(UUID(0, 0)))))
+        assert(result.diagnostics.contains(Diagnostic.UnsolvedMeta(Id(0, 0))))
     }
 }

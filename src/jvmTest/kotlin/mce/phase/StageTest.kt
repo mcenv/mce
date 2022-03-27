@@ -6,7 +6,6 @@ import mce.phase.frontend.elab.Item
 import mce.phase.frontend.elab.Term
 import mce.server.Key
 import org.junit.jupiter.api.Test
-import java.util.*
 import kotlin.test.assertEquals
 
 class StageTest {
@@ -16,6 +15,6 @@ class StageTest {
     fun reduce() {
         val result = stage("code_elim")
         val def = result.item as Item.Def
-        assertEquals(Term.BoolOf(false, Id(UUID(0, 0))), def.body)
+        assertEquals(Term.BoolOf(false, Id(0, 0)), def.body)
     }
 }
