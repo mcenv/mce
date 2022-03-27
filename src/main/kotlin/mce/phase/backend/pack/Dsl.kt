@@ -5,6 +5,8 @@ package mce.phase.backend.pack
 import mce.phase.backend.pack.Command.RemoveData
 import mce.phase.backend.pack.NbtNode.*
 
+// TODO: optimize
+
 inline operator fun NbtPath.get(pattern: Nbt.Compound): NbtPath = NbtPath(nodes + MatchElement(pattern))
 
 inline operator fun NbtPath.invoke(): NbtPath = NbtPath(nodes + AllElements)

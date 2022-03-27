@@ -9,20 +9,32 @@ val nbtPath: NbtPath = NbtPath()
 @Suppress("KDocUnresolvedReference")
 val MAIN = ResourceLocation("0")
 
-val BYTE = nbtPath["a"]
-val SHORT = nbtPath["b"]
-val INT = nbtPath["c"]
-val LONG = nbtPath["d"]
-val FLOAT = nbtPath["e"]
-val DOUBLE = nbtPath["f"]
-val BYTE_ARRAY = nbtPath["g"]
-val STRING = nbtPath["h"]
-val LIST = nbtPath["i"]
-val COMPOUND = nbtPath["j"]
-val INT_ARRAY = nbtPath["k"]
-val LONG_ARRAY = nbtPath["l"]
-
+const val BYTE_KEY = "a"
+const val SHORT_KEY = "b"
+const val INT_KEY = "c"
+const val LONG_KEY = "d"
+const val FLOAT_KEY = "e"
+const val DOUBLE_KEY = "f"
+const val BYTE_ARRAY_KEY = "g"
+const val STRING_KEY = "h"
+const val LIST_KEY = "i"
+const val COMPOUND_KEY = "j"
+const val INT_ARRAY_KEY = "k"
+const val LONG_ARRAY_KEY = "l"
 const val SCRUTINEE_KEY = "m"
+
+val BYTE = nbtPath[BYTE_KEY]
+val SHORT = nbtPath[SHORT_KEY]
+val INT = nbtPath[INT_KEY]
+val LONG = nbtPath[LONG_KEY]
+val FLOAT = nbtPath[FLOAT_KEY]
+val DOUBLE = nbtPath[DOUBLE_KEY]
+val BYTE_ARRAY = nbtPath[BYTE_ARRAY_KEY]
+val STRING = nbtPath[STRING_KEY]
+val LIST = nbtPath[LIST_KEY]
+val COMPOUND = nbtPath[COMPOUND_KEY]
+val INT_ARRAY = nbtPath[INT_ARRAY_KEY]
+val LONG_ARRAY = nbtPath[LONG_ARRAY_KEY]
 val SCRUTINEE = nbtPath[SCRUTINEE_KEY]
 
 /**

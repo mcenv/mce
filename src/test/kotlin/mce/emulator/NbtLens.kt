@@ -7,20 +7,24 @@ import mce.phase.backend.pack.NbtPath
 object NbtLens {
     fun NbtPath.get(target: MutableNbt): List<MutableNbt> =
         nodes.fold(mutableListOf(target)) { context, node ->
-            context.onEach {
-                it.get(node, context)
-                if (context.isEmpty()) {
-                    throw Exception()
+            mutableListOf<MutableNbt>().also { nbts ->
+                context.forEach {
+                    it.get(node, nbts)
+                    if (nbts.isEmpty()) {
+                        throw Exception()
+                    }
                 }
             }
         }
 
     fun NbtPath.countMatching(target: MutableNbt): Int =
         nodes.fold(mutableListOf(target)) { context, node ->
-            context.onEach {
-                it.get(node, context)
-                if (context.isEmpty()) {
-                    return 0
+            mutableListOf<MutableNbt>().also { nbts ->
+                context.forEach {
+                    it.get(node, nbts)
+                    if (nbts.isEmpty()) {
+                        return 0
+                    }
                 }
             }
         }.size
@@ -45,7 +49,7 @@ object NbtLens {
 
     fun NbtPath.remove(target: MutableNbt): Int =
         nodes.dropLast(1).fold(mutableListOf(target)) { context, node ->
-            context.onEach { it.get(node, context) }
+            mutableListOf<MutableNbt>().also { nbts -> context.forEach { it.get(node, nbts) } }
         }.sumOf { it.remove(nodes.last()) }
 
     private fun MutableNbt.get(node: NbtNode, context: MutableList<MutableNbt>) {

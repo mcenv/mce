@@ -29,7 +29,7 @@ class Pack private constructor() {
                 val name = ResourceLocation("$tag")
                 +Context(name).apply {
                     packTerm(term)
-                    +SetScore(R0, REG, -1)
+                    +SetScore(R0, REG, tag)
                 }
                 +Execute(E.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
             }
@@ -65,10 +65,7 @@ class Pack private constructor() {
                 packTerm(term.body)
                 pop(type)
             }
-            is Term.Match -> {
-                packTerm(term.scrutinee)
-                +RunFunction(packMatch(term.clauses))
-            }
+            is Term.Match -> packMatch(term)
             is Term.UnitOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
             is Term.BoolOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(if (term.value) 1 else 0)))
             is Term.ByteOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(term.value)))
@@ -198,153 +195,188 @@ class Pack private constructor() {
         }
     }
 
-    // TODO: nested patterns
-    private fun Context.packPat(pat: Pat) {
-        val scrutinee = eraseType(pat.type).toPath()[-1]
+    private fun Context.packPat(pat: Pat, path: NbtPath, vars: MutableList<Pair<NbtType, NbtPath>>) {
         when (pat) {
-            is Pat.Var -> TODO()
-            is Pat.UnitOf -> +SetScore(R0, REG, 1)
+            is Pat.Var -> {
+                val type = eraseType(pat.type)
+                bind(type, pat.name)
+                vars += type to path
+            }
+            is Pat.UnitOf -> Unit
             is Pat.BoolOf -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(if (pat.value) 1 else 0), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(true, R1, REG, EqConst(if (pat.value) 0 else 1), Run(SetScore(R0, REG, 0))))
             }
             is Pat.ByteOf -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(pat.value.toInt()), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(pat.value.toInt()), Run(SetScore(R0, REG, 0))))
             }
             is Pat.ShortOf -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(pat.value.toInt()), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(pat.value.toInt()), Run(SetScore(R0, REG, 0))))
             }
             is Pat.IntOf -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(pat.value), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(pat.value), Run(SetScore(R0, REG, 0))))
             }
             is Pat.LongOf -> { // TODO: benchmark other methods
-                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Long(pat.value)))))), Run(SetScore(R0, REG, 1))))
+                +SetData(MAIN, SCRUTINEE, From(MAIN, path))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Long(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.FloatOf -> {
-                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Float(pat.value)))))), Run(SetScore(R0, REG, 1))))
+                +SetData(MAIN, SCRUTINEE, From(MAIN, path))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Float(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.DoubleOf -> {
-                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Double(pat.value)))))), Run(SetScore(R0, REG, 1))))
+                +SetData(MAIN, SCRUTINEE, From(MAIN, path))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Double(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.StringOf -> {
-                +SetData(MAIN, SCRUTINEE, From(MAIN, scrutinee))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckMatchingData(true, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.String(pat.value)))))), Run(SetScore(R0, REG, 1))))
+                +SetData(MAIN, SCRUTINEE, From(MAIN, path))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.String(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
-            is Pat.ByteArrayOf -> TODO()
-            is Pat.IntArrayOf -> TODO()
-            is Pat.LongArrayOf -> TODO()
-            is Pat.ListOf -> TODO()
-            is Pat.CompoundOf -> TODO()
-            is Pat.BoxOf -> TODO()
-            is Pat.RefOf -> +SetScore(R0, REG, 1)
+            is Pat.ByteArrayOf -> {
+                +Execute(E.CheckMatchingData(false, MAIN, path[pat.elements.lastIndex], Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(true, MAIN, path[pat.elements.size], Run(SetScore(R0, REG, 0))))
+                pat.elements.forEachIndexed { index, element ->
+                    packPat(element, path[index], vars)
+                }
+            }
+            is Pat.IntArrayOf -> {
+                +Execute(E.CheckMatchingData(false, MAIN, path[pat.elements.lastIndex], Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(true, MAIN, path[pat.elements.size], Run(SetScore(R0, REG, 0))))
+                pat.elements.forEachIndexed { index, element ->
+                    packPat(element, path[index], vars)
+                }
+            }
+            is Pat.LongArrayOf -> {
+                +Execute(E.CheckMatchingData(false, MAIN, path[pat.elements.lastIndex], Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(true, MAIN, path[pat.elements.size], Run(SetScore(R0, REG, 0))))
+                pat.elements.forEachIndexed { index, element ->
+                    packPat(element, path[index], vars)
+                }
+            }
+            is Pat.ListOf -> {
+                +Execute(E.CheckMatchingData(false, MAIN, path[pat.elements.lastIndex], Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(true, MAIN, path[pat.elements.size], Run(SetScore(R0, REG, 0))))
+                pat.elements.forEachIndexed { index, element ->
+                    packPat(element, path[index], vars)
+                }
+            }
+            is Pat.CompoundOf -> {
+                pat.elements.forEach { (key, element) ->
+                    packPat(element, path[key.text], vars)
+                }
+            }
+            is Pat.BoxOf -> {
+                packPat(pat.content, path["0"], vars)
+                packPat(pat.tag, path["1"], vars)
+            }
+            is Pat.RefOf -> Unit
             is Pat.Refl -> TODO()
             is Pat.Or -> TODO()
             is Pat.And -> TODO()
             is Pat.Unit -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(20), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(20), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Bool -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(21), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(21), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Byte -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(22), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(22), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Short -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(23), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(23), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Int -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(24), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(24), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Long -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(25), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(25), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Float -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(26), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(26), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Double -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(27), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(27), Run(SetScore(R0, REG, 0))))
             }
             is Pat.String -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(28), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(28), Run(SetScore(R0, REG, 0))))
             }
             is Pat.ByteArray -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(29), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(29), Run(SetScore(R0, REG, 0))))
             }
             is Pat.IntArray -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(30), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(30), Run(SetScore(R0, REG, 0))))
             }
             is Pat.LongArray -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(31), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(31), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Box -> TODO()
             is Pat.Ref -> TODO()
             is Pat.Eq -> TODO()
             is Pat.Type -> {
-                +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, scrutinee))))
-                +SetScore(R0, REG, 0)
-                +Execute(E.CheckScore(true, R0, REG, EqConst(35), Run(SetScore(R0, REG, 1))))
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(35), Run(SetScore(R0, REG, 0))))
             }
         }
     }
 
-    private fun Context.packMatch(clauses: List<Pair<Pat, Term>>): ResourceLocation {
-        clauses.windowed(2, partialWindows = true).forEachIndexed { index, clauses ->
-            val (pat, term) = clauses[0]
-            +withName(ResourceLocation("${name.path}-$index")).apply {
-                if (clauses.size == 2) {
-                    packPat(pat)
+    private fun Context.packMatch(match: Term.Match) {
+        val matchType = eraseType(match.type)
+        val scrutineeType = eraseType(match.scrutinee.type)
+        val scrutineeTypePath = scrutineeType.toPath()
 
-                    val arm = name.copy(path = "${name.path}-0")
-                    +withName(arm).apply {
-                        packTerm(term)
-                        +SetScore(R0, REG, 1) // TODO: avoid register restoration when possible
+        packTerm(match.scrutinee)
+
+        match.clauses.forEachIndexed { index, (pat, term) ->
+            +withName(ResourceLocation("${name.path}-$index")).apply {
+                +SetScore(R0, REG, 1)
+                val vars = mutableListOf<Pair<NbtType, NbtPath>>()
+                packPat(pat, scrutineeTypePath[-1], vars)
+
+                val arm = name.copy(path = "${name.path}-0")
+                +withName(arm).apply {
+                    // bind variables
+                    vars.forEach { (type, path) ->
+                        +Append(MAIN, type.toPath(), From(MAIN, path))
                     }
-                    +Execute(E.CheckScore(true, R0, REG, GeConst(1), Run(RunFunction(arm))))
-                    +Execute(E.CheckScore(true, R0, REG, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
-                } else {
+
+                    // drop scrutinee
+                    val scrutineeIndex = -1 - vars.count { (type, _) -> type == scrutineeType }
+                    +RemoveData(MAIN, scrutineeTypePath[scrutineeIndex])
+
+                    // execute body
                     packTerm(term)
+
+                    // drop variables
+                    vars.forEach { (type, _) ->
+                        +RemoveData(MAIN, type.toPath()[if (matchType == type) -2 else -1])
+                    }
+
+                    // restore branching register
+                    +SetScore(R0, REG, 1) // TODO: avoid register restoration when possible
                 }
+
+                // TODO: optimize the last clause
+                +Execute(E.CheckScore(true, R0, REG, GeConst(1), Run(RunFunction(arm))))
+                +Execute(E.CheckScore(true, R0, REG, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
             }
         }
-        return ResourceLocation("${name.path}-0")
+
+        +RunFunction(ResourceLocation("${name.path}-0"))
     }
 
     private operator fun Context.unaryPlus() {
@@ -383,75 +415,75 @@ class Pack private constructor() {
     )
 
     companion object {
-        private fun eraseType(type: Type): NbtType = when (type) {
-            is Type.Hole -> throw Error()
-            is Type.Meta -> throw Error()
-            is Type.Var -> TODO()
-            is Type.Def -> TODO()
-            is Type.Match -> TODO()
-            is Type.UnitOf -> throw Error()
-            is Type.BoolOf -> throw Error()
-            is Type.ByteOf -> throw Error()
-            is Type.ShortOf -> throw Error()
-            is Type.IntOf -> throw Error()
-            is Type.LongOf -> throw Error()
-            is Type.FloatOf -> throw Error()
-            is Type.DoubleOf -> throw Error()
-            is Type.StringOf -> throw Error()
-            is Type.ByteArrayOf -> throw Error()
-            is Type.IntArrayOf -> throw Error()
-            is Type.LongArrayOf -> throw Error()
-            is Type.ListOf -> throw Error()
-            is Type.CompoundOf -> throw Error()
-            is Type.BoxOf -> throw Error()
-            is Type.RefOf -> throw Error()
-            is Type.Refl -> throw Error()
-            is Type.FunOf -> throw Error()
-            is Type.Apply -> TODO()
-            is Type.CodeOf -> throw Error()
-            is Type.Splice -> throw Error()
-            is Type.Or -> TODO()
-            is Type.And -> TODO()
-            is Type.Unit -> NbtType.BYTE
-            is Type.Bool -> NbtType.BYTE
-            is Type.Byte -> NbtType.BYTE
-            is Type.Short -> NbtType.SHORT
-            is Type.Int -> NbtType.INT
-            is Type.Long -> NbtType.LONG
-            is Type.Float -> NbtType.FLOAT
-            is Type.Double -> NbtType.DOUBLE
-            is Type.String -> NbtType.STRING
-            is Type.ByteArray -> NbtType.BYTE_ARRAY
-            is Type.IntArray -> NbtType.INT_ARRAY
-            is Type.LongArray -> NbtType.LONG_ARRAY
-            is Type.List -> NbtType.LIST
-            is Type.Compound -> NbtType.COMPOUND
-            is Type.Box -> NbtType.COMPOUND
-            is Type.Ref -> NbtType.INT
-            is Type.Eq -> NbtType.BYTE
-            is Type.Fun -> NbtType.BYTE
-            is Type.Code -> throw Error()
-            is Type.Type -> NbtType.BYTE
-        }
-
-        private fun NbtType.toPath(): NbtPath = when (this) {
-            NbtType.BYTE -> BYTE
-            NbtType.SHORT -> SHORT
-            NbtType.INT -> INT
-            NbtType.LONG -> LONG
-            NbtType.FLOAT -> FLOAT
-            NbtType.DOUBLE -> DOUBLE
-            NbtType.BYTE_ARRAY -> BYTE_ARRAY
-            NbtType.STRING -> STRING
-            NbtType.LIST -> LIST
-            NbtType.COMPOUND -> COMPOUND
-            NbtType.INT_ARRAY -> INT_ARRAY
-            NbtType.LONG_ARRAY -> LONG_ARRAY
-        }
-
         operator fun invoke(input: Defun.Result): Result = Pack().run {
             pack(input.functions, input.item)
             Result(functions)
         }
     }
+}
+
+private fun eraseType(type: Type): NbtType = when (type) {
+    is Type.Hole -> throw Error()
+    is Type.Meta -> throw Error()
+    is Type.Var -> TODO()
+    is Type.Def -> TODO()
+    is Type.Match -> TODO()
+    is Type.UnitOf -> throw Error()
+    is Type.BoolOf -> throw Error()
+    is Type.ByteOf -> throw Error()
+    is Type.ShortOf -> throw Error()
+    is Type.IntOf -> throw Error()
+    is Type.LongOf -> throw Error()
+    is Type.FloatOf -> throw Error()
+    is Type.DoubleOf -> throw Error()
+    is Type.StringOf -> throw Error()
+    is Type.ByteArrayOf -> throw Error()
+    is Type.IntArrayOf -> throw Error()
+    is Type.LongArrayOf -> throw Error()
+    is Type.ListOf -> throw Error()
+    is Type.CompoundOf -> throw Error()
+    is Type.BoxOf -> throw Error()
+    is Type.RefOf -> throw Error()
+    is Type.Refl -> throw Error()
+    is Type.FunOf -> throw Error()
+    is Type.Apply -> TODO()
+    is Type.CodeOf -> throw Error()
+    is Type.Splice -> throw Error()
+    is Type.Or -> TODO()
+    is Type.And -> TODO()
+    is Type.Unit -> NbtType.BYTE
+    is Type.Bool -> NbtType.BYTE
+    is Type.Byte -> NbtType.BYTE
+    is Type.Short -> NbtType.SHORT
+    is Type.Int -> NbtType.INT
+    is Type.Long -> NbtType.LONG
+    is Type.Float -> NbtType.FLOAT
+    is Type.Double -> NbtType.DOUBLE
+    is Type.String -> NbtType.STRING
+    is Type.ByteArray -> NbtType.BYTE_ARRAY
+    is Type.IntArray -> NbtType.INT_ARRAY
+    is Type.LongArray -> NbtType.LONG_ARRAY
+    is Type.List -> NbtType.LIST
+    is Type.Compound -> NbtType.COMPOUND
+    is Type.Box -> NbtType.COMPOUND
+    is Type.Ref -> NbtType.INT
+    is Type.Eq -> NbtType.BYTE
+    is Type.Fun -> NbtType.BYTE
+    is Type.Code -> throw Error()
+    is Type.Type -> NbtType.BYTE
+}
+
+private fun NbtType.toPath(): NbtPath = when (this) {
+    NbtType.BYTE -> BYTE
+    NbtType.SHORT -> SHORT
+    NbtType.INT -> INT
+    NbtType.LONG -> LONG
+    NbtType.FLOAT -> FLOAT
+    NbtType.DOUBLE -> DOUBLE
+    NbtType.BYTE_ARRAY -> BYTE_ARRAY
+    NbtType.STRING -> STRING
+    NbtType.LIST -> LIST
+    NbtType.COMPOUND -> COMPOUND
+    NbtType.INT_ARRAY -> INT_ARRAY
+    NbtType.LONG_ARRAY -> LONG_ARRAY
 }

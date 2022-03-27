@@ -21,41 +21,48 @@ class Executor(
         queue += functions[name]!!.commands
         try {
             while (queue.isNotEmpty()) {
-                runCommand(queue.removeFirst())
+                try {
+                    runCommand(queue.removeFirst())
+                } catch (_: Exception) {
+                }
             }
         } finally {
             queue.clear()
         }
     }
 
-    private fun runCommand(command: Command): Int = when (command) {
-        is Command.Execute -> runExecute(command.execute)
-        is Command.CheckScore -> if (checkScore(command.success, command.target, command.targetObjective, command.source)) 1 else throw Exception()
-        is Command.CheckMatchingData -> if (checkMatchingData(command.success, command.source, command.path)) 1 else throw Exception()
-        is Command.GetData -> getData(command.target, command.path)
-        is Command.GetNumeric -> getNumeric(command.target, command.path, command.scale)
-        is Command.RemoveData -> removeData(command.target, command.path)
-        is Command.InsertAtIndex -> insertAtIndex(command.target, command.path, command.index, command.source)
-        is Command.Prepend -> insertAtIndex(command.target, command.path, 0, command.source)
-        is Command.Append -> insertAtIndex(command.target, command.path, -1, command.source)
-        is Command.SetData -> setData(command.target, command.path, command.source)
-        is Command.MergeData -> mergeData(command.target, command.path, command.source)
-        is Command.RunFunction -> runFunction(command.name)
-        is Command.SetScore -> setScore(command.targets, command.objective, command.score)
-        is Command.GetScore -> getScore(command.target, command.objective)
-        is Command.AddScore -> addScore(command.targets, command.objective, command.score)
-        is Command.RemoveScore -> removeScore(command.targets, command.objective, command.score)
-        is Command.ResetScores -> resetScores(command.targets)
-        is Command.ResetScore -> resetScore(command.targets, command.objective)
-        is Command.PerformOperation -> performOperation(command.targets, command.targetObjective, command.operation, command.source, command.sourceObjective)
+    private fun runCommand(command: Command): Int {
+        return when (command) {
+            is Command.Execute -> runExecute(command.execute)
+            is Command.CheckScore -> if (checkScore(command.success, command.target, command.targetObjective, command.source)) 1 else throw Exception()
+            is Command.CheckMatchingData -> if (checkMatchingData(command.success, command.source, command.path)) 1 else throw Exception()
+            is Command.GetData -> getData(command.target, command.path)
+            is Command.GetNumeric -> getNumeric(command.target, command.path, command.scale)
+            is Command.RemoveData -> removeData(command.target, command.path)
+            is Command.InsertAtIndex -> insertAtIndex(command.target, command.path, command.index, command.source)
+            is Command.Prepend -> insertAtIndex(command.target, command.path, 0, command.source)
+            is Command.Append -> insertAtIndex(command.target, command.path, -1, command.source)
+            is Command.SetData -> setData(command.target, command.path, command.source)
+            is Command.MergeData -> mergeData(command.target, command.path, command.source)
+            is Command.RunFunction -> runFunction(command.name)
+            is Command.SetScore -> setScore(command.targets, command.objective, command.score)
+            is Command.GetScore -> getScore(command.target, command.objective)
+            is Command.AddScore -> addScore(command.targets, command.objective, command.score)
+            is Command.RemoveScore -> removeScore(command.targets, command.objective, command.score)
+            is Command.ResetScores -> resetScores(command.targets)
+            is Command.ResetScore -> resetScore(command.targets, command.objective)
+            is Command.PerformOperation -> performOperation(command.targets, command.targetObjective, command.operation, command.source, command.sourceObjective)
+        }
     }
 
-    private fun runExecute(execute: Execute): Int = when (execute) {
-        is Execute.Run -> runCommand(execute.command)
-        is Execute.CheckScore -> if (checkScore(execute.success, execute.target, execute.targetObjective, execute.source)) runExecute(execute.execute) else throw Exception()
-        is Execute.CheckMatchingData -> if (checkMatchingData(execute.success, execute.source, execute.path)) runExecute(execute.execute) else throw Exception()
-        is Execute.StoreValue -> storeValue(execute.consumer, execute.targets, execute.objective, execute.execute)
-        is Execute.StoreData -> storeData(execute.consumer, execute.target, execute.path, execute.type, execute.scale, execute.execute)
+    private fun runExecute(execute: Execute): Int {
+        return when (execute) {
+            is Execute.Run -> runCommand(execute.command)
+            is Execute.CheckScore -> if (checkScore(execute.success, execute.target, execute.targetObjective, execute.source)) runExecute(execute.execute) else throw Exception()
+            is Execute.CheckMatchingData -> if (checkMatchingData(execute.success, execute.source, execute.path)) runExecute(execute.execute) else throw Exception()
+            is Execute.StoreValue -> storeValue(execute.consumer, execute.targets, execute.objective, execute.execute)
+            is Execute.StoreData -> storeData(execute.consumer, execute.target, execute.path, execute.type, execute.scale, execute.execute)
+        }
     }
 
     private inline fun checkScore(target: ScoreHolder, targetObjective: Objective, source: ScoreHolder, sourceObjective: Objective, comparator: (Int, Int) -> Boolean): Boolean {
@@ -79,10 +86,10 @@ class Executor(
         return path.countMatching(storage[source]) > 0 == success
     }
 
-    private fun getResult(consumer: Consumer, command: Execute): Int {
+    private fun getResult(consumer: Consumer, execute: Execute): Int {
         val result = try {
-            runExecute(command)
-        } catch (e: Exception) {
+            runExecute(execute)
+        } catch (_: Exception) {
             0
         }
         return when (consumer) {
@@ -91,8 +98,8 @@ class Executor(
         }
     }
 
-    private fun storeValue(consumer: Consumer, targets: ScoreHolder, objective: Objective, command: Execute): Int {
-        val result = getResult(consumer, command)
+    private fun storeValue(consumer: Consumer, targets: ScoreHolder, objective: Objective, execute: Execute): Int {
+        val result = getResult(consumer, execute)
         scoreboard[targets, objective] = result
         return result
     }
