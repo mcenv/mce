@@ -47,7 +47,7 @@ class Server {
                         .map { async { fetch(Key.PackResult(it)).functions } }
                         .awaitAll()
                         .flatten()
-                    Gen(key.name, functions) as V
+                    ZipGenerator(key.name).use { Gen(functions)(it) } as V
                 }
             }.also {
                 setValue(key, it)
