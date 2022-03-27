@@ -31,7 +31,9 @@ object NbtLens {
 
     private fun NbtPath.getOrCreateParents(target: MutableNbt): List<MutableNbt> =
         nodes.windowed(2).fold(mutableListOf(target)) { context, (left, right) ->
-            context.onEach { it.getOrCreate(left, lazy { right.createPreferredParent() }, context) }
+            mutableListOf<MutableNbt>().also { nbts ->
+                context.forEach { it.getOrCreate(left, lazy { right.createPreferredParent() }, nbts) }
+            }
         }
 
     fun NbtPath.getOrCreate(target: MutableNbt, source: Lazy<MutableNbt>): List<MutableNbt> =
