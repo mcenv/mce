@@ -3,6 +3,7 @@ package mce.server
 import kotlinx.coroutines.runBlocking
 import mce.phase.Id
 import mce.phase.frontend.parse.Term
+import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -29,9 +30,9 @@ class ServerTest {
             val name = "server"
             val id = Id(0, 0)
             hover(name, id)
-            assertEquals(1, getCount(Key.ElabResult(name)))
+            assertEquals(1, build.getCount(Key.ElabResult(name)))
             hover(name, id)
-            assertEquals(1, getCount(Key.ElabResult(name)))
+            assertEquals(1, build.getCount(Key.ElabResult(name)))
         }
     }
 

@@ -2,7 +2,7 @@ package mce.phase
 
 import mce.fetch
 import mce.phase.frontend.elab.Elab
-import mce.server.Key
+import mce.server.build.Key
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State

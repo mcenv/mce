@@ -10,7 +10,7 @@ import mce.phase.backend.pack.Execute.Run
 import mce.phase.backend.pack.Execute.StoreValue
 import mce.phase.backend.pack.Function
 import mce.phase.backend.pack.SourceProvider.Value
-import mce.server.Key
+import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

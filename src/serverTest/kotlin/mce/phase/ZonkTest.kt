@@ -4,7 +4,7 @@ import mce.fetch
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.elab.VTerm
 import mce.phase.frontend.zonk.Zonk
-import mce.server.Key
+import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertIs
 

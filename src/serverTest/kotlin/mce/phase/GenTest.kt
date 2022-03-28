@@ -4,7 +4,7 @@ import mce.fetch
 import mce.phase.backend.gen.Gen
 import mce.phase.backend.gen.Generator
 import mce.phase.backend.pack.ResourceLocation
-import mce.server.Key
+import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

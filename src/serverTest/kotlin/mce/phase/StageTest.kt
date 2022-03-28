@@ -4,7 +4,7 @@ import mce.fetch
 import mce.phase.backend.stage.Stage
 import mce.phase.frontend.elab.Item
 import mce.phase.frontend.elab.Term
-import mce.server.Key
+import mce.server.build.Key
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 

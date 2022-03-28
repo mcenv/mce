@@ -1,4 +1,4 @@
-package mce.server
+package mce.server.build
 
 import mce.phase.backend.defun.Defun
 import mce.phase.backend.gen.Gen
