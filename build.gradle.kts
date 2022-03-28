@@ -15,14 +15,14 @@ repositories {
 }
 
 kotlin {
-    jvm {
+    jvm("server") {
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
         }
     }
 
-    js {
-        nodejs()
+    js("client") {
+        browser()
     }
 
     sourceSets {
@@ -42,19 +42,19 @@ kotlin {
             }
         }
 
-        val jvmMain by getting {
+        val serverMain by getting {
         }
 
-        val jvmTest by getting {
+        val serverTest by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.2")
             }
         }
 
-        val jsMain by getting {
+        val clientMain by getting {
         }
 
-        val jsTest by getting {
+        val clientTest by getting {
         }
     }
 }
@@ -69,7 +69,7 @@ allOpen {
 
 benchmark {
     targets {
-        register("jvmTest") {
+        register("serverTest") {
             if (this is JvmBenchmarkTarget) {
                 jmhVersion = "1.34"
             }
