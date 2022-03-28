@@ -1,0 +1,14 @@
+{
+  "name": "client",
+  "version": "0.1.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "mce",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^17.2.0"
+  }
+}

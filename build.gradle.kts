@@ -23,6 +23,7 @@ kotlin {
 
     js("client") {
         browser()
+        binaries.executable()
     }
 
     sourceSets {
