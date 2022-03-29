@@ -18,6 +18,7 @@ repositories {
 
 kotlin {
     jvm("server") {
+        withJava()
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
         }
@@ -66,8 +67,10 @@ kotlin {
     }
 }
 
-application {
-    mainClass.set("mce.cli.MainKt")
+tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
 
 allOpen {
@@ -84,8 +87,10 @@ benchmark {
     }
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+application {
+    mainClass.set("mce.cli.MainKt")
+}
+
+tasks.withType<Jar> {
+    archiveBaseName.set("mce-server")
 }
