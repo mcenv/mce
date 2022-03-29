@@ -1,8 +1,10 @@
 const path = require("path")
-const { app, BrowserWindow } = require("electron")
+const { app, BrowserWindow, nativeImage } = require("electron")
 
 const createWindow = () => {
     const win = new BrowserWindow({
+        title: "mce",
+        icon: nativeImage.createFromPath(path.join(__dirname, "icon.png")),
         width: 800,
         height: 600,
         webPreferences: {
