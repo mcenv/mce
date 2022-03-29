@@ -20,3 +20,7 @@ jobs:
       - uses: gradle/gradle-build-action@v2
         with:
           arguments: allTests
+      - uses: gradle/gradle-build-action@v2
+        with:
+          arguments: installDist
+      - run: ./build/install/mce/bin/mce version
