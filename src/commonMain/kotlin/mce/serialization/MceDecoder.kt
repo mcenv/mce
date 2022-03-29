@@ -8,10 +8,10 @@ import kotlinx.serialization.encoding.CompositeDecoder
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
-import java.io.DataInput
+import mce.util.ByteArrayInputStream
 
 @OptIn(ExperimentalSerializationApi::class)
-class MceDecoder(private val input: DataInput) : Decoder, CompositeDecoder {
+class MceDecoder(private val input: ByteArrayInputStream) : Decoder, CompositeDecoder {
     override val serializersModule: SerializersModule = EmptySerializersModule
 
     override fun decodeNotNullMark(): Boolean = throw NotImplementedError()
@@ -34,11 +34,7 @@ class MceDecoder(private val input: DataInput) : Decoder, CompositeDecoder {
 
     override fun decodeDouble(): Double = input.readDouble()
 
-    override fun decodeString(): String {
-        val size = input.readInt()
-        val bytes = ByteArray(size).also { input.readFully(it) }
-        return String(bytes)
-    }
+    override fun decodeString(): String = input.readString()
 
     override fun decodeEnum(enumDescriptor: SerialDescriptor): Int = input.readInt()
 

@@ -8,10 +8,10 @@ import kotlinx.serialization.encoding.CompositeEncoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
-import java.io.DataOutput
+import mce.util.ByteArrayOutputStream
 
 @OptIn(ExperimentalSerializationApi::class)
-class MceEncoder(private val output: DataOutput) : Encoder, CompositeEncoder {
+class MceEncoder(private val output: ByteArrayOutputStream) : Encoder, CompositeEncoder {
     override val serializersModule: SerializersModule = EmptySerializersModule
 
     override fun encodeNotNullMark(): Nothing = throw NotImplementedError()
@@ -20,11 +20,11 @@ class MceEncoder(private val output: DataOutput) : Encoder, CompositeEncoder {
 
     override fun encodeBoolean(value: Boolean): Unit = output.writeBoolean(value)
 
-    override fun encodeByte(value: Byte): Unit = output.writeByte(value.toInt())
+    override fun encodeByte(value: Byte): Unit = output.writeByte(value)
 
-    override fun encodeShort(value: Short): Unit = output.writeShort(value.toInt())
+    override fun encodeShort(value: Short): Unit = output.writeShort(value)
 
-    override fun encodeChar(value: Char): Unit = output.writeChar(value.code)
+    override fun encodeChar(value: Char): Unit = output.writeChar(value)
 
     override fun encodeInt(value: Int): Unit = output.writeInt(value)
 
@@ -34,11 +34,7 @@ class MceEncoder(private val output: DataOutput) : Encoder, CompositeEncoder {
 
     override fun encodeDouble(value: Double): Unit = output.writeDouble(value)
 
-    override fun encodeString(value: String) {
-        val bytes = value.encodeToByteArray()
-        output.writeInt(bytes.size)
-        output.write(bytes)
-    }
+    override fun encodeString(value: String): Unit = output.writeString(value)
 
     override fun encodeEnum(enumDescriptor: SerialDescriptor, index: Int): Unit = output.writeInt(index)
 
