@@ -91,6 +91,14 @@ application {
     mainClass.set("mce.cli.MainKt")
 }
 
-tasks.withType<Jar> {
-    archiveBaseName.set("mce-server")
+distributions {
+    main {
+        contents {
+            from("$buildDir/libs") {
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                rename("${rootProject.name}-server", rootProject.name)
+                into("lib")
+            }
+        }
+    }
 }
