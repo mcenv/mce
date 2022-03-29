@@ -1,5 +1,5 @@
 const path = require("path")
-const { app, BrowserWindow, nativeImage } = require("electron")
+const { app, BrowserWindow, nativeImage, Menu } = require("electron")
 
 const createWindow = () => {
     const win = new BrowserWindow({

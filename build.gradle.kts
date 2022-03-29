@@ -13,6 +13,7 @@ version = "0.1.0"
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") }
 }
 
 kotlin {
@@ -54,6 +55,10 @@ kotlin {
         }
 
         val clientMain by getting {
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.5")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.322-kotlin-1.6.10")
+            }
         }
 
         val clientTest by getting {
