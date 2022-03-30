@@ -14,6 +14,7 @@ version = "0.1.0"
 repositories {
     mavenCentral()
     maven { url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") }
+    maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") }
 }
 
 kotlin {
@@ -33,9 +34,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(kotlin("stdlib"))
-                implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.3.2")
             }
         }
@@ -47,6 +45,15 @@ kotlin {
         }
 
         val serverMain by getting {
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.4")
+                implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
+                implementation("io.ktor:ktor-server-core:2.0.0-beta-1")
+                implementation("io.ktor:ktor-server-netty:2.0.0-beta-1")
+                implementation("io.ktor:ktor-server-websockets:2.0.0-beta-1")
+                implementation("io.ktor:ktor-serialization-kotlinx:2.0.0-beta-1")
+            }
         }
 
         val serverTest by getting {
