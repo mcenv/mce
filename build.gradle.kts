@@ -52,7 +52,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-core:2.0.0-beta-1")
                 implementation("io.ktor:ktor-server-netty:2.0.0-beta-1")
                 implementation("io.ktor:ktor-server-websockets:2.0.0-beta-1")
-                implementation("io.ktor:ktor-serialization-kotlinx:2.0.0-beta-1")
+                implementation("io.ktor:ktor-serialization-kotlinx:2.0.0-eap-360")
             }
         }
 
