@@ -50,7 +50,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
                 implementation("io.ktor:ktor-server-core:2.0.0-beta-1")
-                implementation("io.ktor:ktor-server-netty:2.0.0-beta-1")
+                implementation("io.ktor:ktor-server-netty:2.0.0-ide-debug-eap-225")
                 implementation("io.ktor:ktor-server-websockets:2.0.0-beta-1")
                 implementation("io.ktor:ktor-serialization-kotlinx:2.0.0-beta-1")
             }
