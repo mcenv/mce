@@ -1,1 +1,0 @@
-def box_ill_typed_tag [] : box string ≔ ("" ∈ int)

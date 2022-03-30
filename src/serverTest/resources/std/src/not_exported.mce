@@ -1,0 +1,1 @@
+def not_exported [] : unit ≔ ⋆

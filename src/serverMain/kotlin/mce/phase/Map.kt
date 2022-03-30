@@ -84,7 +84,6 @@ abstract class Map {
         is Term.LongArrayOf -> Term.LongArrayOf(term.elements.map { mapTerm(it) }, term.id)
         is Term.ListOf -> Term.ListOf(term.elements.map { mapTerm(it) }, term.id)
         is Term.CompoundOf -> Term.CompoundOf(term.elements.map { (name, element) -> name to mapTerm(element) }.toLinkedHashMap(), term.id)
-        is Term.BoxOf -> Term.BoxOf(mapTerm(term.content), mapTerm(term.tag), term.id)
         is Term.RefOf -> Term.RefOf(mapTerm(term.element), term.id)
         is Term.Refl -> term
         is Term.FunOf -> Term.FunOf(term.params, mapTerm(term.body), term.id)
@@ -107,7 +106,6 @@ abstract class Map {
         is Term.LongArray -> term
         is Term.List -> Term.List(mapTerm(term.element), mapTerm(term.size), term.id)
         is Term.Compound -> Term.Compound(term.elements.map { (name, element) -> name to Entry(element.relevant, mapTerm(element.type), element.id) }.toLinkedHashMap(), term.id)
-        is Term.Box -> Term.Box(mapTerm(term.content), term.id)
         is Term.Ref -> Term.Ref(mapTerm(term.element), term.id)
         is Term.Eq -> Term.Eq(mapTerm(term.left), mapTerm(term.right), term.id)
         is Term.Fun -> Term.Fun(term.params.map { mapParam(it) }, mapTerm(term.resultant), term.effs, term.id)

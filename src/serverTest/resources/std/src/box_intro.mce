@@ -1,1 +1,0 @@
-def box_intro [] : box int ≔ (0 ∈ int)

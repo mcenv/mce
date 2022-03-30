@@ -205,10 +205,6 @@ sealed class Term {
     data class CompoundOf(val elements: KList<Pair<Name, Term>>, override val id: Id) : Term()
 
     @Serializable
-    @SerialName("21")
-    data class BoxOf(val content: Term, val tag: Term, override val id: Id) : Term()
-
-    @Serializable
     @SerialName("22")
     data class RefOf(val element: Term, override val id: Id) : Term()
 
@@ -297,10 +293,6 @@ sealed class Term {
     data class Compound(val elements: KList<Entry>, override val id: Id) : Term()
 
     @Serializable
-    @SerialName("44")
-    data class Box(val content: Term, override val id: Id) : Term()
-
-    @Serializable
     @SerialName("45")
     data class Ref(val element: Term, override val id: Id) : Term()
 
@@ -386,10 +378,6 @@ sealed class Pat {
     data class CompoundOf(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
 
     @Serializable
-    @SerialName("15")
-    data class BoxOf(val content: Pat, val tag: Pat, override val id: Id) : Pat()
-
-    @Serializable
     @SerialName("16")
     data class RefOf(val element: Pat, override val id: Id) : Pat()
 
@@ -456,10 +444,6 @@ sealed class Pat {
     // TODO: List
 
     // TODO: Compound
-
-    @Serializable
-    @SerialName("32")
-    data class Box(val content: Pat, override val id: Id) : Pat()
 
     @Serializable
     @SerialName("33")

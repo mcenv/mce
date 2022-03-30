@@ -1,1 +1,1 @@
-def subtype_trans [α ≤ bool : type, a : box α] : box (or {bool, int}) ≔ a
+def subtype_trans [α ≤ bool : type, a : list α 1] : list (or {bool, int}) 1 ≔ a

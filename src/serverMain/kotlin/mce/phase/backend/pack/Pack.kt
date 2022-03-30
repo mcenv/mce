@@ -149,20 +149,6 @@ class Pack private constructor() {
                     }
                 }
             }
-            is Term.BoxOf -> {
-                +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
-
-                packTerm(term.content)
-                val contentType = eraseType(term.content.type)
-                val contentPath = contentType.toPath()[-1]
-                +SetData(MAIN, COMPOUND[if (contentType == NbtType.COMPOUND) -2 else -1]["0"], From(MAIN, contentPath))
-                +RemoveData(MAIN, contentPath)
-
-                packTerm(term.tag)
-                val tagPath = BYTE[-1]
-                +SetData(MAIN, COMPOUND[-1]["1"], From(MAIN, tagPath))
-                +RemoveData(MAIN, tagPath)
-            }
             is Term.RefOf -> TODO()
             is Term.Refl -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
             is Term.FunOf -> +Append(MAIN, INT, Value(Nbt.Int(term.tag)))
@@ -187,7 +173,6 @@ class Pack private constructor() {
             is Term.LongArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(31)))
             is Term.List -> TODO()
             is Term.Compound -> TODO()
-            is Term.Box -> TODO()
             is Term.Ref -> TODO()
             is Term.Eq -> TODO()
             is Term.Fun -> TODO()
@@ -268,10 +253,6 @@ class Pack private constructor() {
                     packPat(element, path[key.text], vars)
                 }
             }
-            is Pat.BoxOf -> {
-                packPat(pat.content, path["0"], vars)
-                packPat(pat.tag, path["1"], vars)
-            }
             is Pat.RefOf -> Unit
             is Pat.Refl -> TODO()
             is Pat.Or -> TODO()
@@ -324,7 +305,6 @@ class Pack private constructor() {
                 +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
                 +Execute(E.CheckScore(false, R1, REG, EqConst(31), Run(SetScore(R0, REG, 0))))
             }
-            is Pat.Box -> TODO()
             is Pat.Ref -> TODO()
             is Pat.Eq -> TODO()
             is Pat.Type -> {
@@ -442,7 +422,6 @@ private fun eraseType(type: Type): NbtType = when (type) {
     is Type.LongArrayOf -> throw Error()
     is Type.ListOf -> throw Error()
     is Type.CompoundOf -> throw Error()
-    is Type.BoxOf -> throw Error()
     is Type.RefOf -> throw Error()
     is Type.Refl -> throw Error()
     is Type.FunOf -> throw Error()
@@ -465,7 +444,6 @@ private fun eraseType(type: Type): NbtType = when (type) {
     is Type.LongArray -> NbtType.LONG_ARRAY
     is Type.List -> NbtType.LIST
     is Type.Compound -> NbtType.COMPOUND
-    is Type.Box -> NbtType.COMPOUND
     is Type.Ref -> NbtType.INT
     is Type.Eq -> NbtType.BYTE
     is Type.Fun -> NbtType.BYTE

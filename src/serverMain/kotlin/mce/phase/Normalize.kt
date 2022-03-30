@@ -154,11 +154,6 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             val elements = term.elements.map { (name, element) -> name to lazy { !evalTerm(element) } }.toLinkedHashMap()
             VTerm.CompoundOf(elements, term.id)
         }
-        is Term.BoxOf -> {
-            val content = lazy { !evalTerm(term.content) }
-            val tag = lazy { !evalTerm(term.tag) }
-            VTerm.BoxOf(content, tag, term.id)
-        }
         is Term.RefOf -> {
             val element = lazy { !evalTerm(term.element) }
             VTerm.RefOf(element, term.id)
@@ -209,10 +204,6 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             VTerm.List(element, size, term.id)
         }
         is Term.Compound -> VTerm.Compound(term.elements, term.id)
-        is Term.Box -> {
-            val content = lazy { !evalTerm(term.content) }
-            VTerm.Box(content, term.id)
-        }
         is Term.Ref -> {
             val element = lazy { !evalTerm(term.element) }
             VTerm.Ref(element, term.id)
@@ -270,12 +261,6 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
                     }
                 }
             } else false
-        pat is Pat.BoxOf && term is VTerm.BoxOf -> {
-            val matched = !match(pat.content, term.content.value)
-            if (matched) {
-                !match(pat.tag, term.tag.value)
-            } else false
-        }
         pat is Pat.RefOf && term is VTerm.RefOf -> !match(pat.element, term.element.value)
         pat is Pat.Refl && term is VTerm.Refl -> true
         // TODO: Or
@@ -292,7 +277,6 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
         pat is Pat.ByteArray && term is VTerm.ByteArray -> true
         pat is Pat.IntArray && term is VTerm.IntArray -> true
         pat is Pat.LongArray && term is VTerm.LongArray -> true
-        pat is Pat.Box && term is VTerm.Box -> !match(pat.content, term.content.value)
         pat is Pat.Ref && term is VTerm.Ref -> !match(pat.element, term.element.value)
         pat is Pat.Eq && term is VTerm.Eq -> !match(pat.left, term.left.value) && !match(pat.right, term.right.value)
         pat is Pat.Type && term is VTerm.Type -> true
@@ -351,11 +335,6 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
             val elements = (!term.elements.entries.mapM { (name, element) -> { name to !quoteTerm(element.value) } }).toLinkedHashMap()
             Term.CompoundOf(elements, term.id)
         }
-        is VTerm.BoxOf -> {
-            val content = !quoteTerm(term.content.value)
-            val tag = !quoteTerm(term.tag.value)
-            Term.BoxOf(content, tag, term.id)
-        }
         is VTerm.RefOf -> {
             val element = !quoteTerm(term.element.value)
             Term.RefOf(element, term.id)
@@ -407,10 +386,6 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
             Term.List(element, size, term.id)
         }
         is VTerm.Compound -> Term.Compound(term.elements, term.id)
-        is VTerm.Box -> {
-            val content = !quoteTerm(term.content.value)
-            Term.Box(content, term.id)
-        }
         is VTerm.Ref -> {
             val element = !quoteTerm(term.element.value)
             Term.Ref(element, term.id)

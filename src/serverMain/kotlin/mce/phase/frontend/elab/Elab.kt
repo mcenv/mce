@@ -296,12 +296,6 @@ class Elab private constructor(
                     CVTerm.Compound(elements.map { (name, element) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(element.type)), null) }.toLinkedHashMap())
                 )
             }
-            is STerm.BoxOf -> {
-                val tTag = !checkTerm(term.tag, TYPE)
-                val vTag = !lift({ normalizer }, evalTerm(tTag))
-                val content = !checkTerm(term.content, vTag)
-                Typing(CTerm.BoxOf(content, tTag, term.id), CVTerm.Box(lazyOf(vTag)))
-            }
             is STerm.RefOf -> {
                 val element = !inferTerm(term.element)
                 Typing(CTerm.RefOf(element.term, term.id), CVTerm.Ref(lazyOf(element.type)))
@@ -367,10 +361,6 @@ class Elab private constructor(
                     }
                     Typing(CTerm.Compound(elements.toLinkedHashMap(), term.id), TYPE)
                 }
-            is STerm.Box -> {
-                val content = !checkTerm(term.content, TYPE)
-                Typing(CTerm.Box(content, term.id), TYPE)
-            }
             is STerm.Ref -> {
                 val element = !checkTerm(term.element, TYPE)
                 Typing(CTerm.Ref(element, term.id), TYPE)
@@ -689,9 +679,6 @@ class Elab private constructor(
                                         !unifyTerms(entry1.value.value, entry2.value.value)
                             }
                         }
-            term1 is CVTerm.BoxOf && term2 is CVTerm.BoxOf ->
-                !unifyTerms(term1.content.value, term2.content.value) &&
-                        !unifyTerms(term1.tag.value, term2.tag.value)
             term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !unifyTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Refl && term2 is CVTerm.Refl -> true
             term1 is CVTerm.FunOf && term2 is CVTerm.FunOf ->
@@ -733,7 +720,6 @@ class Elab private constructor(
                                         !unifyTerms(!evalTerm(entry1.value.type), !evalTerm(entry2.value.type))
                             }
                         }
-            term1 is CVTerm.Box && term2 is CVTerm.Box -> !unifyTerms(term1.content.value, term2.content.value)
             term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !unifyTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Eq && term2 is CVTerm.Eq ->
                 !unifyTerms(term1.left.value, term2.left.value) &&
@@ -797,7 +783,6 @@ class Elab private constructor(
                         }
                     }
                 }
-            term1 is CVTerm.Box && term2 is CVTerm.Box -> !subtypeTerms(term1.content.value, term2.content.value)
             term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !subtypeTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Fun && term2 is CVTerm.Fun ->
                 term1.params.size == term2.params.size &&
@@ -827,11 +812,6 @@ class Elab private constructor(
                     val patterns = patterns.filterIsInstance<CPat.BoolOf>()
                     patterns.find { it.value } != null &&
                             patterns.find { !it.value } != null
-                }
-                is CVTerm.Box -> {
-                    val patterns = patterns.filterIsInstance<CPat.BoxOf>()
-                    check(patterns.map { it.content }, type.content.value) &&
-                            check(patterns.map { it.tag }, TYPE)
                 }
                 is CVTerm.Ref -> {
                     val patterns = patterns.filterIsInstance<CPat.RefOf>()
@@ -897,12 +877,6 @@ class Elab private constructor(
                 val elementTypes = elements.map { (name, _, type) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
                 CPat.CompoundOf(elementTerms, pat.id) to CVTerm.Compound(elementTypes)
             }
-            is SPat.BoxOf -> {
-                val tag = !checkPat(pat.tag, TYPE)
-                val vTag = tag.toType() ?: !lift({ normalizer }, fresh(pat.id))
-                val content = !checkPat(pat.content, vTag)
-                CPat.BoxOf(content, tag, pat.id) to CVTerm.Box(lazyOf(vTag))
-            }
             is SPat.RefOf -> {
                 val (element, elementType) = !inferPat(pat.element)
                 CPat.RefOf(element, pat.id) to CVTerm.Ref(lazyOf(elementType))
@@ -931,10 +905,6 @@ class Elab private constructor(
             is SPat.ByteArray -> CPat.ByteArray(pat.id) to TYPE
             is SPat.IntArray -> CPat.IntArray(pat.id) to TYPE
             is SPat.LongArray -> CPat.LongArray(pat.id) to TYPE
-            is SPat.Box -> {
-                val content = !checkPat(pat.content, TYPE)
-                CPat.Box(content, pat.id) to TYPE
-            }
             is SPat.Ref -> {
                 val element = !checkPat(pat.element, TYPE)
                 CPat.Ref(element, pat.id) to TYPE
@@ -984,12 +954,6 @@ class Elab private constructor(
                 }
                 CPat.CompoundOf(elements.toLinkedHashMap(), pat.id)
             }
-            pat is SPat.BoxOf && type is CVTerm.Box -> {
-                val tag = !checkPat(pat.tag, TYPE)
-                val vTag = tag.toType() ?: type.content.value
-                val content = !checkPat(pat.content, vTag)
-                CPat.BoxOf(content, tag, pat.id)
-            }
             pat is SPat.RefOf && type is CVTerm.Ref -> {
                 val element = !checkPat(pat.element, type.element.value)
                 CPat.RefOf(element, pat.id)
@@ -1017,31 +981,6 @@ class Elab private constructor(
     }
 
     /**
-     * Converts this pattern to a semantic term.
-     */
-    private fun CPat.toType(): CVTerm? = when (this) {
-        // TODO: Or
-        // TODO: And
-        is CPat.Unit -> UNIT
-        is CPat.Bool -> BOOL
-        is CPat.Byte -> BYTE
-        is CPat.Short -> SHORT
-        is CPat.Int -> INT
-        is CPat.Long -> LONG
-        is CPat.Float -> FLOAT
-        is CPat.Double -> DOUBLE
-        is CPat.String -> STRING
-        is CPat.ByteArray -> BYTE_ARRAY
-        is CPat.IntArray -> INT_ARRAY
-        is CPat.LongArray -> LONG_ARRAY
-        // TODO: Box
-        // TODO: Ref
-        // TODO: Eq
-        is CPat.Type -> TYPE
-        else -> null
-    }
-
-    /**
      * Matches the [term1] and the [term2].
      */
     private fun match(term1: CVTerm, term2: CVTerm): State<Normalizer, Unit> = {
@@ -1055,10 +994,6 @@ class Elab private constructor(
             term1 is CVTerm.ListOf && term2 is CVTerm.ListOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
             term1 is CVTerm.CompoundOf && term2 is CVTerm.CompoundOf -> !(term1.elements.entries zip term2.elements.entries).forEachM { (entry1, entry2) ->
                 if (entry1.key == entry2.key) match(entry1.value.value, entry2.value.value) else pure(Unit)
-            }
-            term1 is CVTerm.BoxOf && term2 is CVTerm.BoxOf -> {
-                !match(term1.content.value, term2.content.value)
-                !match(term1.tag.value, term2.tag.value)
             }
             term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !match(term1.element.value, term2.element.value)
             else -> Unit // TODO
@@ -1096,7 +1031,6 @@ class Elab private constructor(
                 is CVTerm.LongArray -> term2 is CVTerm.LongArray
                 is CVTerm.List -> term2 is CVTerm.List
                 is CVTerm.Compound -> term2 is CVTerm.Compound
-                is CVTerm.Box -> term2 is CVTerm.Box
                 is CVTerm.Ref -> term2 is CVTerm.Ref
                 is CVTerm.Eq -> term2 is CVTerm.Eq
                 is CVTerm.Fun -> term2 is CVTerm.Fun

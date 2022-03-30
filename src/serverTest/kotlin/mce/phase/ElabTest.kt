@@ -64,8 +64,6 @@ class ElabTest {
         "heterogeneous_list",
         "or_join_var",
         "anno",
-        "box_intro",
-        "box_elim",
         "irrelevant",
         "wildcard_import",
         "typecase",
@@ -74,7 +72,6 @@ class ElabTest {
         "match_eval",
         "var_sized_list",
         "list_size",
-        "box_inst",
         "empty_module",
         "non_empty_module",
         "signature",
@@ -205,18 +202,6 @@ class ElabTest {
     fun or_invalid_join_var() {
         val result = elaborate("or_invalid_join_var")
         assertContains(result.diagnostics, Diagnostic.PolyRepr(Id(0, 0)))
-    }
-
-    @Test
-    fun box_ill_typed_content() {
-        val result = elaborate("box_ill_typed_content")
-        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
-    }
-
-    @Test
-    fun box_ill_typed_tag() {
-        val result = elaborate("box_ill_typed_tag")
-        assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
 
     @Test

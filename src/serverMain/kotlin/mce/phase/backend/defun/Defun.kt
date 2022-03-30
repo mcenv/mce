@@ -131,11 +131,6 @@ class Defun private constructor(
             val elements = term.elements.map { (name, element) -> name to defunTerm(element) }
             DTerm.CompoundOf(elements.toLinkedHashMap(), getType(term.id!!))
         }
-        is CTerm.BoxOf -> {
-            val content = defunTerm(term.content)
-            val tag = defunTerm(term.tag)
-            DTerm.BoxOf(content, tag, getType(term.id!!))
-        }
         is CTerm.RefOf -> {
             val element = defunTerm(term.element)
             DTerm.RefOf(element, getType(term.id!!))
@@ -183,10 +178,6 @@ class Defun private constructor(
         is CTerm.Compound -> {
             val elements = term.elements.map { (name, element) -> name to DEntry(element.relevant, defunTerm(element.type)) }
             DTerm.Compound(elements.toLinkedHashMap(), getType(term.id!!))
-        }
-        is CTerm.Box -> {
-            val content = defunTerm(term.content)
-            DTerm.Box(content, getType(term.id!!))
         }
         is CTerm.Ref -> {
             val element = defunTerm(term.element)
@@ -238,11 +229,6 @@ class Defun private constructor(
             val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
             DPat.CompoundOf(elements.toLinkedHashMap(), getType(pat.id))
         }
-        is CPat.BoxOf -> {
-            val content = defunPat(pat.content)
-            val tag = defunPat(pat.tag)
-            DPat.BoxOf(content, tag, getType(pat.id))
-        }
         is CPat.RefOf -> {
             val element = defunPat(pat.element)
             DPat.RefOf(element, getType(pat.id))
@@ -268,10 +254,6 @@ class Defun private constructor(
         is CPat.ByteArray -> DPat.ByteArray(getType(pat.id))
         is CPat.IntArray -> DPat.IntArray(getType(pat.id))
         is CPat.LongArray -> DPat.LongArray(getType(pat.id))
-        is CPat.Box -> {
-            val content = defunPat(pat.content)
-            DPat.Box(content, getType(pat.id))
-        }
         is CPat.Ref -> {
             val element = defunPat(pat.element)
             DPat.Ref(element, getType(pat.id))

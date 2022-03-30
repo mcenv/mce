@@ -1,3 +1,3 @@
-import {identity_boxed}
+import {not_exported}
 
-def invalid_import [] : box int ≔ (identity_boxed [int, 0])
+def invalid_import [] : unit ≔ (not_exported [int, 0])

@@ -169,11 +169,6 @@ class Parse private constructor(
                         val right = parseTerm()
                         Term.Anno(left, right, id)
                     }
-                    '∈' -> {
-                        skip()
-                        val right = parseTerm()
-                        Term.BoxOf(left, right, id)
-                    }
                     '=' -> {
                         skip()
                         val right = parseTerm()
@@ -300,10 +295,6 @@ class Parse private constructor(
                 }
                 Term.Compound(elements, id)
             }
-            "box" -> {
-                val content = parseTerm()
-                Term.Box(content, id)
-            }
             "ref" -> {
                 val element = parseTerm()
                 Term.Ref(element, id)
@@ -338,11 +329,6 @@ class Parse private constructor(
             val left = parsePat()
             when (val char = peekChar()) {
                 ')' -> left
-                '∈' -> {
-                    skip()
-                    val right = parsePat()
-                    Pat.BoxOf(left, right, id)
-                }
                 '=' -> {
                     skip()
                     val right = parsePat()
@@ -402,10 +388,6 @@ class Parse private constructor(
             "byte_array" -> Pat.ByteArray(id)
             "int_array" -> Pat.IntArray(id)
             "long_array" -> Pat.LongArray(id)
-            "box" -> {
-                val content = parsePat()
-                Pat.Box(content, id)
-            }
             "ref" -> {
                 val element = parsePat()
                 Pat.Ref(element, id)
