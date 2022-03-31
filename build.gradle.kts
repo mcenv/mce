@@ -65,7 +65,7 @@ kotlin {
         val clientMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.5")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.323-kotlin-1.6.10")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.324-kotlin-1.6.10")
             }
         }
 
