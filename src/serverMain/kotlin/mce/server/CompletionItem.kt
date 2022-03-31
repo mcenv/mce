@@ -1,6 +1,6 @@
 package mce.server
 
-import mce.phase.frontend.parse.Term
+import mce.phase.frontend.decode.Term
 
 data class CompletionItem(
     val name: String,

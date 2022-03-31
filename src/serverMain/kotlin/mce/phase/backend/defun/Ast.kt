@@ -140,6 +140,8 @@ sealed class Pat {
     data class ByteArray(override val type: VTerm) : Pat()
     data class IntArray(override val type: VTerm) : Pat()
     data class LongArray(override val type: VTerm) : Pat()
+    data class List(val element: Pat, val size: Pat, override val type: VTerm) : Pat()
+    data class Compound(val elements: LinkedHashMap<Name, Pat>, override val type: VTerm) : Pat()
     data class Ref(val element: Pat, override val type: VTerm) : Pat()
     data class Eq(val left: Pat, val right: Pat, override val type: VTerm) : Pat()
     data class Type(override val type: VTerm) : Pat()

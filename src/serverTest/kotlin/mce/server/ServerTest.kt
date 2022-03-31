@@ -2,7 +2,7 @@ package mce.server
 
 import kotlinx.coroutines.runBlocking
 import mce.phase.Id
-import mce.phase.frontend.parse.Term
+import mce.phase.frontend.decode.Term
 import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals

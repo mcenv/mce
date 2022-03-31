@@ -1,14 +1,14 @@
 package mce.phase.frontend
 
 import mce.phase.freshId
+import mce.phase.frontend.decode.Eff as SEff
+import mce.phase.frontend.decode.Entry as SEntry
+import mce.phase.frontend.decode.Param as SParam
+import mce.phase.frontend.decode.Pat as SPat
+import mce.phase.frontend.decode.Term as STerm
 import mce.phase.frontend.elab.Eff as CEff
 import mce.phase.frontend.elab.Pat as CPat
 import mce.phase.frontend.elab.Term as CTerm
-import mce.phase.frontend.parse.Eff as SEff
-import mce.phase.frontend.parse.Entry as SEntry
-import mce.phase.frontend.parse.Param as SParam
-import mce.phase.frontend.parse.Pat as SPat
-import mce.phase.frontend.parse.Term as STerm
 
 fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Hole -> STerm.Hole(term.id ?: freshId())
@@ -97,8 +97,11 @@ fun printPat(pat: CPat): SPat = when (pat) {
     is CPat.ByteArray -> SPat.ByteArray(pat.id)
     is CPat.IntArray -> SPat.IntArray(pat.id)
     is CPat.LongArray -> SPat.LongArray(pat.id)
+    is CPat.List -> SPat.List(printPat(pat.element), printPat(pat.size), pat.id)
+    is CPat.Compound -> SPat.Compound(pat.elements.map { (name, element) -> name to printPat(element) }, pat.id)
     is CPat.Ref -> SPat.Ref(printPat(pat.element), pat.id)
     is CPat.Eq -> SPat.Eq(printPat(pat.left), printPat(pat.right), pat.id)
+    is CPat.Code -> SPat.Code(printPat(pat.element), pat.id)
     is CPat.Type -> SPat.Type(pat.id)
 }
 

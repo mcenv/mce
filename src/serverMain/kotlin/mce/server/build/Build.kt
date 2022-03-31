@@ -7,10 +7,10 @@ import mce.phase.backend.defun.Defun
 import mce.phase.backend.gen.Gen
 import mce.phase.backend.pack.Pack
 import mce.phase.backend.stage.Stage
+import mce.phase.frontend.decode.Item
+import mce.phase.frontend.decode.Modifier
+import mce.phase.frontend.decode.Parse
 import mce.phase.frontend.elab.Elab
-import mce.phase.frontend.parse.Item
-import mce.phase.frontend.parse.Modifier
-import mce.phase.frontend.parse.Parse
 import mce.phase.frontend.zonk.Zonk
 import mce.server.Server
 

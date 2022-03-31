@@ -10,6 +10,14 @@ import mce.phase.frontend.printTerm
 import mce.util.State
 import mce.util.run
 import mce.util.toLinkedHashMap
+import mce.phase.frontend.decode.Eff as SEff
+import mce.phase.frontend.decode.Item as SItem
+import mce.phase.frontend.decode.Modifier as SModifier
+import mce.phase.frontend.decode.Module as SModule
+import mce.phase.frontend.decode.Param as SParam
+import mce.phase.frontend.decode.Pat as SPat
+import mce.phase.frontend.decode.Signature as SSignature
+import mce.phase.frontend.decode.Term as STerm
 import mce.phase.frontend.elab.Eff as CEff
 import mce.phase.frontend.elab.Entry as CEntry
 import mce.phase.frontend.elab.Item as CItem
@@ -22,14 +30,6 @@ import mce.phase.frontend.elab.Term as CTerm
 import mce.phase.frontend.elab.VModule as CVModule
 import mce.phase.frontend.elab.VSignature as CVSignature
 import mce.phase.frontend.elab.VTerm as CVTerm
-import mce.phase.frontend.parse.Eff as SEff
-import mce.phase.frontend.parse.Item as SItem
-import mce.phase.frontend.parse.Modifier as SModifier
-import mce.phase.frontend.parse.Module as SModule
-import mce.phase.frontend.parse.Param as SParam
-import mce.phase.frontend.parse.Pat as SPat
-import mce.phase.frontend.parse.Signature as SSignature
-import mce.phase.frontend.parse.Term as STerm
 
 @Suppress("NAME_SHADOWING")
 class Elab private constructor(
@@ -905,6 +905,19 @@ class Elab private constructor(
             is SPat.ByteArray -> CPat.ByteArray(pat.id) to TYPE
             is SPat.IntArray -> CPat.IntArray(pat.id) to TYPE
             is SPat.LongArray -> CPat.LongArray(pat.id) to TYPE
+            is SPat.List -> {
+                val element = !checkPat(pat.element, TYPE)
+                val size = !checkPat(pat.size, INT)
+                CPat.List(element, size, pat.id) to TYPE
+            }
+            is SPat.Compound -> {
+                val elements = !pat.elements.mapM { (name, element) ->
+                    {
+                        name to !checkPat(element, TYPE)
+                    }
+                }
+                CPat.Compound(elements.toLinkedHashMap(), pat.id) to TYPE
+            }
             is SPat.Ref -> {
                 val element = !checkPat(pat.element, TYPE)
                 CPat.Ref(element, pat.id) to TYPE
@@ -913,6 +926,10 @@ class Elab private constructor(
                 val left = !inferPat(pat.left)
                 val right = !checkPat(pat.right, left.second)
                 CPat.Eq(left.first, right, pat.id) to TYPE
+            }
+            is SPat.Code -> {
+                val element = !checkPat(pat.element, TYPE)
+                CPat.Code(element, pat.id) to TYPE
             }
             is SPat.Type -> CPat.Type(pat.id) to TYPE
         }.also { (_, type) ->

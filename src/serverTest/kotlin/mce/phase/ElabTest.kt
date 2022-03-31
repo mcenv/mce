@@ -2,9 +2,9 @@ package mce.phase
 
 import mce.fetch
 import mce.phase.frontend.Diagnostic
+import mce.phase.frontend.decode.Eff
 import mce.phase.frontend.elab.Elab
 import mce.phase.frontend.elab.VTerm
-import mce.phase.frontend.parse.Eff
 import mce.server.build.Key
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest

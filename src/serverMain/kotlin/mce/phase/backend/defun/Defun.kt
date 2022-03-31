@@ -254,6 +254,15 @@ class Defun private constructor(
         is CPat.ByteArray -> DPat.ByteArray(getType(pat.id))
         is CPat.IntArray -> DPat.IntArray(getType(pat.id))
         is CPat.LongArray -> DPat.LongArray(getType(pat.id))
+        is CPat.List -> {
+            val element = defunPat(pat.element)
+            val size = defunPat(pat.size)
+            DPat.List(element, size, getType(pat.id))
+        }
+        is CPat.Compound -> {
+            val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
+            DPat.Compound(elements.toLinkedHashMap(), getType(pat.id))
+        }
         is CPat.Ref -> {
             val element = defunPat(pat.element)
             DPat.Ref(element, getType(pat.id))
@@ -263,6 +272,7 @@ class Defun private constructor(
             val right = defunPat(pat.right)
             DPat.Eq(left, right, getType(pat.id))
         }
+        is CPat.Code -> throw Error()
         is CPat.Type -> DPat.Type(getType(pat.id))
     }
 

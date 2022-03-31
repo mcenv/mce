@@ -2,7 +2,7 @@ package mce.serialization
 
 import kotlinx.serialization.serializer
 import mce.phase.freshId
-import mce.phase.frontend.parse.Term
+import mce.phase.frontend.decode.Term
 import mce.util.ByteArrayInputStream
 import mce.util.ByteArrayOutputStream
 import kotlin.test.Test

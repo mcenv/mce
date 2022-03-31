@@ -222,6 +222,9 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
     }
 }
 
+/**
+ * Checks if the [pat] matches the [term], binding the matched terms to the normalizer.
+ */
 private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
     when {
         pat is Pat.Var -> {
@@ -277,8 +280,11 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
         pat is Pat.ByteArray && term is VTerm.ByteArray -> true
         pat is Pat.IntArray && term is VTerm.IntArray -> true
         pat is Pat.LongArray && term is VTerm.LongArray -> true
+        pat is Pat.List && term is VTerm.List -> !match(pat.element, term.element.value) && !match(pat.size, term.size.value)
+        pat is Pat.Compound && term is VTerm.Compound -> TODO()
         pat is Pat.Ref && term is VTerm.Ref -> !match(pat.element, term.element.value)
         pat is Pat.Eq && term is VTerm.Eq -> !match(pat.left, term.left.value) && !match(pat.right, term.right.value)
+        pat is Pat.Code && term is VTerm.Code -> !match(pat.element, term.element.value)
         pat is Pat.Type && term is VTerm.Type -> true
         else -> false
     }

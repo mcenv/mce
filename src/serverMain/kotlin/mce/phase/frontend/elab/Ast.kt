@@ -243,8 +243,11 @@ sealed class Pat {
     data class ByteArray(override val id: Id) : Pat()
     data class IntArray(override val id: Id) : Pat()
     data class LongArray(override val id: Id) : Pat()
+    data class List(val element: Pat, val size: Pat, override val id: Id) : Pat()
+    data class Compound(val elements: LinkedHashMap<Name, Pat>, override val id: Id) : Pat()
     data class Ref(val element: Pat, override val id: Id) : Pat()
     data class Eq(val left: Pat, val right: Pat, override val id: Id) : Pat()
+    data class Code(val element: Pat, override val id: Id) : Pat()
     data class Type(override val id: Id) : Pat()
 }
 

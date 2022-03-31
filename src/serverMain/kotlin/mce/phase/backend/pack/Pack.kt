@@ -180,6 +180,7 @@ class Pack private constructor() {
         }
     }
 
+    // TODO: optimize
     private fun Context.packPat(pat: Pat, path: NbtPath, vars: MutableList<Pair<NbtType, NbtPath>>) {
         when (pat) {
             is Pat.Var -> {
@@ -305,11 +306,19 @@ class Pack private constructor() {
                 +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
                 +Execute(E.CheckScore(false, R1, REG, EqConst(31), Run(SetScore(R0, REG, 0))))
             }
+            is Pat.List -> {
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(32), Run(SetScore(R0, REG, 0))))
+            }
+            is Pat.Compound -> {
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(33), Run(SetScore(R0, REG, 0))))
+            }
             is Pat.Ref -> TODO()
             is Pat.Eq -> TODO()
             is Pat.Type -> {
                 +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(35), Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(37), Run(SetScore(R0, REG, 0))))
             }
         }
     }

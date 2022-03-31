@@ -1,11 +1,11 @@
-package mce.phase.frontend.parse
+package mce.phase.frontend.decode
 
 import mce.phase.Id
 import mce.phase.Name
 import mce.phase.freshId
 import java.util.*
 
-@Deprecated("Use decoder")
+@Deprecated("Use [mce.serialization.MceDecoder] instead")
 class Parse private constructor(
     private val source: String
 ) {
@@ -388,10 +388,29 @@ class Parse private constructor(
             "byte_array" -> Pat.ByteArray(id)
             "int_array" -> Pat.IntArray(id)
             "long_array" -> Pat.LongArray(id)
+            "list" -> {
+                val element = parsePat()
+                val size = parsePat()
+                Pat.List(element, size, id)
+            }
+            "compound" -> {
+                val elements = parseList('{', '}') {
+                    val left = parsePat()
+                    if (peekChar() == ',' || peekChar() == '}') {
+                        Name("", freshId()) to left
+                    } else {
+                        expect(':')
+                        val right = parsePat()
+                        Name((left as? Pat.Var)?.name ?: error("name expected"), freshId()) to right
+                    }
+                }
+                Pat.Compound(elements, id)
+            }
             "ref" -> {
                 val element = parsePat()
                 Pat.Ref(element, id)
             }
+            "code" -> Pat.Code(parsePat(), id)
             "type" -> Pat.Type(id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> Pat.ByteOf(word.dropLast(1).toByte(), id)

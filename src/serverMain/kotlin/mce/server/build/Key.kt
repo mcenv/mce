@@ -6,7 +6,7 @@ import mce.phase.backend.pack.Pack
 import mce.phase.backend.stage.Stage
 import mce.phase.frontend.elab.Elab
 import mce.phase.frontend.zonk.Zonk
-import mce.phase.frontend.parse.Item as SItem
+import mce.phase.frontend.decode.Item as SItem
 
 sealed class Key<V> {
     abstract val name: String

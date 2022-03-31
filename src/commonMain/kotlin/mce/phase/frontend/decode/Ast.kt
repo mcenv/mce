@@ -1,6 +1,6 @@
 @file:UseSerializers(IdSerializer::class)
 
-package mce.phase.frontend.parse
+package mce.phase.frontend.decode
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -441,22 +441,30 @@ sealed class Pat {
     @SerialName("31")
     data class LongArray(override val id: Id) : Pat()
 
-    // TODO: List
-
-    // TODO: Compound
+    @Serializable
+    @SerialName("32")
+    data class List(val element: Pat, val size: Pat, override val id: Id) : Pat()
 
     @Serializable
     @SerialName("33")
-    data class Ref(val element: Pat, override val id: Id) : Pat()
+    data class Compound(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
 
     @Serializable
     @SerialName("34")
-    data class Eq(val left: Pat, val right: Pat, override val id: Id) : Pat()
-
-    // TODO: Fun?
+    data class Ref(val element: Pat, override val id: Id) : Pat()
 
     @Serializable
     @SerialName("35")
+    data class Eq(val left: Pat, val right: Pat, override val id: Id) : Pat()
+
+    // TODO: Fun
+
+    @Serializable
+    @SerialName("36")
+    data class Code(val element: Pat, override val id: Id) : Pat()
+
+    @Serializable
+    @SerialName("37")
     data class Type(override val id: Id) : Pat()
 }
 
