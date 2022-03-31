@@ -1,6 +1,5 @@
 .gradle
 .idea
-**/node_modules/
 **/build/
 /kotlin-js-store/
 !src/**/build/

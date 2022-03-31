@@ -26,7 +26,12 @@ kotlin {
     }
 
     js("client") {
-        browser()
+        browser {
+            @Suppress("EXPERIMENTAL_API_USAGE")
+            distribution {
+                directory = file("$projectDir/app/distributions/")
+            }
+        }
         binaries.executable()
     }
 
