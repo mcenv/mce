@@ -1,14 +1,17 @@
 {
-  "name": "client",
+  "name": "mce",
+  "productName": "mce",
   "version": "0.1.0",
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package": "electron-packager ."
   },
   "author": "mce",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^18.0.1"
+    "electron": "^18.0.1",
+    "electron-packager": "^15.4.0"
   }
 }
