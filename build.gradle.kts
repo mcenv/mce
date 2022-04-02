@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("multiplatform") version "1.6.20"
-    kotlin("plugin.allopen") version "1.6.10"
+    kotlin("plugin.allopen") version "1.6.20"
     kotlin("plugin.serialization") version "1.6.10"
     id("org.jetbrains.kotlinx.benchmark") version "0.4.2"
     application
