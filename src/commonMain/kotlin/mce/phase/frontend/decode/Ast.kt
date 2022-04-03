@@ -1,12 +1,8 @@
-@file:UseSerializers(IdSerializer::class)
-
 package mce.phase.frontend.decode
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.UseSerializers
 import mce.Id
-import mce.IdSerializer
 import mce.phase.Name
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
