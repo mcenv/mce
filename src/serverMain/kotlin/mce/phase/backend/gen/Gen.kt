@@ -1,5 +1,7 @@
 package mce.phase.backend.gen
 
+import mce.phase.Config
+import mce.phase.Pass
 import mce.phase.backend.pack.*
 import mce.phase.backend.pack.Function as PFunction
 
@@ -466,10 +468,10 @@ class Gen(
         val generate: (Generator) -> Unit,
     )
 
-    companion object {
-        operator fun invoke(functions: List<PFunction>): Result = Result { generator ->
+    companion object : Pass<List<PFunction>, Result> {
+        override operator fun invoke(config: Config, input: List<PFunction>): Result = Result { generator ->
             val gen = Gen(generator)
-            functions.forEach { gen.genFunction(it) }
+            input.forEach { gen.genFunction(it) }
         }
     }
 }

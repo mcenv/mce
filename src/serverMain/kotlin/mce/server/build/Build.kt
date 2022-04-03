@@ -3,6 +3,7 @@ package mce.server.build
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import mce.phase.Config
 import mce.phase.backend.defun.Defun
 import mce.phase.backend.gen.Gen
 import mce.phase.backend.pack.Pack
@@ -17,7 +18,9 @@ import mce.server.Server
 /**
  * A build system with constructive traces rebuilder and suspending scheduler.
  */
-class Build {
+class Build(
+    private val config: Config,
+) {
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
     private val counter: MutableMap<Key<*>, Int> = mutableMapOf()
 
@@ -35,19 +38,19 @@ class Build {
                         .map { async { fetch(Key.ElabResult(it)).item } }
                         .awaitAll()
                         .associateBy { it.name }
-                    Elab(surfaceItem, items) as V
+                    Elab(config, surfaceItem to items) as V
                 }
-                is Key.ZonkResult -> Zonk(fetch(Key.ElabResult(key.name))) as V
-                is Key.StageResult -> Stage(fetch(Key.ZonkResult(key.name))) as V
-                is Key.DefunResult -> Defun(fetch(Key.StageResult(key.name))) as V
-                is Key.PackResult -> Pack(fetch(Key.DefunResult(key.name))) as V
+                is Key.ZonkResult -> Zonk(config, fetch(Key.ElabResult(key.name))) as V
+                is Key.StageResult -> Stage(config, fetch(Key.ZonkResult(key.name))) as V
+                is Key.DefunResult -> Defun(config, fetch(Key.StageResult(key.name))) as V
+                is Key.PackResult -> Pack(config, fetch(Key.DefunResult(key.name))) as V
                 is Key.GenResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
                     val functions = (surfaceItem.imports + key.name)
                         .map { async { fetch(Key.PackResult(it)).functions } }
                         .awaitAll()
                         .flatten()
-                    Gen(functions) as V
+                    Gen(config, functions) as V
                 }
             }.also {
                 setValue(key, it)

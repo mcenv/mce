@@ -1,5 +1,6 @@
 package mce.server
 
+import mce.phase.Config
 import mce.phase.frontend.printTerm
 import mce.phase.quoteTerm
 import mce.protocol.CompletionRequest
@@ -10,8 +11,8 @@ import mce.server.build.Build
 import mce.server.build.Key
 import mce.util.run
 
-class Server {
-    internal val build: Build = Build()
+class Server(config: Config) {
+    internal val build: Build = Build(config)
 
     suspend fun hover(request: HoverRequest): HoverResponse {
         val result = build.fetch(Key.ElabResult(request.name))

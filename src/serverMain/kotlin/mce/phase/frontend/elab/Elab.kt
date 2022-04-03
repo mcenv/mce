@@ -1138,7 +1138,7 @@ class Elab private constructor(
         }
     }
 
-    companion object {
+    companion object : Pass<Pair<SItem, Map<String, CItem>>, Result> {
         private val UNIT = CVTerm.Unit()
         private val BOOL = CVTerm.Bool()
         private val BYTE = CVTerm.Byte()
@@ -1155,9 +1155,9 @@ class Elab private constructor(
         private val ANY = CVTerm.And(emptyList())
         private val TYPE = CVTerm.Type()
 
-        operator fun invoke(item: SItem, items: Map<String, CItem>): Result = Elab(items).run {
+        override operator fun invoke(config: Config, input: Pair<SItem, Map<String, CItem>>): Result = Elab(input.second).run {
             val normalizer = Normalizer(persistentListOf(), items, solutions)
-            val (item, _) = inferItem(item).run(Context(persistentListOf(), normalizer, false, 0, true, true))
+            val (item, _) = inferItem(input.first).run(Context(persistentListOf(), normalizer, false, 0, true, true))
             Result(item, types, normalizer, diagnostics, completions)
         }
     }

@@ -1,5 +1,7 @@
 package mce.phase.backend.pack
 
+import mce.phase.Config
+import mce.phase.Pass
 import mce.phase.backend.defun.Defun
 import mce.phase.backend.defun.Item
 import mce.phase.backend.defun.Pat
@@ -403,8 +405,8 @@ class Pack private constructor() {
         val functions: List<PFunction>,
     )
 
-    companion object {
-        operator fun invoke(input: Defun.Result): Result = Pack().run {
+    companion object : Pass<Defun.Result, Result> {
+        override operator fun invoke(config: Config, input: Defun.Result): Result = Pack().run {
             pack(input.functions, input.item)
             Result(functions)
         }

@@ -1,6 +1,8 @@
 package mce.phase.backend.defun
 
 import mce.Id
+import mce.phase.Config
+import mce.phase.Pass
 import mce.phase.backend.stage.Stage
 import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -287,12 +289,12 @@ class Defun private constructor(
         val functions: Map<Int, DTerm>,
     )
 
-    companion object {
+    companion object : Pass<Stage.Result, Result> {
         private val tag: AtomicInteger = AtomicInteger(0)
 
         private fun freshTag(): Int = tag.getAndIncrement()
 
-        operator fun invoke(input: Stage.Result): Result = Defun(input.types).run {
+        override operator fun invoke(config: Config, input: Stage.Result): Result = Defun(input.types).run {
             Result(defunItem(input.item), functions)
         }
     }

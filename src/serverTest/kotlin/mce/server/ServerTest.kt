@@ -2,6 +2,7 @@ package mce.server
 
 import kotlinx.coroutines.runBlocking
 import mce.Id
+import mce.phase.Config
 import mce.phase.frontend.decode.Term
 import mce.protocol.CompletionRequest
 import mce.protocol.HoverRequest
@@ -13,7 +14,7 @@ import kotlin.test.assertIs
 class ServerTest {
     private fun runServer(action: suspend Server.() -> Unit) {
         runBlocking {
-            Server().action()
+            Server(Config).action()
         }
     }
 

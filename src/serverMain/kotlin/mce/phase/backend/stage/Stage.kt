@@ -1,12 +1,11 @@
 package mce.phase.backend.stage
 
 import mce.Id
-import mce.phase.Normalizer
+import mce.phase.*
 import mce.phase.frontend.elab.Item
 import mce.phase.frontend.elab.Term
 import mce.phase.frontend.elab.VTerm
 import mce.phase.frontend.zonk.Zonk
-import mce.phase.normTerm
 import mce.util.run
 
 /**
@@ -15,18 +14,18 @@ import mce.util.run
 @Suppress("NAME_SHADOWING")
 class Stage private constructor(
     private val normalizer: Normalizer,
-) : mce.phase.Map() {
+) : Transform() {
     // TODO: use specialized normalizer for staging.
-    override fun mapTerm(term: Term): Term = when (term) {
+    override fun transformTerm(term: Term): Term = when (term) {
         is Term.Hole -> throw Error()
         is Term.Meta -> throw Error()
         is Term.CodeOf -> throw Error()
         is Term.Splice -> {
             val staged = normTerm(term).run(normalizer)
-            mapTermInternal(staged)
+            transformTermInternal(staged)
         }
         is Term.Code -> throw Error()
-        else -> mapTermInternal(term)
+        else -> transformTermInternal(term)
     }
 
     data class Result(
@@ -34,9 +33,9 @@ class Stage private constructor(
         val types: Map<Id, VTerm>,
     )
 
-    companion object {
-        operator fun invoke(input: Zonk.Result): Result = Stage(input.normalizer).run {
-            Result(mapItem(input.item), input.types)
+    companion object : Pass<Zonk.Result, Result> {
+        override operator fun invoke(config: Config, input: Zonk.Result): Result = Stage(input.normalizer).run {
+            Result(transformItem(input.item), input.types)
         }
     }
 }
