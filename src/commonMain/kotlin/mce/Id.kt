@@ -1,4 +1,4 @@
-package mce.phase
+package mce
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -8,6 +8,14 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import kotlinx.serialization.encoding.encodeStructure
+
+/**
+ * A unique identifier for a node.
+ */
+data class Id(
+    val most: Long,
+    val least: Long,
+)
 
 object IdSerializer : KSerializer<Id> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Id") {

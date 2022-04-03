@@ -1,6 +1,6 @@
 package mce.phase.backend.defun
 
-import mce.phase.Id
+import mce.Id
 import mce.phase.backend.stage.Stage
 import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger

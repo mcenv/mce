@@ -1,6 +1,6 @@
 package mce.phase.frontend
 
-import mce.phase.Id
+import mce.Id
 import mce.phase.frontend.decode.Eff
 import mce.phase.frontend.decode.Term
 

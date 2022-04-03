@@ -3,6 +3,7 @@ package mce.phase
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
+import mce.Id
 import mce.phase.builtin.builtins
 import mce.phase.frontend.elab.*
 import mce.util.State

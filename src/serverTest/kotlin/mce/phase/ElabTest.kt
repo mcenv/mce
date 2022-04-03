@@ -1,5 +1,6 @@
 package mce.phase
 
+import mce.Id
 import mce.fetch
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.decode.Eff

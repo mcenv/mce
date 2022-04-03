@@ -1,6 +1,6 @@
 package mce.phase.frontend.zonk
 
-import mce.phase.Id
+import mce.Id
 import mce.phase.Normalizer
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.elab.Elab

@@ -1,6 +1,6 @@
 package mce.phase.backend.stage
 
-import mce.phase.Id
+import mce.Id
 import mce.phase.Normalizer
 import mce.phase.frontend.elab.Item
 import mce.phase.frontend.elab.Term

@@ -3,6 +3,7 @@ package mce.phase.frontend.elab
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
+import mce.Id
 import mce.phase.*
 import mce.phase.frontend.Diagnostic
 import mce.phase.frontend.printEff

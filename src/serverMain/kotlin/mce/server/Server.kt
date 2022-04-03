@@ -1,8 +1,11 @@
 package mce.server
 
-import mce.phase.Id
 import mce.phase.frontend.printTerm
 import mce.phase.quoteTerm
+import mce.protocol.CompletionRequest
+import mce.protocol.CompletionResponse
+import mce.protocol.HoverRequest
+import mce.protocol.HoverResponse
 import mce.server.build.Build
 import mce.server.build.Key
 import mce.util.run
@@ -10,16 +13,16 @@ import mce.util.run
 class Server {
     internal val build: Build = Build()
 
-    suspend fun hover(name: String, id: Id): HoverItem {
-        val result = build.fetch(Key.ElabResult(name))
-        val type = printTerm(quoteTerm(result.types[id]!!).run(result.normalizer))
-        return HoverItem(type)
+    suspend fun hover(request: HoverRequest): HoverResponse {
+        val result = build.fetch(Key.ElabResult(request.name))
+        val type = printTerm(quoteTerm(result.types[request.target]!!).run(result.normalizer))
+        return HoverResponse(type, request.id)
     }
 
-    suspend fun completion(name: String, id: Id): List<CompletionItem> {
-        val result = build.fetch(Key.ElabResult(name))
-        return result.completions[id]?.let { completions ->
-            completions.map { (name, type) -> CompletionItem(name, printTerm(quoteTerm(type).run(result.normalizer))) }
+    suspend fun completion(request: CompletionRequest): List<CompletionResponse> {
+        val result = build.fetch(Key.ElabResult(request.name))
+        return result.completions[request.target]?.let { completions ->
+            completions.map { (name, type) -> CompletionResponse(name, printTerm(quoteTerm(type).run(result.normalizer)), request.id) }
         } ?: emptyList()
     }
 }

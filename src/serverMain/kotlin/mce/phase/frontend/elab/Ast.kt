@@ -1,6 +1,6 @@
 package mce.phase.frontend.elab
 
-import mce.phase.Id
+import mce.Id
 import mce.phase.Name
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte

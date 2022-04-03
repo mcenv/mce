@@ -1,6 +1,6 @@
 package mce.phase.frontend.decode
 
-import mce.phase.Id
+import mce.Id
 import mce.phase.Name
 import mce.phase.freshId
 import java.util.*
