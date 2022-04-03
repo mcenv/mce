@@ -10,7 +10,13 @@ import kotlinx.cli.ArgType
 import kotlinx.cli.ExperimentalCli
 import kotlinx.cli.Subcommand
 import kotlinx.cli.default
+import mce.phase.Config
+import mce.protocol.CompletionRequest
+import mce.protocol.HoverRequest
+import mce.protocol.Request
+import mce.protocol.Response
 import mce.serialization.Mce
+import mce.server.Server
 
 @OptIn(ExperimentalCli::class)
 object Launch : Subcommand("launch", "Launch server") {
@@ -18,15 +24,20 @@ object Launch : Subcommand("launch", "Launch server") {
     private val port: Int by option(ArgType.Int, "port", "p", "Port").default(DEFAULT_PORT)
 
     override fun execute() {
+        val server = Server(Config)
+
         embeddedServer(Netty, port = port) {
             install(WebSockets) {
                 contentConverter = KotlinxWebsocketSerializationConverter(Mce)
             }
             routing {
                 webSocket {
-                    val frames = incoming.iterator()
-                    while (frames.hasNext()) {
-                        // TODO
+                    while (true) {
+                        val response = when (val request = receiveDeserialized<Request>()) {
+                            is HoverRequest -> server.hover(request)
+                            is CompletionRequest -> TODO()
+                        }
+                        sendSerialized<Response>(response)
                     }
                 }
             }
