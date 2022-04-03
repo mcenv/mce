@@ -92,9 +92,8 @@ allOpen {
 benchmark {
     targets {
         register("serverTest") {
-            if (this is JvmBenchmarkTarget) {
-                jmhVersion = "1.34"
-            }
+            this as JvmBenchmarkTarget
+            jmhVersion = "1.35"
         }
     }
 }
