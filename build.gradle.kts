@@ -29,7 +29,7 @@ kotlin {
         browser {
             @Suppress("EXPERIMENTAL_API_USAGE")
             distribution {
-                directory = file("$projectDir/app/distributions/")
+                directory = file("$projectDir/app/distributions")
             }
         }
         binaries.executable()
@@ -113,4 +113,9 @@ distributions {
             }
         }
     }
+}
+
+tasks.getByName<Sync>("installDist") {
+    dependsOn(tasks.getByName("clientBrowserWebpack"))
+    destinationDir = file("$projectDir/app/install")
 }
