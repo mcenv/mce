@@ -83,6 +83,9 @@ class ElabTest {
         "identity_test",
         "irrelevant_compound_entries",
         "abstract_eq",
+        "block_multi_let",
+        "empty_block",
+        "let_unit",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

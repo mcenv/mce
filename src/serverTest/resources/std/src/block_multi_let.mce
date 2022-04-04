@@ -1,0 +1,5 @@
+def block_multi_let [] : list bool 2 ≔ block [
+  let x ≔ false
+  let y ≔ true
+  [x, y]
+]

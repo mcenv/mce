@@ -50,6 +50,13 @@ class Pack private constructor() {
 
     private fun Context.packTerm(term: Term) {
         when (term) {
+            is Term.Block -> {
+                val size = this.size
+                term.elements.forEach { packTerm(it) }
+                repeat(this.size - size) {
+                    pop()
+                }
+            }
             is Term.Var -> {
                 val type = eraseType(term.type)
                 val path = type.toPath()
@@ -64,8 +71,6 @@ class Pack private constructor() {
                 val type = eraseType(term.init.type)
                 packTerm(term.init)
                 bind(type, term.name)
-                packTerm(term.body)
-                pop(type)
             }
             is Term.Match -> packMatch(term)
             is Term.UnitOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
@@ -377,23 +382,29 @@ class Pack private constructor() {
     private data class Context(
         val name: ResourceLocation,
         private val commands: MutableList<Command> = mutableListOf(),
-        private val entries: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() },
+        private val entries: MutableList<Pair<NbtType, String>> = mutableListOf(),
+        private val entriesByType: Map<NbtType, MutableList<String>> = NbtType.values().associateWith { mutableListOf() },
     ) {
+        val size: Int get() = entries.size
+
         operator fun Command.unaryPlus() {
             commands += this
         }
 
         fun getIndex(type: NbtType, name: String): Int {
-            val entry = entries[type]!!
+            val entry = entriesByType[type]!!
             return entry.lastIndexOf(name) - entry.size
         }
 
         fun bind(type: NbtType, name: String) {
-            entries[type]!! += name
+            entries += type to name
+            entriesByType[type]!! += name
         }
 
-        fun pop(type: NbtType) {
-            entries[type]!!.removeLast()
+        fun pop() {
+            val (type, _) = entries.removeLast()
+            entriesByType[type]!!.removeLast()
+            +Pop(MAIN, type.toPath())
         }
 
         fun withName(name: ResourceLocation): Context = copy(name = name, commands = mutableListOf())

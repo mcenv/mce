@@ -1,6 +1,7 @@
-def let_escape [] : bool ≔
-  let a ≔ (
+def let_escape [] : bool ≔ block [
+  let a ≔ block [
     let b ≔ false
     b
-  )
+  ]
   (#0-0-0-0-0 b)
+]

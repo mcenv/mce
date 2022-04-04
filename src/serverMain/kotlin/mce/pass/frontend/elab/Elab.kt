@@ -32,6 +32,8 @@ import mce.pass.frontend.elab.VModule as CVModule
 import mce.pass.frontend.elab.VSignature as CVSignature
 import mce.pass.frontend.elab.VTerm as CVTerm
 
+// TODO: stop using [State]
+// TODO: check/synth effects and stages
 @Suppress("NAME_SHADOWING")
 class Elab private constructor(
     private val items: Map<String, CItem>,
@@ -393,6 +395,12 @@ class Elab private constructor(
      */
     private fun inferComputation(computation: STerm): State<Context, Typing> = {
         when (computation) {
+            is STerm.Block ->
+                !restore {
+                    val elements = !computation.elements.mapM { inferComputation(it) }
+                    val type = elements.lastOrNull()?.type ?: UNIT
+                    Typing(CTerm.Block(elements.map { it.term }, computation.id), type)
+                }
             is STerm.Def -> when (val item = items[computation.name]) {
                 is CItem.Def -> {
                     if (item.params.size != computation.arguments.size) {
@@ -422,11 +430,8 @@ class Elab private constructor(
             }
             is STerm.Let -> {
                 val init = !inferComputation(computation.init)
-                !restore {
-                    !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
-                    val body = !inferComputation(computation.body)
-                    Typing(CTerm.Let(computation.name, init.term, body.term, computation.id), body.type, init.effs + body.effs)
-                }
+                !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
+                Typing(CTerm.Let(computation.name, init.term, computation.id), UNIT, init.effs)
             }
             is STerm.Match -> {
                 val type = !lift({ normalizer }, fresh(computation.id)) // TODO: use union of element types
@@ -573,14 +578,17 @@ class Elab private constructor(
             }
         }
         when {
-            computation is STerm.Let ->
+            computation is STerm.Block ->
                 !restore {
-                    val init = !inferComputation(computation.init)
-                    !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
-                    val body = !checkComputation(computation.body, type, effs)
-                    val effs = init.effs + body.effs
-                    Effecting(CTerm.Let(computation.name, init.term, body.term, computation.id), effs)
+                    val elements = !computation.elements.mapM { inferComputation(it) }
+                    val effs = elements.flatMap { it.effs }.toSet()
+                    Effecting(CTerm.Block(elements.map { it.term }, computation.id), effs)
                 }
+            computation is STerm.Let -> {
+                val init = !inferComputation(computation.init)
+                !modify { bind(computation.init.id, Entry(true /* TODO */, computation.name, END, ANY, true, init.type, stage)) }
+                Effecting(CTerm.Let(computation.name, init.term, computation.id), init.effs)
+            }
             computation is STerm.Match -> {
                 val scrutinee = !inferTerm(computation.scrutinee)
                 val clauses = !computation.clauses.mapM { (pat, body) ->

@@ -1,3 +1,4 @@
-{static} def stage_mismatch [] : code bool ≔
+{static} def stage_mismatch [] : code bool ≔ block [
   let b ≔ false
   `(#0-0-0-0-0 b)
+]

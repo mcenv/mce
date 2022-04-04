@@ -81,6 +81,16 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
     when (term) {
         is Term.Hole -> VTerm.Hole(term.id)
         is Term.Meta -> !gets { getSolution(term.index) } ?: VTerm.Meta(term.index, term.id)
+        is Term.Block -> {
+            !term.elements.dropLast(1).forEachM { element ->
+                {
+                    !evalTerm(element)
+                }
+            }
+            term.elements.lastOrNull()?.let {
+                !evalTerm(it)
+            } ?: VTerm.UnitOf()
+        }
         is Term.Var -> !gets { lookup(term.level) }
         is Term.Def -> {
             val item = !gets { getItem(term.name)!! } as Item.Def;
@@ -98,7 +108,7 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
         }
         is Term.Let -> {
             !modify { bind(lazy { !evalTerm(term.init) }) }
-            !evalTerm(term.body)
+            VTerm.UnitOf()
         }
         is Term.Match -> {
             val scrutinee = !evalTerm(term.scrutinee)

@@ -92,12 +92,15 @@ class Defun private constructor(
     private fun defunTerm(term: CTerm): DTerm = when (term) {
         is CTerm.Hole -> throw Error()
         is CTerm.Meta -> throw Error()
+        is CTerm.Block -> {
+            val elements = term.elements.map { defunTerm(it) }
+            DTerm.Block(elements, getType(term.id!!))
+        }
         is CTerm.Var -> DTerm.Var(term.name, term.level, getType(term.id!!))
         is CTerm.Def -> DTerm.Def(term.name, term.arguments.map { defunTerm(it) }, getType(term.id!!))
         is CTerm.Let -> {
             val init = defunTerm(term.init)
-            val body = defunTerm(term.body)
-            DTerm.Let(term.name, init, body, getType(term.id!!))
+            DTerm.Let(term.name, init, getType(term.id!!))
         }
         is CTerm.Match -> {
             val scrutinee = defunTerm(term.scrutinee)

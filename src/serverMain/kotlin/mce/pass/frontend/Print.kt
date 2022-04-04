@@ -13,9 +13,10 @@ import mce.pass.frontend.elab.Term as CTerm
 fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Hole -> STerm.Hole(term.id ?: freshId())
     is CTerm.Meta -> STerm.Meta(term.id ?: freshId())
+    is CTerm.Block -> STerm.Block(term.elements.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.Var -> STerm.Var(term.name, term.id ?: freshId())
     is CTerm.Def -> STerm.Def(term.name, term.arguments.map { printTerm(it) }, term.id ?: freshId())
-    is CTerm.Let -> STerm.Let(term.name, printTerm(term.init), printTerm(term.body), term.id ?: freshId())
+    is CTerm.Let -> STerm.Let(term.name, printTerm(term.init), term.id ?: freshId())
     is CTerm.Match -> STerm.Match(printTerm(term.scrutinee), term.clauses.map { printPat(it.first) to printTerm(it.second) }, term.id ?: freshId())
     is CTerm.UnitOf -> STerm.UnitOf(term.id ?: freshId())
     is CTerm.BoolOf -> STerm.BoolOf(term.value, term.id ?: freshId())

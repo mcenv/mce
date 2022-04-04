@@ -108,9 +108,10 @@ sealed class Term {
 
     data class Hole(override val id: Id?) : Term()
     data class Meta(val index: KInt, override val id: Id?) : Term()
+    data class Block(val elements: KList<Term>, override val id: Id?) : Term()
     data class Var(val name: KString, val level: KInt, override val id: Id?) : Term()
     data class Def(val name: KString, val arguments: KList<Term>, override val id: Id?) : Term()
-    data class Let(val name: KString, val init: Term, val body: Term, override val id: Id?) : Term()
+    data class Let(val name: KString, val init: Term, override val id: Id?) : Term()
     data class Match(val scrutinee: Term, val clauses: KList<Pair<Pat, Term>>, override val id: Id?) : Term()
     data class UnitOf(override val id: Id?) : Term()
     data class BoolOf(val value: KBoolean, override val id: Id?) : Term()

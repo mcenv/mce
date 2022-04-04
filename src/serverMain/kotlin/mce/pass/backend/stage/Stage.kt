@@ -15,7 +15,7 @@ import mce.util.run
 class Stage private constructor(
     private val normalizer: Normalizer,
 ) : Transform() {
-    // TODO: use specialized normalizer for staging.
+    // TODO: do not normalize runtime code
     override fun transformTerm(term: Term): Term = when (term) {
         is Term.Hole -> throw Error()
         is Term.Meta -> throw Error()

@@ -1,3 +1,4 @@
-def let [] : bool ≔
+def let [] : bool ≔ block [
   let x ≔ false
   x
+]

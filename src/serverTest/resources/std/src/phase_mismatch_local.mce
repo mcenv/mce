@@ -1,3 +1,4 @@
-def phase_mismatch_local [] : bool ≔
+def phase_mismatch_local [] : bool ≔ block [
   let b ≔ (#0-0-0-0-0 `false)
   false
+]

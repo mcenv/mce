@@ -62,9 +62,10 @@ sealed class Signature {
 sealed class Term {
     abstract val type: VTerm
 
+    data class Block(val elements: KList<Term>, override val type: VTerm) : Term()
     data class Var(val name: KString, val level: KInt, override val type: VTerm) : Term()
     data class Def(val name: KString, val arguments: KList<Term>, override val type: VTerm) : Term()
-    data class Let(val name: KString, val init: Term, val body: Term, override val type: VTerm) : Term()
+    data class Let(val name: KString, val init: Term, override val type: VTerm) : Term()
     data class Match(val scrutinee: Term, val clauses: KList<Pair<Pat, Term>>, override val type: VTerm) : Term()
     data class UnitOf(override val type: VTerm) : Term()
     data class BoolOf(val value: KBoolean, override val type: VTerm) : Term()

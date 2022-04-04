@@ -1,0 +1,2 @@
+def let_unit [] : unit ≔
+  let x ≔ false

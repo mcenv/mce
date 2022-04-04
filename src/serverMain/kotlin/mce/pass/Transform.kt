@@ -66,9 +66,10 @@ abstract class Transform {
     protected fun transformTermInternal(term: Term): Term = when (term) {
         is Term.Hole -> term
         is Term.Meta -> term
+        is Term.Block -> Term.Block(term.elements.map { transformTerm(it) }, term.id)
         is Term.Var -> term
         is Term.Def -> Term.Def(term.name, term.arguments.map { transformTerm(it) }, term.id)
-        is Term.Let -> Term.Let(term.name, transformTerm(term.init), transformTerm(term.body), term.id)
+        is Term.Let -> Term.Let(term.name, transformTerm(term.init), term.id)
         is Term.Match -> Term.Match(transformTerm(term.scrutinee), term.clauses.map { it.first to transformTerm(it.second) }, term.id)
         is Term.UnitOf -> term
         is Term.BoolOf -> term

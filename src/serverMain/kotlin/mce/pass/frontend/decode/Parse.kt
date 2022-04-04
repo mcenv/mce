@@ -231,17 +231,15 @@ class Parse private constructor(
             Term.Splice(parseTerm(), id)
         }
         else -> when (val word = readWord()) {
+            "block" -> {
+                val elements = parseList('[', ']') { parseTerm() }
+                Term.Block(elements, id)
+            }
             "let" -> {
                 val name = readWord()
                 expectString("≔")
                 val init = parseTerm()
-                skipSpace()
-                when (val delimiter = peek()) {
-                    ',', '\n' -> skip()
-                    else -> error("',' or '\\n' expected but '$delimiter' found")
-                }
-                val body = parseTerm()
-                Term.Let(name, init, body, id)
+                Term.Let(name, init, id)
             }
             "match" -> {
                 val scrutinee = parseTerm()

@@ -110,6 +110,9 @@ sealed class Term {
     data class Meta(override val id: Id) : Term()
 
     @Serializable
+    data class Block(val elements: KList<Term>, override val id: Id) : Term()
+
+    @Serializable
     data class Anno(val element: Term, val type: Term, override val id: Id) : Term()
 
     @Serializable
@@ -119,7 +122,7 @@ sealed class Term {
     data class Def(val name: KString, val arguments: KList<Term>, override val id: Id) : Term()
 
     @Serializable
-    data class Let(val name: KString, val init: Term, val body: Term, override val id: Id) : Term()
+    data class Let(val name: KString, val init: Term, override val id: Id) : Term()
 
     @Serializable
     data class Match(val scrutinee: Term, val clauses: KList<Pair<Pat, Term>>, override val id: Id) : Term()
