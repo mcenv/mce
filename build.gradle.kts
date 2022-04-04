@@ -41,7 +41,7 @@ kotlin {
                 implementation(kotlin("stdlib"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.3.2")
-                implementation("io.ktor:ktor-serialization-kotlinx:2.0.0-eap-362")
+                implementation("io.ktor:ktor-serialization-kotlinx:2.0.0-eap-363")
             }
         }
 
@@ -55,9 +55,9 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
-                implementation("io.ktor:ktor-server-core:2.0.0-eap-362")
-                implementation("io.ktor:ktor-server-netty:2.0.0-eap-362")
-                implementation("io.ktor:ktor-server-websockets:2.0.0-eap-362")
+                implementation("io.ktor:ktor-server-core:2.0.0-eap-363")
+                implementation("io.ktor:ktor-server-netty:2.0.0-eap-363")
+                implementation("io.ktor:ktor-server-websockets:2.0.0-eap-363")
             }
         }
 
@@ -71,9 +71,9 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.5")
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.325-kotlin-1.6.10")
-                implementation("io.ktor:ktor-client-core:2.0.0-eap-362")
-                implementation("io.ktor:ktor-client-js:2.0.0-eap-362")
-                implementation("io.ktor:ktor-client-websockets:2.0.0-eap-362")
+                implementation("io.ktor:ktor-client-core:2.0.0-eap-363")
+                implementation("io.ktor:ktor-client-js:2.0.0-eap-363")
+                implementation("io.ktor:ktor-client-websockets:2.0.0-eap-363")
             }
         }
 
