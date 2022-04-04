@@ -1,6 +1,6 @@
 package mce.emulator
 
-import mce.phase.backend.pack.ResourceLocation
+import mce.pass.backend.pack.ResourceLocation
 
 class NbtStorage(
     private val storage: MutableMap<ResourceLocation, CompoundNbt> = mutableMapOf(),

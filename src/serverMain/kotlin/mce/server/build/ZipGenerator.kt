@@ -1,7 +1,7 @@
 package mce.server.build
 
-import mce.phase.backend.gen.Generator
-import mce.phase.backend.pack.ResourceLocation
+import mce.pass.backend.gen.Generator
+import mce.pass.backend.pack.ResourceLocation
 import java.io.Closeable
 import java.io.File
 import java.util.zip.ZipEntry

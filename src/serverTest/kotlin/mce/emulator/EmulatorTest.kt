@@ -1,10 +1,10 @@
 package mce.emulator
 
-import mce.phase.backend.pack.*
-import mce.phase.backend.pack.SourceProvider.Value
+import mce.pass.backend.pack.*
+import mce.pass.backend.pack.SourceProvider.Value
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import mce.phase.backend.pack.Function as PFunction
+import mce.pass.backend.pack.Function as PFunction
 
 class EmulatorTest {
     @Test

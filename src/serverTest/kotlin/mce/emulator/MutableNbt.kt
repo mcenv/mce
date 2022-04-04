@@ -1,7 +1,7 @@
 package mce.emulator
 
-import mce.phase.backend.pack.Nbt
-import mce.phase.backend.pack.NbtType
+import mce.pass.backend.pack.Nbt
+import mce.pass.backend.pack.NbtType
 
 sealed class MutableNbt {
     abstract val type: NbtType

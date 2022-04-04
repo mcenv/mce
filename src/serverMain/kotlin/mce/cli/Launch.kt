@@ -10,7 +10,7 @@ import kotlinx.cli.ArgType
 import kotlinx.cli.ExperimentalCli
 import kotlinx.cli.Subcommand
 import kotlinx.cli.default
-import mce.phase.Config
+import mce.pass.Config
 import mce.protocol.CompletionRequest
 import mce.protocol.HoverRequest
 import mce.protocol.Request

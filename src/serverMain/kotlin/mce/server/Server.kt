@@ -1,8 +1,8 @@
 package mce.server
 
-import mce.phase.Config
-import mce.phase.frontend.printTerm
-import mce.phase.quoteTerm
+import mce.pass.Config
+import mce.pass.frontend.printTerm
+import mce.pass.quoteTerm
 import mce.protocol.CompletionRequest
 import mce.protocol.CompletionResponse
 import mce.protocol.HoverRequest

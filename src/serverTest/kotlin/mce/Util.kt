@@ -1,7 +1,7 @@
 package mce
 
 import kotlinx.coroutines.runBlocking
-import mce.phase.Config
+import mce.pass.Config
 import mce.server.Server
 import mce.server.build.Key
 
