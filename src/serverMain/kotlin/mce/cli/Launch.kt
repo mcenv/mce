@@ -36,6 +36,7 @@ object Launch : Subcommand("launch", "Launch server") {
                         val response = when (val request = receiveDeserialized<Request>()) {
                             is HoverRequest -> server.hover(request)
                             is CompletionRequest -> TODO()
+                            else -> TODO()
                         }
                         sendSerialized<Response>(response)
                     }

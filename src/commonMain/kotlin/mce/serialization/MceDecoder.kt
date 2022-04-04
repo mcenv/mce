@@ -2,7 +2,6 @@ package mce.serialization
 
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.CompositeDecoder
 import kotlinx.serialization.encoding.Decoder
@@ -66,14 +65,7 @@ class MceDecoder(private val input: ByteArrayInputStream) : Decoder, CompositeDe
 
     override fun decodeDoubleElement(descriptor: SerialDescriptor, index: Int): Double = decodeDouble()
 
-    override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String =
-        if (descriptor.kind is PolymorphicKind) {
-            val ordinal = input.readInt()
-            val serialName = ordinal.toString()
-            serialName
-        } else {
-            decodeString()
-        }
+    override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String = decodeString()
 
     override fun decodeInlineElement(descriptor: SerialDescriptor, index: Int): Decoder = this
 

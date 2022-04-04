@@ -13,7 +13,7 @@ import kotlinx.html.dom.append
 import kotlinx.html.js.textArea
 import kotlinx.html.spellCheck
 import kotlinx.html.style
-import mce.protocol.HoverResponse
+import mce.protocol.Response
 import mce.serialization.Mce
 import kotlin.coroutines.CoroutineContext
 
@@ -33,7 +33,7 @@ object Application : CoroutineScope {
         launch {
             client.webSocket(host = "localhost", port = 51130) {
                 while (true) {
-                    val response = receiveDeserialized<HoverResponse>()
+                    val response = receiveDeserialized<Response>()
                     // TODO
                 }
             }
