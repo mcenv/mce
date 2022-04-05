@@ -28,6 +28,10 @@ abstract class Transform {
             val body = transformTerm(item.body)
             Item.Test(item.modifiers, item.name, body, item.id)
         }
+        is Item.Pack -> {
+            val body = transformTerm(item.body)
+            Item.Pack(body, item.id)
+        }
     }
 
     protected fun transformParamInternal(param: Param): Param {
@@ -61,6 +65,7 @@ abstract class Transform {
             Signature.Mod(signature.name, type, signature.id)
         }
         is Signature.Test -> Signature.Test(signature.name, signature.id)
+        is Signature.Pack -> signature
     }
 
     protected fun transformTermInternal(term: Term): Term = when (term) {

@@ -86,6 +86,7 @@ class ElabTest {
         "block_multi_let",
         "empty_block",
         "let_unit",
+        "pack",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

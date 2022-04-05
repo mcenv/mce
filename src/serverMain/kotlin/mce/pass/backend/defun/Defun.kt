@@ -47,6 +47,7 @@ class Defun private constructor(
                 val body = defunTerm(item.body)
                 DItem.Test(modifiers, item.name, body)
             }
+            is CItem.Pack -> throw Error()
         }
     }
 
@@ -87,6 +88,7 @@ class Defun private constructor(
             DSignature.Mod(signature.name, type)
         }
         is CSignature.Test -> DSignature.Test(signature.name)
+        is CSignature.Pack -> throw Error()
     }
 
     private fun defunTerm(term: CTerm): DTerm = when (term) {

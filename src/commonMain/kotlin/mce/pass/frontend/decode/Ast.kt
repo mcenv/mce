@@ -54,6 +54,17 @@ sealed class Item {
         val body: Term,
         override val id: Id,
     ) : Item()
+
+    @Serializable
+    data class Pack(
+        val body: Term,
+        override val id: Id,
+    ) : Item() {
+        override val imports: KList<KString> = emptyList()
+        override val exports: KList<KString> = emptyList()
+        override val modifiers: KList<Modifier> = emptyList()
+        override val name: KString = "pack"
+    }
 }
 
 enum class Modifier {

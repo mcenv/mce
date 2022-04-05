@@ -460,5 +460,6 @@ fun evalSignature(signature: Signature): State<Normalizer, VSignature> = {
             VSignature.Mod(signature.name, type, signature.id)
         }
         is Signature.Test -> VSignature.Test(signature.name, signature.id)
+        is Signature.Pack -> VSignature.Pack(signature.id)
     }
 }

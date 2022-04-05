@@ -42,6 +42,14 @@ sealed class Item {
         val body: Term,
         override val id: Id,
     ) : Item()
+
+    data class Pack(
+        val body: Term,
+        override val id: Id,
+    ) : Item() {
+        override val modifiers: KSet<Modifier> = emptySet()
+        override val name: KString = "pack"
+    }
 }
 
 enum class Modifier {
@@ -87,6 +95,7 @@ sealed class Signature {
     data class Def(val name: KString, val params: KList<Param>, val resultant: Term, override val id: Id?) : Signature()
     data class Mod(val name: KString, val type: Module, override val id: Id?) : Signature()
     data class Test(val name: KString, override val id: Id?) : Signature()
+    data class Pack(override val id: Id?) : Signature()
 }
 
 /**
@@ -98,6 +107,7 @@ sealed class VSignature {
     data class Def(val name: KString, val params: KList<Param>, val resultant: Term, override val id: Id?) : VSignature()
     data class Mod(val name: KString, val type: VModule, override val id: Id?) : VSignature()
     data class Test(val name: KString, override val id: Id?) : VSignature()
+    data class Pack(override val id: Id?) : VSignature()
 }
 
 /**

@@ -50,6 +50,10 @@ class Parse private constructor(
                 }
                 Item.Test(imports, exports, modifiers, name, body, id)
             }
+            "pack" -> {
+                val body = parseTerm()
+                Item.Pack(body, id)
+            }
             else -> error("unexpected item '$word'")
         }
     }

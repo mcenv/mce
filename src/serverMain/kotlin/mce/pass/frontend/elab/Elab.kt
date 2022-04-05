@@ -74,6 +74,10 @@ class Elab private constructor(
                 val body = !checkTerm(item.body, BOOL)
                 CItem.Test(modifiers, item.name, body, item.id) to CVSignature.Test(item.name, null)
             }
+            is SItem.Pack -> {
+                val body = !checkTerm(item.body, ANY) // TODO
+                CItem.Pack(body, item.id) to CVSignature.Pack(null)
+            }
         }
     }
 
@@ -196,6 +200,8 @@ class Elab private constructor(
             is CVSignature.Test ->
                 signature2 is CVSignature.Test &&
                         signature1.name == signature2.name
+            is CVSignature.Pack ->
+                signature2 is CVSignature.Pack
         }
     }
 
