@@ -1,7 +1,7 @@
 package mce.protocol
 
 import kotlinx.serialization.Serializable
-import mce.pass.frontend.decode.Term
+import mce.ast.surface.Term
 
 @Serializable
 data class HoverResponse(

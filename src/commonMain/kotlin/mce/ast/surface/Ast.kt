@@ -1,8 +1,8 @@
-package mce.pass.frontend.decode
+package mce.ast.surface
 
 import kotlinx.serialization.Serializable
 import mce.Id
-import mce.pass.Name
+import mce.ast.Name
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble

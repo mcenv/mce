@@ -1,9 +1,9 @@
-package mce.pass.backend.gen
+package mce.pass.backend
 
+import mce.ast.pack.*
 import mce.pass.Config
 import mce.pass.Pass
-import mce.pass.backend.pack.*
-import mce.pass.backend.pack.Function as PFunction
+import mce.ast.pack.Function as PFunction
 
 class Gen(
     private val generator: Generator,
@@ -474,4 +474,12 @@ class Gen(
             input.forEach { gen.genFunction(it) }
         }
     }
+}
+
+interface Generator {
+    fun entry(name: ResourceLocation, block: Generator.() -> Unit)
+
+    fun write(char: Char)
+
+    fun write(string: String)
 }

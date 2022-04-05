@@ -1,8 +1,8 @@
 package mce.pass.frontend
 
 import mce.Id
-import mce.pass.frontend.decode.Eff
-import mce.pass.frontend.decode.Term
+import mce.ast.surface.Eff
+import mce.ast.surface.Term
 
 sealed class Diagnostic {
     abstract val id: Id

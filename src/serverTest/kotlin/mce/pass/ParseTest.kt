@@ -1,7 +1,7 @@
 package mce.pass
 
+import mce.ast.surface.Item
 import mce.fetch
-import mce.pass.frontend.decode.Item
 import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertFails

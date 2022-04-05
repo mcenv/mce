@@ -1,8 +1,8 @@
 package mce.pass.builtin.src
 
-import mce.pass.backend.pack.Command
+import mce.ast.core.VTerm
+import mce.ast.pack.Command
 import mce.pass.builtin.BuiltinDef1
-import mce.pass.frontend.elab.VTerm
 
 @Suppress("ClassName")
 object identity : BuiltinDef1("identity") {

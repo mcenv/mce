@@ -1,9 +1,9 @@
 package mce.pass.builtin
 
+import mce.ast.core.VTerm
+import mce.ast.pack.Command
 import mce.pass.Normalizer
-import mce.pass.backend.pack.Command
 import mce.pass.builtin.src.identity
-import mce.pass.frontend.elab.VTerm
 import mce.pass.builtin.src.byte_array.size as byte_array_size
 import mce.pass.builtin.src.int.add as int_add
 import mce.pass.builtin.src.int.div as int_div

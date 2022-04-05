@@ -1,9 +1,9 @@
 package mce.pass
 
+import mce.ast.pack.ResourceLocation
 import mce.fetch
-import mce.pass.backend.gen.Gen
-import mce.pass.backend.gen.Generator
-import mce.pass.backend.pack.ResourceLocation
+import mce.pass.backend.Gen
+import mce.pass.backend.Generator
 import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals

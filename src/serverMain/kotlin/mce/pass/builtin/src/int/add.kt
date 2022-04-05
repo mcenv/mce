@@ -1,14 +1,16 @@
 package mce.pass.builtin.src.int
 
-import mce.pass.backend.pack.*
-import mce.pass.backend.pack.Command.GetData
-import mce.pass.backend.pack.Command.PerformOperation
-import mce.pass.backend.pack.Consumer.RESULT
-import mce.pass.backend.pack.Execute.*
-import mce.pass.backend.pack.Operation.PLUS_ASSIGN
+import mce.ast.core.VTerm
+import mce.ast.pack.Command
+import mce.ast.pack.Command.GetData
+import mce.ast.pack.Command.PerformOperation
+import mce.ast.pack.Consumer.RESULT
+import mce.ast.pack.Execute.*
+import mce.ast.pack.Operation.PLUS_ASSIGN
+import mce.ast.pack.StoreType
+import mce.pass.backend.*
 import mce.pass.builtin.BuiltinDef2
 import mce.pass.builtin.commuter
-import mce.pass.frontend.elab.VTerm
 
 @Suppress("ClassName")
 object add : BuiltinDef2("int/add") {

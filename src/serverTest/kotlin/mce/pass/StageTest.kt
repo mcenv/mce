@@ -1,10 +1,10 @@
 package mce.pass
 
 import mce.Id
+import mce.ast.core.Item
+import mce.ast.core.Term
 import mce.fetch
-import mce.pass.backend.stage.Stage
-import mce.pass.frontend.elab.Item
-import mce.pass.frontend.elab.Term
+import mce.pass.backend.Stage
 import mce.server.build.Key
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

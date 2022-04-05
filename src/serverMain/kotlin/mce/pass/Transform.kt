@@ -1,6 +1,6 @@
 package mce.pass
 
-import mce.pass.frontend.elab.*
+import mce.ast.core.*
 import mce.util.toLinkedHashMap
 
 abstract class Transform {

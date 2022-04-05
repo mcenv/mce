@@ -1,11 +1,11 @@
-package mce.pass.backend.stage
+package mce.pass.backend
 
 import mce.Id
+import mce.ast.core.Item
+import mce.ast.core.Term
+import mce.ast.core.VTerm
 import mce.pass.*
-import mce.pass.frontend.elab.Item
-import mce.pass.frontend.elab.Term
-import mce.pass.frontend.elab.VTerm
-import mce.pass.frontend.zonk.Zonk
+import mce.pass.frontend.Zonk
 import mce.util.run
 
 /**

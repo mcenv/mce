@@ -1,12 +1,12 @@
 package mce.server.build
 
-import mce.pass.backend.defun.Defun
-import mce.pass.backend.gen.Gen
-import mce.pass.backend.pack.Pack
-import mce.pass.backend.stage.Stage
-import mce.pass.frontend.elab.Elab
-import mce.pass.frontend.zonk.Zonk
-import mce.pass.frontend.decode.Item as SItem
+import mce.pass.backend.Defun
+import mce.pass.backend.Gen
+import mce.pass.backend.Pack
+import mce.pass.backend.Stage
+import mce.pass.frontend.Elab
+import mce.pass.frontend.Zonk
+import mce.ast.surface.Item as SItem
 
 sealed class Key<V> {
     abstract val name: String

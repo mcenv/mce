@@ -1,7 +1,8 @@
-package mce.pass.frontend.decode
+package mce.pass.frontend
 
 import mce.Id
-import mce.pass.Name
+import mce.ast.Name
+import mce.ast.surface.*
 import mce.pass.freshId
 import java.util.*
 

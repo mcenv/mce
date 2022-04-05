@@ -1,36 +1,33 @@
-package mce.pass.frontend.elab
+package mce.pass.frontend
 
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import mce.Id
 import mce.pass.*
-import mce.pass.frontend.Diagnostic
-import mce.pass.frontend.printEff
-import mce.pass.frontend.printTerm
 import mce.util.State
 import mce.util.run
 import mce.util.toLinkedHashMap
-import mce.pass.frontend.decode.Eff as SEff
-import mce.pass.frontend.decode.Item as SItem
-import mce.pass.frontend.decode.Modifier as SModifier
-import mce.pass.frontend.decode.Module as SModule
-import mce.pass.frontend.decode.Param as SParam
-import mce.pass.frontend.decode.Pat as SPat
-import mce.pass.frontend.decode.Signature as SSignature
-import mce.pass.frontend.decode.Term as STerm
-import mce.pass.frontend.elab.Eff as CEff
-import mce.pass.frontend.elab.Entry as CEntry
-import mce.pass.frontend.elab.Item as CItem
-import mce.pass.frontend.elab.Modifier as CModifier
-import mce.pass.frontend.elab.Module as CModule
-import mce.pass.frontend.elab.Param as CParam
-import mce.pass.frontend.elab.Pat as CPat
-import mce.pass.frontend.elab.Signature as CSignature
-import mce.pass.frontend.elab.Term as CTerm
-import mce.pass.frontend.elab.VModule as CVModule
-import mce.pass.frontend.elab.VSignature as CVSignature
-import mce.pass.frontend.elab.VTerm as CVTerm
+import mce.ast.core.Eff as CEff
+import mce.ast.core.Entry as CEntry
+import mce.ast.core.Item as CItem
+import mce.ast.core.Modifier as CModifier
+import mce.ast.core.Module as CModule
+import mce.ast.core.Param as CParam
+import mce.ast.core.Pat as CPat
+import mce.ast.core.Signature as CSignature
+import mce.ast.core.Term as CTerm
+import mce.ast.core.VModule as CVModule
+import mce.ast.core.VSignature as CVSignature
+import mce.ast.core.VTerm as CVTerm
+import mce.ast.surface.Eff as SEff
+import mce.ast.surface.Item as SItem
+import mce.ast.surface.Modifier as SModifier
+import mce.ast.surface.Module as SModule
+import mce.ast.surface.Param as SParam
+import mce.ast.surface.Pat as SPat
+import mce.ast.surface.Signature as SSignature
+import mce.ast.surface.Term as STerm
 
 // TODO: stop using [State]
 // TODO: check/synth effects and stages

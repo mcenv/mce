@@ -1,4 +1,4 @@
-package mce.pass.backend.pack
+package mce.ast.pack
 
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble
@@ -15,7 +15,7 @@ data class Function(
 )
 
 sealed class Command {
-    data class Execute(val execute: mce.pass.backend.pack.Execute) : Command()
+    data class Execute(val execute: mce.ast.pack.Execute) : Command()
     data class CheckScore(val success: Boolean, val target: ScoreHolder, val targetObjective: Objective, val source: SourceComparator) : Command()
     data class CheckMatchingData(val success: Boolean, val source: ResourceLocation, val path: NbtPath) : Command()
     data class GetData(val target: ResourceLocation, val path: NbtPath? = null) : Command()

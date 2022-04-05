@@ -1,7 +1,7 @@
-package mce.pass.frontend.elab
+package mce.ast.core
 
 import mce.Id
-import mce.pass.Name
+import mce.ast.Name
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble

@@ -1,4 +1,4 @@
-package mce.pass
+package mce.ast
 
 import kotlinx.serialization.Serializable
 import mce.Id

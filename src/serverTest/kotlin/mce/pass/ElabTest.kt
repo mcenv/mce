@@ -1,11 +1,11 @@
 package mce.pass
 
 import mce.Id
+import mce.ast.core.VTerm
+import mce.ast.surface.Eff
 import mce.fetch
 import mce.pass.frontend.Diagnostic
-import mce.pass.frontend.decode.Eff
-import mce.pass.frontend.elab.Elab
-import mce.pass.frontend.elab.VTerm
+import mce.pass.frontend.Elab
 import mce.server.build.Key
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest

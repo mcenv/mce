@@ -1,14 +1,14 @@
 package mce.pass.frontend
 
 import mce.pass.freshId
-import mce.pass.frontend.decode.Eff as SEff
-import mce.pass.frontend.decode.Entry as SEntry
-import mce.pass.frontend.decode.Param as SParam
-import mce.pass.frontend.decode.Pat as SPat
-import mce.pass.frontend.decode.Term as STerm
-import mce.pass.frontend.elab.Eff as CEff
-import mce.pass.frontend.elab.Pat as CPat
-import mce.pass.frontend.elab.Term as CTerm
+import mce.ast.core.Eff as CEff
+import mce.ast.core.Pat as CPat
+import mce.ast.core.Term as CTerm
+import mce.ast.surface.Eff as SEff
+import mce.ast.surface.Entry as SEntry
+import mce.ast.surface.Param as SParam
+import mce.ast.surface.Pat as SPat
+import mce.ast.surface.Term as STerm
 
 fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Hole -> STerm.Hole(term.id ?: freshId())

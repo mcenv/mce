@@ -1,8 +1,8 @@
 package mce.serialization
 
 import kotlinx.serialization.serializer
+import mce.ast.surface.Term
 import mce.pass.freshId
-import mce.pass.frontend.decode.Term
 import mce.util.ByteArrayInputStream
 import mce.util.ByteArrayOutputStream
 import kotlin.test.Test

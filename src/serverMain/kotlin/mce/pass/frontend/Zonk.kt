@@ -1,12 +1,10 @@
-package mce.pass.frontend.zonk
+package mce.pass.frontend
 
 import mce.Id
+import mce.ast.core.Item
+import mce.ast.core.Term
+import mce.ast.core.VTerm
 import mce.pass.*
-import mce.pass.frontend.Diagnostic
-import mce.pass.frontend.elab.Elab
-import mce.pass.frontend.elab.Item
-import mce.pass.frontend.elab.Term
-import mce.pass.frontend.elab.VTerm
 import mce.util.run
 
 /**

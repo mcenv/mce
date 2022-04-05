@@ -1,16 +1,18 @@
 package mce.pass.builtin.src.int
 
-import mce.pass.backend.pack.*
-import mce.pass.backend.pack.Command.*
-import mce.pass.backend.pack.Consumer.RESULT
-import mce.pass.backend.pack.Execute.Run
-import mce.pass.backend.pack.Execute.StoreValue
-import mce.pass.backend.pack.SourceComparator.EqScore
-import mce.pass.backend.pack.SourceProvider.Value
+import mce.ast.core.VTerm
+import mce.ast.pack.Command
+import mce.ast.pack.Command.*
+import mce.ast.pack.Consumer.RESULT
+import mce.ast.pack.Execute.Run
+import mce.ast.pack.Execute.StoreValue
+import mce.ast.pack.Nbt
+import mce.ast.pack.SourceComparator.EqScore
+import mce.ast.pack.SourceProvider.Value
+import mce.pass.backend.*
 import mce.pass.builtin.BuiltinDef2
 import mce.pass.builtin.commuter
-import mce.pass.frontend.elab.VTerm
-import mce.pass.backend.pack.Execute as E
+import mce.ast.pack.Execute as E
 
 @Suppress("ClassName")
 object eq : BuiltinDef2("int/eq") {

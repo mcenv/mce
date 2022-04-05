@@ -1,10 +1,10 @@
 package mce.pass
 
 import mce.Id
+import mce.ast.core.VTerm
 import mce.fetch
 import mce.pass.frontend.Diagnostic
-import mce.pass.frontend.elab.VTerm
-import mce.pass.frontend.zonk.Zonk
+import mce.pass.frontend.Zonk
 import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertIs

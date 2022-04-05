@@ -1,12 +1,12 @@
 package mce.emulator
 
+import mce.ast.pack.*
+import mce.ast.pack.Function
 import mce.emulator.NbtLens.countMatching
 import mce.emulator.NbtLens.get
 import mce.emulator.NbtLens.getOrCreate
 import mce.emulator.NbtLens.remove
 import mce.emulator.NbtLens.set
-import mce.pass.backend.pack.*
-import mce.pass.backend.pack.Function
 import kotlin.math.max
 import kotlin.math.min
 

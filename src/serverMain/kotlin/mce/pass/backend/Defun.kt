@@ -1,29 +1,28 @@
-package mce.pass.backend.defun
+package mce.pass.backend
 
 import mce.Id
 import mce.pass.Config
 import mce.pass.Pass
-import mce.pass.backend.stage.Stage
 import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import mce.pass.backend.defun.Eff as DEff
-import mce.pass.backend.defun.Entry as DEntry
-import mce.pass.backend.defun.Item as DItem
-import mce.pass.backend.defun.Modifier as DModifier
-import mce.pass.backend.defun.Module as DModule
-import mce.pass.backend.defun.Param as DParam
-import mce.pass.backend.defun.Pat as DPat
-import mce.pass.backend.defun.Signature as DSignature
-import mce.pass.backend.defun.Term as DTerm
-import mce.pass.frontend.elab.Eff as CEff
-import mce.pass.frontend.elab.Item as CItem
-import mce.pass.frontend.elab.Modifier as CModifier
-import mce.pass.frontend.elab.Module as CModule
-import mce.pass.frontend.elab.Param as CParam
-import mce.pass.frontend.elab.Pat as CPat
-import mce.pass.frontend.elab.Signature as CSignature
-import mce.pass.frontend.elab.Term as CTerm
-import mce.pass.frontend.elab.VTerm as CVTerm
+import mce.ast.core.Eff as CEff
+import mce.ast.core.Item as CItem
+import mce.ast.core.Modifier as CModifier
+import mce.ast.core.Module as CModule
+import mce.ast.core.Param as CParam
+import mce.ast.core.Pat as CPat
+import mce.ast.core.Signature as CSignature
+import mce.ast.core.Term as CTerm
+import mce.ast.core.VTerm as CVTerm
+import mce.ast.defun.Eff as DEff
+import mce.ast.defun.Entry as DEntry
+import mce.ast.defun.Item as DItem
+import mce.ast.defun.Modifier as DModifier
+import mce.ast.defun.Module as DModule
+import mce.ast.defun.Param as DParam
+import mce.ast.defun.Pat as DPat
+import mce.ast.defun.Signature as DSignature
+import mce.ast.defun.Term as DTerm
 
 @Suppress("NAME_SHADOWING")
 class Defun private constructor(

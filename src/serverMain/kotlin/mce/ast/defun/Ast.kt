@@ -1,7 +1,7 @@
-package mce.pass.backend.defun
+package mce.ast.defun
 
-import mce.pass.Name
-import mce.pass.frontend.elab.VTerm
+import mce.ast.Name
+import mce.ast.core.VTerm
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble

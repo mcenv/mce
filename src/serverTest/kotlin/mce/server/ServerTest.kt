@@ -2,8 +2,8 @@ package mce.server
 
 import kotlinx.coroutines.runBlocking
 import mce.Id
+import mce.ast.surface.Term
 import mce.pass.Config
-import mce.pass.frontend.decode.Term
 import mce.protocol.CompletionRequest
 import mce.protocol.HoverRequest
 import mce.server.build.Key
