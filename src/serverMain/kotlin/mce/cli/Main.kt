@@ -7,6 +7,7 @@ import kotlinx.cli.ExperimentalCli
 fun main(args: Array<String>) {
     ArgParser("mce").run {
         subcommands(
+            Init,
             Launch,
             Test,
             Version,
