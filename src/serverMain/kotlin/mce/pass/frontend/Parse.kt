@@ -215,7 +215,15 @@ class Parse private constructor(
             }
             else -> Term.ListOf(parseList('[', ']') { parseTerm() }, id)
         }
-        '{' -> Term.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parseTerm() }) }, id)
+        '{' -> {
+            val elements = parseList('{', '}') {
+                val name = parseName()
+                expect(':')
+                val element = parseTerm()
+                Term.CompoundOf.Entry(name, element)
+            }
+            Term.CompoundOf(elements, id)
+        }
         '⟨' -> {
             val elements = parseList('⟨', '⟩') { parseTerm() }
             Term.TupleOf(elements, id)
@@ -534,7 +542,7 @@ class Parse private constructor(
         return source.substring(start, cursor).also { skip() }
     }
 
-    private fun Char.isWordPart(): Boolean = this != ',' && this != ')' && this != ']' && this != '}' && this != ':' && !this.isWhitespace()
+    private fun Char.isWordPart(): Boolean = this != ',' && this != ')' && this != ']' && this != '}' && this != '⟩' && this != ':' && !this.isWhitespace()
 
     private fun error(message: String): Nothing = throw Error("$message at $cursor")
 

@@ -1,7 +1,6 @@
 package mce.pass
 
 import mce.ast.core.*
-import mce.util.toLinkedHashMap
 
 abstract class Transform {
     open fun transformItem(item: Item): Item = transformItemInternal(item)
@@ -89,7 +88,7 @@ abstract class Transform {
         is Term.IntArrayOf -> Term.IntArrayOf(term.elements.map { transformTerm(it) }, term.id)
         is Term.LongArrayOf -> Term.LongArrayOf(term.elements.map { transformTerm(it) }, term.id)
         is Term.ListOf -> Term.ListOf(term.elements.map { transformTerm(it) }, term.id)
-        is Term.CompoundOf -> Term.CompoundOf(term.elements.map { (name, element) -> name to transformTerm(element) }.toLinkedHashMap(), term.id)
+        is Term.CompoundOf -> Term.CompoundOf(term.elements.map { element -> Term.CompoundOf.Entry(element.name, transformTerm(element.element)) }, term.id)
         is Term.TupleOf -> Term.TupleOf(term.elements.map { transformTerm(it) }, term.id)
         is Term.RefOf -> Term.RefOf(transformTerm(term.element), term.id)
         is Term.Refl -> term
@@ -112,7 +111,7 @@ abstract class Transform {
         is Term.IntArray -> term
         is Term.LongArray -> term
         is Term.List -> Term.List(transformTerm(term.element), transformTerm(term.size), term.id)
-        is Term.Compound -> Term.Compound(term.elements.map { (name, element) -> name to Term.Compound.Entry(element.relevant, transformTerm(element.type), element.id) }.toLinkedHashMap(), term.id)
+        is Term.Compound -> Term.Compound(term.elements.map { element -> Term.Compound.Entry(element.relevant, element.name, transformTerm(element.type), element.id) }, term.id)
         is Term.Tuple -> Term.Tuple(term.elements.map { Term.Tuple.Entry(it.relevant, it.name, transformTerm(it.type), it.id) }, term.id)
         is Term.Ref -> Term.Ref(transformTerm(term.element), term.id)
         is Term.Eq -> Term.Eq(transformTerm(term.left), transformTerm(term.right), term.id)

@@ -258,7 +258,7 @@ class Elab private constructor(
                             type
                         }
                     }
-                    Typing(CTerm.Var(term.name, level, term.id), type)
+                    Typing(CTerm.Var(term.name, level /* TODO: avoid [IndexOutOfBoundsException] */, term.id), type)
                 }
             is STerm.UnitOf -> Typing(CTerm.UnitOf(term.id), UNIT)
             is STerm.BoolOf -> Typing(CTerm.BoolOf(term.value, term.id), BOOL)
@@ -291,16 +291,13 @@ class Elab private constructor(
                 Typing(CTerm.ListOf(elements, term.id), CVTerm.List(lazyOf(head.type), lazyOf(size)))
             }
             is STerm.CompoundOf -> {
-                val elements = !term.elements.mapM { (name, element) ->
+                val (elementTerms, elementTypes) = (!term.elements.mapM { entry ->
                     {
-                        val element = !(inferTerm(element))
-                        name to element
+                        val element = !inferTerm(entry.element)
+                        CTerm.CompoundOf.Entry(entry.name, element.term) to CVTerm.Compound.Entry(true, entry.name, lazyOf(element.type), null)
                     }
-                }
-                Typing(
-                    CTerm.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
-                    CVTerm.Compound(elements.map { (name, element) -> name to CTerm.Compound.Entry(true, !lift({ normalizer }, quoteTerm(element.type)), null) }.toLinkedHashMap())
-                )
+                }).unzip()
+                Typing(CTerm.CompoundOf(elementTerms, term.id), CVTerm.Compound(elementTypes.map { it.name.text to it }.toLinkedHashMap()))
             }
             is STerm.TupleOf -> {
                 val elements = !term.elements.mapM { element -> inferTerm(element) }
@@ -363,17 +360,15 @@ class Elab private constructor(
                     Typing(CTerm.List(element, size, term.id), TYPE)
                 }
             }
-            is STerm.Compound ->
-                !restore {
-                    val elements = !term.elements.mapM { entry ->
-                        {
-                            val element = !checkTerm(entry.type, TYPE)
-                            !modify { bind(entry.id, Entry(false, entry.name.text, END, ANY, true, !lift({ normalizer }, evalTerm(element)), stage)) }
-                            entry.name to CTerm.Compound.Entry(entry.relevant, element, entry.id)
-                        }
+            is STerm.Compound -> {
+                val elements = !term.elements.mapM { entry ->
+                    {
+                        val element = !checkTerm(entry.type, TYPE)
+                        CTerm.Compound.Entry(entry.relevant, entry.name, element, entry.id)
                     }
-                    Typing(CTerm.Compound(elements.toLinkedHashMap(), term.id), TYPE)
                 }
+                Typing(CTerm.Compound(elements, term.id), TYPE)
+            }
             is STerm.Tuple ->
                 !restore {
                     val elements = !term.elements.mapM { entry ->
@@ -559,19 +554,15 @@ class Elab private constructor(
                 }
                 CTerm.ListOf(elements, term.id)
             }
-            term is STerm.CompoundOf && type is CVTerm.Compound ->
-                !restore {
-                    val elements = !(term.elements zip type.elements.values).mapM { (element, entry) ->
-                        {
-                            val vType = !lift({ normalizer }, evalTerm(entry.type))
-                            val tElement = !checkTerm(element.second, vType)
-                            val vElement = !lift({ normalizer }, evalTerm(tElement))
-                            !modify { bind(element.first.id, Entry(entry.relevant, element.first.text, END, ANY, true, vType, stage), vElement) }
-                            element.first to tElement
-                        }
+            term is STerm.CompoundOf && type is CVTerm.Compound -> {
+                val elements = !(term.elements zip type.elements.values).mapM { (element, entry) ->
+                    {
+                        val tElement = !checkTerm(element.element, entry.type.value)
+                        CTerm.CompoundOf.Entry(element.name, tElement)
                     }
-                    CTerm.CompoundOf(elements.toLinkedHashMap(), term.id)
                 }
+                CTerm.CompoundOf(elements, term.id)
+            }
             term is STerm.TupleOf && type is CVTerm.Tuple ->
                 !restore {
                     val elements = !(term.elements zip type.elements).mapM { (element, entry) ->
@@ -715,11 +706,11 @@ class Elab private constructor(
                 term1.elements.size == term2.elements.size &&
                         !(term1.elements zip term2.elements).allM { unifyTerms(it.first.value, it.second.value) }
             term1 is CVTerm.CompoundOf && term2 is CVTerm.CompoundOf ->
-                term1.elements.size == term2.elements.size &&
-                        !(term1.elements.entries zip term2.elements.entries).allM { (entry1, entry2) ->
+                term1.elements.keys == term2.elements.keys &&
+                        !term1.elements.entries.allM { (key1, element1) ->
                             {
-                                entry1.key.text == entry2.key.text &&
-                                        !unifyTerms(entry1.value.value, entry2.value.value)
+                                val element2 = term2.elements[key1]!!
+                                !unifyTerms(element1.element.value, element2.element.value)
                             }
                         }
             term1 is CVTerm.TupleOf && term2 is CVTerm.TupleOf ->
@@ -759,13 +750,13 @@ class Elab private constructor(
                 !unifyTerms(term1.element.value, term2.element.value) &&
                         !unifyTerms(term1.size.value, term2.size.value)
             term1 is CVTerm.Compound && term2 is CVTerm.Compound ->
-                term1.elements.size == term2.elements.size &&
-                        !(term1.elements.entries zip term2.elements.entries).allM { (entry1, entry2) ->
+                term1.elements.keys == term2.elements.keys &&
+                        !term1.elements.entries.allM { (key1, element1) ->
                             {
-                                !modify { bind(lazyOf(CVTerm.Var(entry1.key.text, size))) }
-                                entry1.key.text == entry2.key.text &&
-                                        entry1.value.relevant == entry2.value.relevant &&
-                                        !unifyTerms(!evalTerm(entry1.value.type), !evalTerm(entry2.value.type))
+                                val element2 = term2.elements[key1]!!
+                                !modify { bind(lazyOf(CVTerm.Var(key1, size))) }
+                                element1.relevant == element2.relevant &&
+                                        !unifyTerms(element1.type.value, element2.type.value)
                             }
                         }
             term1 is CVTerm.Tuple && term2 is CVTerm.Tuple ->
@@ -831,9 +822,9 @@ class Elab private constructor(
                             val element1 = term1.elements[key2]
                             if (element1 != null) {
                                 element1.relevant == element2.relevant && run {
-                                    val upper1 = !lift({ normalizer }, evalTerm(element1.type))
-                                    !subtypeTerms(upper1, !lift({ normalizer }, evalTerm(element2.type))).also {
-                                        !modify { bindUnchecked(Entry(false, key2.text, null, upper1, true, TYPE, stage)) }
+                                    val upper1 = element1.type.value
+                                    !subtypeTerms(upper1, element2.type.value).also {
+                                        !modify { bindUnchecked(Entry(false, key2, null, upper1, true, TYPE, stage)) }
                                     }
                                 }
                             } else false
@@ -937,15 +928,13 @@ class Elab private constructor(
                 }
             }
             is SPat.CompoundOf -> {
-                val elements = !pat.elements.mapM { (name, element) ->
+                val (elementTerms, elementTypes) = (!pat.elements.mapM { (name, element) ->
                     {
                         val (element, elementType) = !inferPat(element)
-                        Triple(name, element, elementType)
+                        (name to element) to (name.text to CVTerm.Compound.Entry(true, name, lazyOf(elementType), null))
                     }
-                }
-                val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
-                val elementTypes = elements.map { (name, _, type) -> name to CTerm.Compound.Entry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
-                CPat.CompoundOf(elementTerms, pat.id) to CVTerm.Compound(elementTypes)
+                }).unzip()
+                CPat.CompoundOf(elementTerms, pat.id) to CVTerm.Compound(elementTypes.toLinkedHashMap())
             }
             is SPat.TupleOf -> {
                 val elements = !pat.elements.mapM { element -> inferPat(element) }
@@ -992,7 +981,7 @@ class Elab private constructor(
                         name to !checkPat(element, TYPE)
                     }
                 }
-                CPat.Compound(elements.toLinkedHashMap(), pat.id) to TYPE
+                CPat.Compound(elements, pat.id) to TYPE
             }
             is SPat.Tuple -> {
                 val elements = !pat.elements.mapM { element -> checkPat(element, TYPE) }
@@ -1044,12 +1033,11 @@ class Elab private constructor(
             pat is SPat.CompoundOf && type is CVTerm.Compound -> {
                 val elements = !(pat.elements zip type.elements.entries).mapM { (element, entry) ->
                     {
-                        val type = !lift({ normalizer }, evalTerm(entry.value.type))
-                        val pat = !checkPat(element.second, type)
+                        val pat = !checkPat(element.second, entry.value.type.value)
                         element.first to pat
                     }
                 }
-                CPat.CompoundOf(elements.toLinkedHashMap(), pat.id)
+                CPat.CompoundOf(elements, pat.id)
             }
             pat is SPat.TupleOf && type is CVTerm.Tuple -> {
                 val elements = !(pat.elements zip type.elements).mapM { (element, entry) ->
@@ -1099,7 +1087,7 @@ class Elab private constructor(
             term1 is CVTerm.LongArrayOf && term2 is CVTerm.LongArrayOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
             term1 is CVTerm.ListOf && term2 is CVTerm.ListOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
             term1 is CVTerm.CompoundOf && term2 is CVTerm.CompoundOf -> !(term1.elements.entries zip term2.elements.entries).forEachM { (entry1, entry2) ->
-                if (entry1.key == entry2.key) match(entry1.value.value, entry2.value.value) else pure(Unit)
+                if (entry1.key == entry2.key) match(entry1.value.element.value, entry2.value.element.value) else pure(Unit)
             }
             term1 is CVTerm.TupleOf && term2 is CVTerm.TupleOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
             term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !match(term1.element.value, term2.element.value)

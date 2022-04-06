@@ -147,7 +147,7 @@ class Pack private constructor() {
             is Term.CompoundOf -> {
                 +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
                 if (term.elements.isNotEmpty()) {
-                    term.elements.entries.forEach { (name, element) ->
+                    term.elements.forEach { (name, element) ->
                         val type = eraseType(element.type)
                         val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1][name.text]
                         val sourcePath = type.toPath()[-1]

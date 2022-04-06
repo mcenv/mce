@@ -175,7 +175,10 @@ sealed class Term {
     data class ListOf(val elements: KList<Term>, override val id: Id) : Term()
 
     @Serializable
-    data class CompoundOf(val elements: KList<Pair<Name, Term>>, override val id: Id) : Term()
+    data class CompoundOf(val elements: KList<Entry>, override val id: Id) : Term() {
+        @Serializable
+        data class Entry(val name: Name, val element: Term)
+    }
 
     @Serializable
     data class TupleOf(val elements: KList<Term>, override val id: Id) : Term()

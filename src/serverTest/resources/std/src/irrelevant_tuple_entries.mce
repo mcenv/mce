@@ -1,0 +1,1 @@
+def irrelevant_tuple_entries [] : tuple ⟨0 α: type, α⟩ ≔ ⟨bool, false⟩

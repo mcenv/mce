@@ -3,7 +3,6 @@ package mce.pass.backend
 import mce.Id
 import mce.pass.Config
 import mce.pass.Pass
-import mce.util.toLinkedHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import mce.ast.core.Eff as CEff
 import mce.ast.core.Item as CItem
@@ -133,8 +132,8 @@ class Defun private constructor(
             DTerm.ListOf(elements, getType(term.id!!))
         }
         is CTerm.CompoundOf -> {
-            val elements = term.elements.map { (name, element) -> name to defunTerm(element) }
-            DTerm.CompoundOf(elements.toLinkedHashMap(), getType(term.id!!))
+            val elements = term.elements.map { element -> DTerm.CompoundOf.Entry(element.name, defunTerm(element.element)) }
+            DTerm.CompoundOf(elements, getType(term.id!!))
         }
         is CTerm.TupleOf -> {
             val elements = term.elements.map { defunTerm(it) }
@@ -185,8 +184,8 @@ class Defun private constructor(
             DTerm.List(element, size, getType(term.id!!))
         }
         is CTerm.Compound -> {
-            val elements = term.elements.map { (name, element) -> name to DTerm.Compound.Entry(element.relevant, defunTerm(element.type)) }
-            DTerm.Compound(elements.toLinkedHashMap(), getType(term.id!!))
+            val elements = term.elements.map { element -> DTerm.Compound.Entry(element.relevant, element.name, defunTerm(element.type)) }
+            DTerm.Compound(elements, getType(term.id!!))
         }
         is CTerm.Tuple -> {
             val elements = term.elements.map { DTerm.Tuple.Entry(it.relevant, defunTerm(it.type)) }
@@ -240,7 +239,7 @@ class Defun private constructor(
         }
         is CPat.CompoundOf -> {
             val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
-            DPat.CompoundOf(elements.toLinkedHashMap(), getType(pat.id))
+            DPat.CompoundOf(elements, getType(pat.id))
         }
         is CPat.TupleOf -> {
             val elements = pat.elements.map { defunPat(it) }
@@ -278,7 +277,7 @@ class Defun private constructor(
         }
         is CPat.Compound -> {
             val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
-            DPat.Compound(elements.toLinkedHashMap(), getType(pat.id))
+            DPat.Compound(elements, getType(pat.id))
         }
         is CPat.Tuple -> {
             val elements = pat.elements.map { defunPat(it) }

@@ -1,0 +1,1 @@
+def tuple [] : tuple ⟨α: type, α⟩ ≔ ⟨bool, false⟩

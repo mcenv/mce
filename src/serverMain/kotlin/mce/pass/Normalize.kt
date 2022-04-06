@@ -161,7 +161,7 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             VTerm.ListOf(elements, term.id)
         }
         is Term.CompoundOf -> {
-            val elements = term.elements.map { (name, element) -> name to lazy { !evalTerm(element) } }.toLinkedHashMap()
+            val elements = term.elements.map { (name, element) -> name.text to VTerm.CompoundOf.Entry(name, lazy { !evalTerm(element) }) }.toLinkedHashMap()
             VTerm.CompoundOf(elements, term.id)
         }
         is Term.TupleOf -> {
@@ -217,7 +217,10 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
             val size = lazy { !evalTerm(term.size) }
             VTerm.List(element, size, term.id)
         }
-        is Term.Compound -> VTerm.Compound(term.elements, term.id)
+        is Term.Compound -> {
+            val elements = term.elements.map { element -> element.name.text to VTerm.Compound.Entry(element.relevant, element.name, lazy { !evalTerm(element.type) }, element.id) }.toLinkedHashMap()
+            VTerm.Compound(elements, term.id)
+        }
         is Term.Tuple -> VTerm.Tuple(term.elements, term.id)
         is Term.Ref -> {
             val element = lazy { !evalTerm(term.element) }
@@ -272,13 +275,11 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
                 !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
             } else false
         pat is Pat.CompoundOf && term is VTerm.CompoundOf ->
-            if (pat.elements.size == term.elements.size) {
-                !(pat.elements.entries zip term.elements.entries).allM { (pattern, value) ->
-                    {
-                        !match(pattern.value, value.value.value) && pattern.key.text == value.key.text
-                    }
+            !pat.elements.allM { (name, element) ->
+                {
+                    term.elements[name.text]?.let { !match(element, it.element.value) } ?: false
                 }
-            } else false
+            }
         pat is Pat.TupleOf && term is VTerm.TupleOf ->
             if (pat.elements.size == term.elements.size) {
                 !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
@@ -358,7 +359,11 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
             Term.ListOf(elements, term.id)
         }
         is VTerm.CompoundOf -> {
-            val elements = (!term.elements.entries.mapM { (name, element) -> { name to !quoteTerm(element.value) } }).toLinkedHashMap()
+            val elements = (!term.elements.entries.mapM { (name, element) ->
+                {
+                    Term.CompoundOf.Entry(element.name, !quoteTerm(element.element.value))
+                }
+            })
             Term.CompoundOf(elements, term.id)
         }
         is VTerm.TupleOf -> {
@@ -415,7 +420,10 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
             val size = !quoteTerm(term.size.value)
             Term.List(element, size, term.id)
         }
-        is VTerm.Compound -> Term.Compound(term.elements, term.id)
+        is VTerm.Compound -> {
+            val elements = term.elements.map { (_, element) -> Term.Compound.Entry(element.relevant, element.name, !quoteTerm(element.type.value), element.id) }
+            Term.Compound(elements, term.id)
+        }
         is VTerm.Tuple -> Term.Tuple(term.elements, term.id)
         is VTerm.Ref -> {
             val element = !quoteTerm(term.element.value)

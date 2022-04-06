@@ -134,7 +134,10 @@ sealed class Term {
     data class IntArrayOf(val elements: KList<Term>, override val id: Id?) : Term()
     data class LongArrayOf(val elements: KList<Term>, override val id: Id?) : Term()
     data class ListOf(val elements: KList<Term>, override val id: Id?) : Term()
-    data class CompoundOf(val elements: LinkedHashMap<Name, Term>, override val id: Id?) : Term()
+    data class CompoundOf(val elements: KList<Entry>, override val id: Id?) : Term() {
+        data class Entry(val name: Name, val element: Term)
+    }
+
     data class TupleOf(val elements: KList<Term>, override val id: Id?) : Term()
     data class RefOf(val element: Term, override val id: Id?) : Term()
     data class Refl(override val id: Id?) : Term()
@@ -157,8 +160,8 @@ sealed class Term {
     data class IntArray(override val id: Id?) : Term()
     data class LongArray(override val id: Id?) : Term()
     data class List(val element: Term, val size: Term, override val id: Id?) : Term()
-    data class Compound(val elements: LinkedHashMap<Name, Entry>, override val id: Id?) : Term() {
-        data class Entry(val relevant: KBoolean, val type: Term, val id: Id?)
+    data class Compound(val elements: KList<Entry>, override val id: Id?) : Term() {
+        data class Entry(val relevant: KBoolean, val name: Name, val type: Term, val id: Id?)
     }
 
     data class Tuple(val elements: KList<Entry>, override val id: Id?) : Term() {
@@ -196,7 +199,10 @@ sealed class VTerm {
     data class IntArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
     data class LongArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
     data class ListOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
-    data class CompoundOf(val elements: LinkedHashMap<Name, Lazy<VTerm>>, override val id: Id? = null) : VTerm()
+    data class CompoundOf(val elements: LinkedHashMap<KString, Entry>, override val id: Id? = null) : VTerm() {
+        data class Entry(val name: Name, val element: Lazy<VTerm>)
+    }
+
     data class TupleOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
     data class RefOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
     data class Refl(override val id: Id? = null) : VTerm()
@@ -219,7 +225,10 @@ sealed class VTerm {
     data class IntArray(override val id: Id? = null) : VTerm()
     data class LongArray(override val id: Id? = null) : VTerm()
     data class List(val element: Lazy<VTerm>, val size: Lazy<VTerm>, override val id: Id? = null) : VTerm()
-    data class Compound(val elements: LinkedHashMap<Name, Term.Compound.Entry>, override val id: Id? = null) : VTerm()
+    data class Compound(val elements: LinkedHashMap<KString, Entry>, override val id: Id? = null) : VTerm() {
+        data class Entry(val relevant: KBoolean, val name: Name, val type: Lazy<VTerm>, val id: Id?)
+    }
+
     data class Tuple(val elements: KList<Term.Tuple.Entry>, override val id: Id? = null) : VTerm()
     data class Ref(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm()
     data class Eq(val left: Lazy<VTerm>, val right: Lazy<VTerm>, override val id: Id? = null) : VTerm()
@@ -245,7 +254,7 @@ sealed class Pat {
     data class IntArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
     data class LongArrayOf(val elements: KList<Pat>, override val id: Id) : Pat()
     data class ListOf(val elements: KList<Pat>, override val id: Id) : Pat()
-    data class CompoundOf(val elements: LinkedHashMap<Name, Pat>, override val id: Id) : Pat()
+    data class CompoundOf(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
     data class TupleOf(val elements: KList<Pat>, override val id: Id) : Pat()
     data class RefOf(val element: Pat, override val id: Id) : Pat()
     data class Refl(override val id: Id) : Pat()
@@ -264,7 +273,7 @@ sealed class Pat {
     data class IntArray(override val id: Id) : Pat()
     data class LongArray(override val id: Id) : Pat()
     data class List(val element: Pat, val size: Pat, override val id: Id) : Pat()
-    data class Compound(val elements: LinkedHashMap<Name, Pat>, override val id: Id) : Pat()
+    data class Compound(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
     data class Tuple(val elements: KList<Pat>, override val id: Id) : Pat()
     data class Ref(val element: Pat, override val id: Id) : Pat()
     data class Eq(val left: Pat, val right: Pat, override val id: Id) : Pat()

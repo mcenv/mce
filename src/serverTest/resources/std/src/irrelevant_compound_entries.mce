@@ -1,1 +1,1 @@
-def irrelevant_compound_entries [] : compound {0 α: type, a: α} ≔ {α: bool, a: false}
+def irrelevant_compound_entries [] : compound {0 a: unit} ≔ {a: ⋆}
