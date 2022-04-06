@@ -5,7 +5,6 @@ import mce.ast.core.Eff as CEff
 import mce.ast.core.Pat as CPat
 import mce.ast.core.Term as CTerm
 import mce.ast.surface.Eff as SEff
-import mce.ast.surface.Entry as SEntry
 import mce.ast.surface.Param as SParam
 import mce.ast.surface.Pat as SPat
 import mce.ast.surface.Term as STerm
@@ -32,6 +31,7 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.LongArrayOf -> STerm.LongArrayOf(term.elements.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.ListOf -> STerm.ListOf(term.elements.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.CompoundOf -> STerm.CompoundOf(term.elements.map { (name, element) -> name to printTerm(element) }, term.id ?: freshId())
+    is CTerm.TupleOf -> STerm.TupleOf(term.elements.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.RefOf -> STerm.RefOf(printTerm(term.element), term.id ?: freshId())
     is CTerm.Refl -> STerm.Refl(term.id ?: freshId())
     is CTerm.FunOf -> STerm.FunOf(term.params, printTerm(term.body), term.id ?: freshId())
@@ -53,7 +53,8 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.IntArray -> STerm.IntArray(term.id ?: freshId())
     is CTerm.LongArray -> STerm.LongArray(term.id ?: freshId())
     is CTerm.List -> STerm.List(printTerm(term.element), printTerm(term.size), term.id ?: freshId())
-    is CTerm.Compound -> STerm.Compound(term.elements.map { (name, element) -> SEntry(element.relevant, name, printTerm(element.type), element.id ?: freshId()) }, term.id ?: freshId())
+    is CTerm.Compound -> STerm.Compound(term.elements.map { (name, element) -> STerm.Compound.Entry(element.relevant, name, printTerm(element.type), element.id ?: freshId()) }, term.id ?: freshId())
+    is CTerm.Tuple -> STerm.Tuple(term.elements.map { STerm.Tuple.Entry(it.relevant, it.name, printTerm(it.type), it.id ?: freshId()) }, term.id ?: freshId())
     is CTerm.Ref -> STerm.Ref(printTerm(term.element), term.id ?: freshId())
     is CTerm.Eq -> STerm.Eq(printTerm(term.left), printTerm(term.right), term.id ?: freshId())
     is CTerm.Fun -> STerm.Fun(
@@ -82,6 +83,7 @@ fun printPat(pat: CPat): SPat = when (pat) {
     is CPat.LongArrayOf -> SPat.LongArrayOf(pat.elements.map { printPat(it) }, pat.id)
     is CPat.ListOf -> SPat.ListOf(pat.elements.map { printPat(it) }, pat.id)
     is CPat.CompoundOf -> SPat.CompoundOf(pat.elements.map { (name, element) -> name to printPat(element) }, pat.id)
+    is CPat.TupleOf -> SPat.TupleOf(pat.elements.map { printPat(it) }, pat.id)
     is CPat.RefOf -> SPat.RefOf(printPat(pat.element), pat.id)
     is CPat.Refl -> SPat.Refl(pat.id)
     is CPat.Or -> SPat.Or(pat.variants.map { printPat(it) }, pat.id)
@@ -100,6 +102,7 @@ fun printPat(pat: CPat): SPat = when (pat) {
     is CPat.LongArray -> SPat.LongArray(pat.id)
     is CPat.List -> SPat.List(printPat(pat.element), printPat(pat.size), pat.id)
     is CPat.Compound -> SPat.Compound(pat.elements.map { (name, element) -> name to printPat(element) }, pat.id)
+    is CPat.Tuple -> SPat.Tuple(pat.elements.map { printPat(it) }, pat.id)
     is CPat.Ref -> SPat.Ref(printPat(pat.element), pat.id)
     is CPat.Eq -> SPat.Eq(printPat(pat.left), printPat(pat.right), pat.id)
     is CPat.Code -> SPat.Code(printPat(pat.element), pat.id)

@@ -216,6 +216,10 @@ class Parse private constructor(
             else -> Term.ListOf(parseList('[', ']') { parseTerm() }, id)
         }
         '{' -> Term.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parseTerm() }) }, id)
+        '⟨' -> {
+            val elements = parseList('⟨', '⟩') { parseTerm() }
+            Term.TupleOf(elements, id)
+        }
         '&' -> {
             skip()
             Term.RefOf(parseTerm(), id)
@@ -289,14 +293,31 @@ class Parse private constructor(
                     } else true
                     val left = parseTerm()
                     if (peekChar() == ',' || peekChar() == '}') {
-                        Entry(erased, Name("", freshId()), left, freshId())
+                        Term.Compound.Entry(erased, Name("", freshId()), left, freshId())
                     } else {
                         expect(':')
                         val right = parseTerm()
-                        Entry(erased, Name((left as? Term.Var)?.name ?: error("name expected"), freshId()), right, freshId())
+                        Term.Compound.Entry(erased, Name((left as? Term.Var)?.name ?: error("name expected"), freshId()), right, freshId())
                     }
                 }
                 Term.Compound(elements, id)
+            }
+            "tuple" -> {
+                val elements = parseList('⟨', '⟩') {
+                    val erased = if (peekChar() == '0') {
+                        skip()
+                        false
+                    } else true
+                    val left = parseTerm()
+                    if (peekChar() == ',' || peekChar() == '⟩') {
+                        Term.Tuple.Entry(erased, Name("", freshId()), left, freshId())
+                    } else {
+                        expect(':')
+                        val right = parseTerm()
+                        Term.Tuple.Entry(erased, Name((left as? Term.Var)?.name ?: error("name expected"), freshId()), right, freshId())
+                    }
+                }
+                Term.Tuple(elements, id)
             }
             "ref" -> {
                 val element = parseTerm()
@@ -361,6 +382,10 @@ class Parse private constructor(
             else -> Pat.ListOf(parseList('[', ']') { parsePat() }, id)
         }
         '{' -> Pat.CompoundOf(parseList('{', '}') { parsePair({ parseName() }, { expect(':') }, { parsePat() }) }, id)
+        '⟨' -> {
+            val elements = parseList('⟨', '⟩') { parsePat() }
+            Pat.TupleOf(elements, id)
+        }
         '&' -> {
             skip()
             Pat.RefOf(parsePat(), id)
@@ -408,6 +433,10 @@ class Parse private constructor(
                     }
                 }
                 Pat.Compound(elements, id)
+            }
+            "tuple" -> {
+                val elements = parseList('⟨', '⟩') { parsePat() }
+                Pat.Tuple(elements, id)
             }
             "ref" -> {
                 val element = parsePat()

@@ -4,12 +4,12 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import mce.Id
+import mce.ast.Name
 import mce.pass.*
 import mce.util.State
 import mce.util.run
 import mce.util.toLinkedHashMap
 import mce.ast.core.Eff as CEff
-import mce.ast.core.Entry as CEntry
 import mce.ast.core.Item as CItem
 import mce.ast.core.Modifier as CModifier
 import mce.ast.core.Module as CModule
@@ -299,7 +299,14 @@ class Elab private constructor(
                 }
                 Typing(
                     CTerm.CompoundOf(elements.map { (name, element) -> name to element.term }.toLinkedHashMap(), term.id),
-                    CVTerm.Compound(elements.map { (name, element) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(element.type)), null) }.toLinkedHashMap())
+                    CVTerm.Compound(elements.map { (name, element) -> name to CTerm.Compound.Entry(true, !lift({ normalizer }, quoteTerm(element.type)), null) }.toLinkedHashMap())
+                )
+            }
+            is STerm.TupleOf -> {
+                val elements = !term.elements.mapM { element -> inferTerm(element) }
+                Typing(
+                    CTerm.TupleOf(elements.map { it.term }, term.id),
+                    CVTerm.Tuple(elements.map { CTerm.Tuple.Entry(true, Name("", freshId()), !lift({ normalizer }, quoteTerm(it.type)), null) })
                 )
             }
             is STerm.RefOf -> {
@@ -362,10 +369,21 @@ class Elab private constructor(
                         {
                             val element = !checkTerm(entry.type, TYPE)
                             !modify { bind(entry.id, Entry(false, entry.name.text, END, ANY, true, !lift({ normalizer }, evalTerm(element)), stage)) }
-                            entry.name to CEntry(entry.relevant, element, entry.id)
+                            entry.name to CTerm.Compound.Entry(entry.relevant, element, entry.id)
                         }
                     }
                     Typing(CTerm.Compound(elements.toLinkedHashMap(), term.id), TYPE)
+                }
+            is STerm.Tuple ->
+                !restore {
+                    val elements = !term.elements.mapM { entry ->
+                        {
+                            val element = !checkTerm(entry.type, TYPE)
+                            !modify { bind(entry.id, Entry(false, entry.name.text, END, ANY, true, !lift({ normalizer }, evalTerm(element)), stage)) }
+                            CTerm.Tuple.Entry(entry.relevant, entry.name, element, entry.id)
+                        }
+                    }
+                    Typing(CTerm.Tuple(elements, term.id), TYPE)
                 }
             is STerm.Ref -> {
                 val element = !checkTerm(term.element, TYPE)
@@ -554,6 +572,19 @@ class Elab private constructor(
                     }
                     CTerm.CompoundOf(elements.toLinkedHashMap(), term.id)
                 }
+            term is STerm.TupleOf && type is CVTerm.Tuple ->
+                !restore {
+                    val elements = !(term.elements zip type.elements).mapM { (element, entry) ->
+                        {
+                            val vType = !lift({ normalizer }, evalTerm(entry.type))
+                            val tElement = !checkTerm(element, vType)
+                            val vElement = !lift({ normalizer }, evalTerm(tElement))
+                            !modify { bindUnchecked(Entry(entry.relevant, "", END, ANY, true, vType, stage), vElement) }
+                            tElement
+                        }
+                    }
+                    CTerm.TupleOf(elements, term.id)
+                }
             term is STerm.RefOf && type is CVTerm.Ref -> {
                 val element = !checkTerm(term.element, type.element.value)
                 CTerm.RefOf(element, term.id)
@@ -691,6 +722,11 @@ class Elab private constructor(
                                         !unifyTerms(entry1.value.value, entry2.value.value)
                             }
                         }
+            term1 is CVTerm.TupleOf && term2 is CVTerm.TupleOf ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements zip term2.elements).allM { (element1, element2) ->
+                            unifyTerms(element1.value, element2.value)
+                        }
             term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !unifyTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Refl && term2 is CVTerm.Refl -> true
             term1 is CVTerm.FunOf && term2 is CVTerm.FunOf ->
@@ -730,6 +766,15 @@ class Elab private constructor(
                                 entry1.key.text == entry2.key.text &&
                                         entry1.value.relevant == entry2.value.relevant &&
                                         !unifyTerms(!evalTerm(entry1.value.type), !evalTerm(entry2.value.type))
+                            }
+                        }
+            term1 is CVTerm.Tuple && term2 is CVTerm.Tuple ->
+                term1.elements.size == term2.elements.size &&
+                        !(term1.elements zip term2.elements).allM { (entry1, entry2) ->
+                            {
+                                !modify { bind(lazyOf(CVTerm.Var(entry1.name.text, size))) }
+                                entry1.relevant == entry2.relevant &&
+                                        !unifyTerms(!evalTerm(entry1.type), !evalTerm(entry2.type))
                             }
                         }
             term1 is CVTerm.Ref && term2 is CVTerm.Ref -> !unifyTerms(term1.element.value, term2.element.value)
@@ -792,6 +837,19 @@ class Elab private constructor(
                                     }
                                 }
                             } else false
+                        }
+                    }
+                }
+            term1 is CVTerm.Tuple && term2 is CVTerm.Tuple ->
+                !restore {
+                    !(term1.elements zip term2.elements).allM { (element1, element2) ->
+                        {
+                            element1.relevant == element2.relevant && run {
+                                val upper1 = !lift({ normalizer }, evalTerm(element1.type))
+                                !subtypeTerms(upper1, !lift({ normalizer }, evalTerm(element2.type))).also {
+                                    !modify { bindUnchecked(Entry(false, element2.name.text, null, upper1, true, TYPE, stage)) }
+                                }
+                            }
                         }
                     }
                 }
@@ -886,8 +944,14 @@ class Elab private constructor(
                     }
                 }
                 val elementTerms = elements.map { (name, element, _) -> name to element }.toLinkedHashMap()
-                val elementTypes = elements.map { (name, _, type) -> name to CEntry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
+                val elementTypes = elements.map { (name, _, type) -> name to CTerm.Compound.Entry(true, !lift({ normalizer }, quoteTerm(type)), null) }.toLinkedHashMap()
                 CPat.CompoundOf(elementTerms, pat.id) to CVTerm.Compound(elementTypes)
+            }
+            is SPat.TupleOf -> {
+                val elements = !pat.elements.mapM { element -> inferPat(element) }
+                val elementTerms = elements.map { (element, _) -> element }
+                val elementTypes = elements.map { (_, type) -> CTerm.Tuple.Entry(true, Name("", freshId()), !lift({ normalizer }, quoteTerm(type)), null) }
+                CPat.TupleOf(elementTerms, pat.id) to CVTerm.Tuple(elementTypes)
             }
             is SPat.RefOf -> {
                 val (element, elementType) = !inferPat(pat.element)
@@ -929,6 +993,10 @@ class Elab private constructor(
                     }
                 }
                 CPat.Compound(elements.toLinkedHashMap(), pat.id) to TYPE
+            }
+            is SPat.Tuple -> {
+                val elements = !pat.elements.mapM { element -> checkPat(element, TYPE) }
+                CPat.Tuple(elements, pat.id) to TYPE
             }
             is SPat.Ref -> {
                 val element = !checkPat(pat.element, TYPE)
@@ -983,6 +1051,15 @@ class Elab private constructor(
                 }
                 CPat.CompoundOf(elements.toLinkedHashMap(), pat.id)
             }
+            pat is SPat.TupleOf && type is CVTerm.Tuple -> {
+                val elements = !(pat.elements zip type.elements).mapM { (element, entry) ->
+                    {
+                        val type = !lift({ normalizer }, evalTerm(entry.type))
+                        !checkPat(element, type)
+                    }
+                }
+                CPat.TupleOf(elements, pat.id)
+            }
             pat is SPat.RefOf && type is CVTerm.Ref -> {
                 val element = !checkPat(pat.element, type.element.value)
                 CPat.RefOf(element, pat.id)
@@ -1024,6 +1101,7 @@ class Elab private constructor(
             term1 is CVTerm.CompoundOf && term2 is CVTerm.CompoundOf -> !(term1.elements.entries zip term2.elements.entries).forEachM { (entry1, entry2) ->
                 if (entry1.key == entry2.key) match(entry1.value.value, entry2.value.value) else pure(Unit)
             }
+            term1 is CVTerm.TupleOf && term2 is CVTerm.TupleOf -> !(term1.elements zip term2.elements).forEachM { (element1, element2) -> match(element1.value, element2.value) }
             term1 is CVTerm.RefOf && term2 is CVTerm.RefOf -> !match(term1.element.value, term2.element.value)
             else -> Unit // TODO
         }
@@ -1060,6 +1138,7 @@ class Elab private constructor(
                 is CVTerm.LongArray -> term2 is CVTerm.LongArray
                 is CVTerm.List -> term2 is CVTerm.List
                 is CVTerm.Compound -> term2 is CVTerm.Compound
+                is CVTerm.Tuple -> term2 is CVTerm.Tuple
                 is CVTerm.Ref -> term2 is CVTerm.Ref
                 is CVTerm.Eq -> term2 is CVTerm.Eq
                 is CVTerm.Fun -> term2 is CVTerm.Fun

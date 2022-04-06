@@ -157,6 +157,19 @@ class Pack private constructor() {
                     }
                 }
             }
+            is Term.TupleOf -> {
+                +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
+                if (term.elements.isNotEmpty()) {
+                    term.elements.forEachIndexed { index, element ->
+                        val type = eraseType(element.type)
+                        val targetPath = COMPOUND[if (type == NbtType.COMPOUND) -2 else -1]["$index"]
+                        val sourcePath = type.toPath()[-1]
+                        packTerm(element)
+                        +SetData(MAIN, targetPath, From(MAIN, sourcePath))
+                        +RemoveData(MAIN, sourcePath)
+                    }
+                }
+            }
             is Term.RefOf -> TODO()
             is Term.Refl -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
             is Term.FunOf -> +Append(MAIN, INT, Value(Nbt.Int(term.tag)))
@@ -181,6 +194,7 @@ class Pack private constructor() {
             is Term.LongArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(31)))
             is Term.List -> TODO()
             is Term.Compound -> TODO()
+            is Term.Tuple -> TODO()
             is Term.Ref -> TODO()
             is Term.Eq -> TODO()
             is Term.Fun -> TODO()
@@ -262,6 +276,11 @@ class Pack private constructor() {
                     packPat(element, path[key.text], vars)
                 }
             }
+            is Pat.TupleOf -> {
+                pat.elements.forEachIndexed { index, element ->
+                    packPat(element, path["$index"], vars)
+                }
+            }
             is Pat.RefOf -> Unit
             is Pat.Refl -> TODO()
             is Pat.Or -> TODO()
@@ -321,6 +340,10 @@ class Pack private constructor() {
             is Pat.Compound -> {
                 +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
                 +Execute(E.CheckScore(false, R1, REG, EqConst(33), Run(SetScore(R0, REG, 0))))
+            }
+            is Pat.Tuple -> {
+                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
+                +Execute(E.CheckScore(false, R1, REG, EqConst(34), Run(SetScore(R0, REG, 0))))
             }
             is Pat.Ref -> TODO()
             is Pat.Eq -> TODO()
@@ -511,6 +534,7 @@ private fun eraseType(type: Type): NbtType = when (type) {
     is Type.LongArrayOf -> throw Error()
     is Type.ListOf -> throw Error()
     is Type.CompoundOf -> throw Error()
+    is Type.TupleOf -> throw Error()
     is Type.RefOf -> throw Error()
     is Type.Refl -> throw Error()
     is Type.FunOf -> throw Error()
@@ -533,6 +557,7 @@ private fun eraseType(type: Type): NbtType = when (type) {
     is Type.LongArray -> NbtType.LONG_ARRAY
     is Type.List -> NbtType.LIST
     is Type.Compound -> NbtType.COMPOUND
+    is Type.Tuple -> NbtType.COMPOUND
     is Type.Ref -> NbtType.INT
     is Type.Eq -> NbtType.BYTE
     is Type.Fun -> NbtType.BYTE

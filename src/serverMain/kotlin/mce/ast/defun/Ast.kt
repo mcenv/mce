@@ -44,8 +44,6 @@ enum class Modifier {
 
 data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term)
 
-data class Entry(val relevant: KBoolean, val type: Term)
-
 sealed class Module {
     data class Var(val name: KString) : Module()
     data class Str(val items: KList<Item>) : Module()
@@ -81,6 +79,7 @@ sealed class Term {
     data class LongArrayOf(val elements: KList<Term>, override val type: VTerm) : Term()
     data class ListOf(val elements: KList<Term>, override val type: VTerm) : Term()
     data class CompoundOf(val elements: LinkedHashMap<Name, Term>, override val type: VTerm) : Term()
+    data class TupleOf(val elements: KList<Term>, override val type: VTerm) : Term()
     data class RefOf(val element: Term, override val type: VTerm) : Term()
     data class Refl(override val type: VTerm) : Term()
     data class FunOf(val tag: KInt, override val type: VTerm) : Term()
@@ -100,7 +99,14 @@ sealed class Term {
     data class IntArray(override val type: VTerm) : Term()
     data class LongArray(override val type: VTerm) : Term()
     data class List(val element: Term, val size: Term, override val type: VTerm) : Term()
-    data class Compound(val elements: LinkedHashMap<Name, Entry>, override val type: VTerm) : Term()
+    data class Compound(val elements: LinkedHashMap<Name, Entry>, override val type: VTerm) : Term() {
+        data class Entry(val relevant: KBoolean, val type: Term)
+    }
+
+    data class Tuple(val elements: KList<Entry>, override val type: VTerm) : Term() {
+        data class Entry(val relevant: KBoolean, val type: Term)
+    }
+
     data class Ref(val element: Term, override val type: VTerm) : Term()
     data class Eq(val left: Term, val right: Term, override val type: VTerm) : Term()
     data class Fun(val params: KList<Param>, val resultant: Term, val effs: KSet<Eff>, override val type: VTerm) : Term()
@@ -125,6 +131,7 @@ sealed class Pat {
     data class LongArrayOf(val elements: KList<Pat>, override val type: VTerm) : Pat()
     data class ListOf(val elements: KList<Pat>, override val type: VTerm) : Pat()
     data class CompoundOf(val elements: LinkedHashMap<Name, Pat>, override val type: VTerm) : Pat()
+    data class TupleOf(val elements: KList<Pat>, override val type: VTerm) : Pat()
     data class RefOf(val element: Pat, override val type: VTerm) : Pat()
     data class Refl(override val type: VTerm) : Pat()
     data class Or(val variants: KList<Pat>, override val type: VTerm) : Pat()
@@ -143,6 +150,7 @@ sealed class Pat {
     data class LongArray(override val type: VTerm) : Pat()
     data class List(val element: Pat, val size: Pat, override val type: VTerm) : Pat()
     data class Compound(val elements: LinkedHashMap<Name, Pat>, override val type: VTerm) : Pat()
+    data class Tuple(val elements: KList<Pat>, override val type: VTerm) : Pat()
     data class Ref(val element: Pat, override val type: VTerm) : Pat()
     data class Eq(val left: Pat, val right: Pat, override val type: VTerm) : Pat()
     data class Type(override val type: VTerm) : Pat()

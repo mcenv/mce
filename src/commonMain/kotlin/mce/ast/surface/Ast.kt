@@ -77,9 +77,6 @@ enum class Modifier {
 data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)
 
 @Serializable
-data class Entry(val relevant: KBoolean, val name: Name, val type: Term, val id: Id)
-
-@Serializable
 sealed class Module {
     abstract val id: Id
 
@@ -181,6 +178,9 @@ sealed class Term {
     data class CompoundOf(val elements: KList<Pair<Name, Term>>, override val id: Id) : Term()
 
     @Serializable
+    data class TupleOf(val elements: KList<Term>, override val id: Id) : Term()
+
+    @Serializable
     data class RefOf(val element: Term, override val id: Id) : Term()
 
     @Serializable
@@ -244,7 +244,16 @@ sealed class Term {
     data class List(val element: Term, val size: Term, override val id: Id) : Term()
 
     @Serializable
-    data class Compound(val elements: KList<Entry>, override val id: Id) : Term()
+    data class Compound(val elements: KList<Entry>, override val id: Id) : Term() {
+        @Serializable
+        data class Entry(val relevant: KBoolean, val name: Name, val type: Term, val id: Id)
+    }
+
+    @Serializable
+    data class Tuple(val elements: KList<Entry>, override val id: Id) : Term() {
+        @Serializable
+        data class Entry(val relevant: KBoolean, val name: Name, val type: Term, val id: Id)
+    }
 
     @Serializable
     data class Ref(val element: Term, override val id: Id) : Term()
@@ -312,6 +321,9 @@ sealed class Pat {
     data class CompoundOf(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
 
     @Serializable
+    data class TupleOf(val elements: KList<Pat>, override val id: Id) : Pat()
+
+    @Serializable
     data class RefOf(val element: Pat, override val id: Id) : Pat()
 
     @Serializable
@@ -364,6 +376,9 @@ sealed class Pat {
 
     @Serializable
     data class Compound(val elements: KList<Pair<Name, Pat>>, override val id: Id) : Pat()
+
+    @Serializable
+    data class Tuple(val elements: KList<Pat>, override val id: Id) : Pat()
 
     @Serializable
     data class Ref(val element: Pat, override val id: Id) : Pat()

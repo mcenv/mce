@@ -15,7 +15,6 @@ import mce.ast.core.Signature as CSignature
 import mce.ast.core.Term as CTerm
 import mce.ast.core.VTerm as CVTerm
 import mce.ast.defun.Eff as DEff
-import mce.ast.defun.Entry as DEntry
 import mce.ast.defun.Item as DItem
 import mce.ast.defun.Modifier as DModifier
 import mce.ast.defun.Module as DModule
@@ -137,6 +136,10 @@ class Defun private constructor(
             val elements = term.elements.map { (name, element) -> name to defunTerm(element) }
             DTerm.CompoundOf(elements.toLinkedHashMap(), getType(term.id!!))
         }
+        is CTerm.TupleOf -> {
+            val elements = term.elements.map { defunTerm(it) }
+            DTerm.TupleOf(elements, getType(term.id!!))
+        }
         is CTerm.RefOf -> {
             val element = defunTerm(term.element)
             DTerm.RefOf(element, getType(term.id!!))
@@ -182,8 +185,12 @@ class Defun private constructor(
             DTerm.List(element, size, getType(term.id!!))
         }
         is CTerm.Compound -> {
-            val elements = term.elements.map { (name, element) -> name to DEntry(element.relevant, defunTerm(element.type)) }
+            val elements = term.elements.map { (name, element) -> name to DTerm.Compound.Entry(element.relevant, defunTerm(element.type)) }
             DTerm.Compound(elements.toLinkedHashMap(), getType(term.id!!))
+        }
+        is CTerm.Tuple -> {
+            val elements = term.elements.map { DTerm.Tuple.Entry(it.relevant, defunTerm(it.type)) }
+            DTerm.Tuple(elements, getType(term.id!!))
         }
         is CTerm.Ref -> {
             val element = defunTerm(term.element)
@@ -235,6 +242,10 @@ class Defun private constructor(
             val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
             DPat.CompoundOf(elements.toLinkedHashMap(), getType(pat.id))
         }
+        is CPat.TupleOf -> {
+            val elements = pat.elements.map { defunPat(it) }
+            DPat.TupleOf(elements, getType(pat.id))
+        }
         is CPat.RefOf -> {
             val element = defunPat(pat.element)
             DPat.RefOf(element, getType(pat.id))
@@ -268,6 +279,10 @@ class Defun private constructor(
         is CPat.Compound -> {
             val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
             DPat.Compound(elements.toLinkedHashMap(), getType(pat.id))
+        }
+        is CPat.Tuple -> {
+            val elements = pat.elements.map { defunPat(it) }
+            DPat.Tuple(elements, getType(pat.id))
         }
         is CPat.Ref -> {
             val element = defunPat(pat.element)
