@@ -19,9 +19,9 @@ fun main() {
             }
         }
         client.webSocket(host = "localhost", port = 51130) {
-            while (true) {
-                electron.onOpenFile { _, path -> println(path) }
+            electron.onOpenFile { _, path -> println(path) }
 
+            while (true) {
                 val response = receiveDeserialized<Response>()
                 println(response) // TODO
             }
