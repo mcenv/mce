@@ -1,5 +1,13 @@
+const { spawn } = require("child_process")
 const path = require("path")
+const { platform } = require("process")
 const { app, BrowserWindow, nativeImage, Menu, dialog } = require("electron")
+
+const launchServer = () => {
+    const extension = platform === "win32" ? ".bat" : ""
+    const mce = path.join(__dirname, "install", "bin", `mce${extension}`)
+    spawn(mce, ["launch"])
+}
 
 const createWindow = () => {
     const win = new BrowserWindow({
@@ -33,7 +41,9 @@ const createWindow = () => {
     win.webContents.openDevTools()
 }
 
-(async () => {
+const main = async () => {
+    launchServer()
+
     await app.whenReady()
     createWindow()
 
@@ -42,10 +52,12 @@ const createWindow = () => {
             createWindow()
         }
     })
-})()
+}
+
+main()
 
 app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
+    if (platform !== "darwin") {
         app.quit()
     }
 })
