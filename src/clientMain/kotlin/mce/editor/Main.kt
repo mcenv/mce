@@ -6,9 +6,11 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.serialization.kotlinx.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.ExperimentalSerializationApi
 import mce.protocol.Response
 import mce.serialization.Mce
 
+@ExperimentalSerializationApi
 fun main() {
     MainScope().launch {
         val client = HttpClient(Js) {
@@ -19,7 +21,7 @@ fun main() {
         client.webSocket(host = "localhost", port = 51130) {
             while (true) {
                 val response = receiveDeserialized<Response>()
-                // TODO
+                println(response) // TODO
             }
         }
     }

@@ -1,5 +1,6 @@
 package mce.serialization
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import mce.ast.surface.Term
 import mce.pass.freshId
@@ -10,6 +11,7 @@ import kotlin.test.assertEquals
 
 class SerializeTest {
     @Test
+    @ExperimentalSerializationApi
     fun identity() {
         val expected = Term.Anno(Term.IntOf(0, freshId()), Term.Int(freshId()), freshId())
         val output = ByteArrayOutputStream()

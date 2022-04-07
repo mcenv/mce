@@ -10,6 +10,7 @@ import kotlinx.cli.ArgType
 import kotlinx.cli.ExperimentalCli
 import kotlinx.cli.Subcommand
 import kotlinx.cli.default
+import kotlinx.serialization.ExperimentalSerializationApi
 import mce.pass.Config
 import mce.protocol.CompletionRequest
 import mce.protocol.HoverRequest
@@ -18,7 +19,7 @@ import mce.protocol.Response
 import mce.serialization.Mce
 import mce.server.Server
 
-@OptIn(ExperimentalCli::class)
+@ExperimentalCli
 object Launch : Subcommand("launch", "Launch server") {
     private const val DEFAULT_PORT: Int = 51130
     private val port: Int by option(ArgType.Int, "port", "p", "Port").default(DEFAULT_PORT)
@@ -26,7 +27,7 @@ object Launch : Subcommand("launch", "Launch server") {
     override fun execute() {
         val server = Server(Config)
 
-        embeddedServer(Netty, port = port) {
+        embeddedServer(Netty, port = port) @ExperimentalSerializationApi {
             install(WebSockets) {
                 contentConverter = KotlinxWebsocketSerializationConverter(Mce)
             }
@@ -36,7 +37,6 @@ object Launch : Subcommand("launch", "Launch server") {
                         val response = when (val request = receiveDeserialized<Request>()) {
                             is HoverRequest -> server.hover(request)
                             is CompletionRequest -> TODO()
-                            else -> TODO()
                         }
                         sendSerialized<Response>(response)
                     }

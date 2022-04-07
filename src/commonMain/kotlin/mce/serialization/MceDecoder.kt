@@ -9,7 +9,7 @@ import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
 import mce.util.ByteArrayInputStream
 
-@OptIn(ExperimentalSerializationApi::class)
+@ExperimentalSerializationApi
 class MceDecoder(private val input: ByteArrayInputStream) : Decoder, CompositeDecoder {
     override val serializersModule: SerializersModule = EmptySerializersModule
 
