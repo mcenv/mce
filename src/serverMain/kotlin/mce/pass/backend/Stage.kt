@@ -6,7 +6,7 @@ import mce.ast.core.Term
 import mce.ast.core.VTerm
 import mce.pass.*
 import mce.pass.frontend.Zonk
-import mce.util.run
+import mce.util.Store
 
 /**
  * Performs staging.
@@ -21,7 +21,7 @@ class Stage private constructor(
         is Term.Meta -> throw Error()
         is Term.CodeOf -> throw Error()
         is Term.Splice -> {
-            val staged = normTerm(term).run(normalizer)
+            val staged = Store(normalizer).normTerm(term)
             transformTermInternal(staged)
         }
         is Term.Code -> throw Error()

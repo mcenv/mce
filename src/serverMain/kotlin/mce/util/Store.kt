@@ -1,9 +1,10 @@
 package mce.util
 
-class Store<T>(var value: T) {
-    inline fun restore(block: Store<T>.() -> Unit) {
+class Store<S>(var value: S) {
+    inline fun <R> restore(block: Store<S>.() -> R): R {
         val value = this.value
-        block()
+        val result = block()
         this.value = value
+        return result
     }
 }

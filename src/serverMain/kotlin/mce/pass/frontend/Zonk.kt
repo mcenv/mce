@@ -5,7 +5,7 @@ import mce.ast.core.Item
 import mce.ast.core.Term
 import mce.ast.core.VTerm
 import mce.pass.*
-import mce.util.run
+import mce.util.Store
 
 /**
  * Performs zonking.
@@ -22,7 +22,7 @@ class Zonk private constructor(
                 diagnostics += Diagnostic.UnsolvedMeta(term.id!!)
                 term
             }
-            else -> quoteTerm(solution).run(normalizer)
+            else -> Store(normalizer).quoteTerm(solution)
         }
         else -> transformTermInternal(term)
     }

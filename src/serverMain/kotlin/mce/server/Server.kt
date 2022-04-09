@@ -9,21 +9,21 @@ import mce.protocol.HoverRequest
 import mce.protocol.HoverResponse
 import mce.server.build.Build
 import mce.server.build.Key
-import mce.util.run
+import mce.util.Store
 
 class Server(config: Config) {
     internal val build: Build = Build(config)
 
     suspend fun hover(request: HoverRequest): HoverResponse {
         val result = build.fetch(Key.ElabResult(request.name))
-        val type = printTerm(quoteTerm(result.types[request.target]!!).run(result.normalizer))
+        val type = printTerm(Store(result.normalizer).quoteTerm(result.types[request.target]!!))
         return HoverResponse(type, request.id)
     }
 
     suspend fun completion(request: CompletionRequest): List<CompletionResponse> {
         val result = build.fetch(Key.ElabResult(request.name))
         return result.completions[request.target]?.let { completions ->
-            completions.map { (name, type) -> CompletionResponse(name, printTerm(quoteTerm(type).run(result.normalizer)), request.id) }
+            completions.map { (name, type) -> CompletionResponse(name, printTerm(Store(result.normalizer).quoteTerm(type)), request.id) }
         } ?: emptyList()
     }
 }

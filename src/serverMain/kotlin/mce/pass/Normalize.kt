@@ -6,7 +6,7 @@ import kotlinx.collections.immutable.plus
 import mce.Id
 import mce.ast.core.*
 import mce.pass.builtin.builtins
-import mce.util.State
+import mce.util.Store
 import mce.util.toLinkedHashMap
 
 @Suppress("NOTHING_TO_INLINE")
@@ -43,11 +43,7 @@ class Normalizer(
 /**
  * Creates a fresh meta-variable.
  */
-fun fresh(id: Id): State<Normalizer, VTerm> = {
-    !gets {
-        VTerm.Meta(solutions.size, id).also { solutions += null }
-    }
-}
+fun Normalizer.fresh(id: Id): VTerm = VTerm.Meta(solutions.size, id).also { solutions += null }
 
 /**
  * Reveals the head constructor of the [term].
@@ -77,61 +73,53 @@ private tailrec fun Normalizer.forceSubst(term: VTerm): VTerm = when (term) {
 /**
  * Evaluates the [term] to a semantic term under the normalizer.
  */
-fun evalTerm(term: Term): State<Normalizer, VTerm> = {
+fun Store<Normalizer>.evalTerm(term: Term): VTerm =
     when (term) {
         is Term.Hole -> VTerm.Hole(term.id)
-        is Term.Meta -> !gets { getSolution(term.index) } ?: VTerm.Meta(term.index, term.id)
+        is Term.Meta -> value.getSolution(term.index) ?: VTerm.Meta(term.index, term.id)
         is Term.Block -> {
-            !term.elements.dropLast(1).forEachM { element ->
-                {
-                    !evalTerm(element)
-                }
-            }
-            term.elements.lastOrNull()?.let {
-                !evalTerm(it)
-            } ?: VTerm.UnitOf()
+            term.elements.dropLast(1).forEach { element -> evalTerm(element) }
+            term.elements.lastOrNull()?.let { evalTerm(it) } ?: VTerm.UnitOf()
         }
-        is Term.Var -> !gets { lookup(term.level) }
+        is Term.Var -> value.lookup(term.level)
         is Term.Def -> {
-            val item = !gets { getItem(term.name)!! } as Item.Def;
+            val item = value.getItem(term.name)!! as Item.Def
             if (item.modifiers.contains(Modifier.ABSTRACT)) {
-                val arguments = !term.arguments.mapM { { lazy { !evalTerm(it) } } }
+                val arguments = term.arguments.map { lazy { evalTerm(it) } }
                 VTerm.Def(term.name, arguments, term.id)
             } else {
-                !term.arguments.forEachM { argument -> modify { bind(lazy { !evalTerm(argument) }) } }
+                term.arguments.forEach { argument -> value = value.bind(lazy { evalTerm(argument) }) }
                 if (item.modifiers.contains(Modifier.BUILTIN)) {
-                    !gets { with(builtins[term.name]!!) { eval() } }
+                    with(builtins[term.name]!!) { value.eval() }
                 } else {
-                    !evalTerm(item.body)
+                    evalTerm(item.body)
                 }
             }
         }
         is Term.Let -> {
-            !modify { bind(lazy { !evalTerm(term.init) }) }
+            value = value.bind(lazy { evalTerm(term.init) })
             VTerm.UnitOf()
         }
         is Term.Match -> {
-            val scrutinee = !evalTerm(term.scrutinee)
+            val scrutinee = evalTerm(term.scrutinee)
             val clause = term.clauses.firstOrNull { (pattern, _) ->
-                !restore {
-                    !match(pattern, scrutinee)
-                }
+                restore { match(pattern, scrutinee) }
             }
             when (clause) {
                 null -> {
-                    val clauses = !term.clauses.mapM { (clause, body) ->
+                    val clauses = term.clauses.map { (clause, body) ->
                         restore {
                             clause to lazy {
-                                !match(clause, scrutinee)
-                                !evalTerm(body)
+                                match(clause, scrutinee)
+                                evalTerm(body)
                             }
                         }
                     }
                     VTerm.Match(scrutinee, clauses, term.id)
                 }
                 else -> {
-                    !match(clause.first, scrutinee)
-                    !evalTerm(clause.second)
+                    match(clause.first, scrutinee)
+                    evalTerm(clause.second)
                 }
             }
         }
@@ -145,59 +133,59 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
         is Term.DoubleOf -> VTerm.DoubleOf(term.value, term.id)
         is Term.StringOf -> VTerm.StringOf(term.value, term.id)
         is Term.ByteArrayOf -> {
-            val elements = !term.elements.mapM { { lazy { !evalTerm(it) } } }
+            val elements = term.elements.map { lazy { evalTerm(it) } }
             VTerm.ByteArrayOf(elements, term.id)
         }
         is Term.IntArrayOf -> {
-            val elements = !term.elements.mapM { { lazy { !evalTerm(it) } } }
+            val elements = term.elements.map { lazy { evalTerm(it) } }
             VTerm.IntArrayOf(elements, term.id)
         }
         is Term.LongArrayOf -> {
-            val elements = !term.elements.mapM { { lazy { !evalTerm(it) } } }
+            val elements = term.elements.map { lazy { evalTerm(it) } }
             VTerm.LongArrayOf(elements, term.id)
         }
         is Term.ListOf -> {
-            val elements = !term.elements.mapM { { lazy { !evalTerm(it) } } }
+            val elements = term.elements.map { lazy { evalTerm(it) } }
             VTerm.ListOf(elements, term.id)
         }
         is Term.CompoundOf -> {
-            val elements = term.elements.map { (name, element) -> name.text to VTerm.CompoundOf.Entry(name, lazy { !evalTerm(element) }) }.toLinkedHashMap()
+            val elements = term.elements.map { (name, element) -> name.text to VTerm.CompoundOf.Entry(name, lazy { evalTerm(element) }) }.toLinkedHashMap()
             VTerm.CompoundOf(elements, term.id)
         }
         is Term.TupleOf -> {
-            val elements = !term.elements.mapM { { lazy { !evalTerm(it) } } }
+            val elements = term.elements.map { lazy { evalTerm(it) } }
             VTerm.TupleOf(elements, term.id)
         }
         is Term.RefOf -> {
-            val element = lazy { !evalTerm(term.element) }
+            val element = lazy { evalTerm(term.element) }
             VTerm.RefOf(element, term.id)
         }
         is Term.Refl -> VTerm.Refl(term.id)
         is Term.FunOf -> VTerm.FunOf(term.params, term.body, term.id)
         is Term.Apply -> {
-            val arguments = term.arguments.map { lazy { !evalTerm(it) } }
-            when (val function = !evalTerm(term.function)) {
+            val arguments = term.arguments.map { lazy { evalTerm(it) } }
+            when (val function = evalTerm(term.function)) {
                 is VTerm.FunOf -> {
-                    !arguments.forEachM { argument -> gets { bind(argument) } }
-                    !evalTerm(function.body)
+                    arguments.forEach { argument -> value = value.bind(argument) }
+                    evalTerm(function.body)
                 }
                 else -> VTerm.Apply(function, arguments, term.id)
             }
         }
         is Term.CodeOf -> {
-            val element = lazy { !evalTerm(term.element) }
+            val element = lazy { evalTerm(term.element) }
             VTerm.CodeOf(element, term.id)
         }
-        is Term.Splice -> when (val element = !evalTerm(term.element)) {
+        is Term.Splice -> when (val element = evalTerm(term.element)) {
             is VTerm.CodeOf -> element.element.value
             else -> VTerm.Splice(lazyOf(element), term.id)
         }
         is Term.Or -> {
-            val variants = term.variants.map { lazy { !evalTerm(it) } }
+            val variants = term.variants.map { lazy { evalTerm(it) } }
             VTerm.Or(variants, term.id)
         }
         is Term.And -> {
-            val variants = term.variants.map { lazy { !evalTerm(it) } }
+            val variants = term.variants.map { lazy { evalTerm(it) } }
             VTerm.And(variants, term.id)
         }
         is Term.Unit -> VTerm.Unit(term.id)
@@ -213,40 +201,39 @@ fun evalTerm(term: Term): State<Normalizer, VTerm> = {
         is Term.IntArray -> VTerm.IntArray(term.id)
         is Term.LongArray -> VTerm.LongArray(term.id)
         is Term.List -> {
-            val element = lazy { !evalTerm(term.element) }
-            val size = lazy { !evalTerm(term.size) }
+            val element = lazy { evalTerm(term.element) }
+            val size = lazy { evalTerm(term.size) }
             VTerm.List(element, size, term.id)
         }
         is Term.Compound -> {
-            val elements = term.elements.map { element -> element.name.text to VTerm.Compound.Entry(element.relevant, element.name, lazy { !evalTerm(element.type) }, element.id) }.toLinkedHashMap()
+            val elements = term.elements.map { element -> element.name.text to VTerm.Compound.Entry(element.relevant, element.name, lazy { evalTerm(element.type) }, element.id) }.toLinkedHashMap()
             VTerm.Compound(elements, term.id)
         }
         is Term.Tuple -> VTerm.Tuple(term.elements, term.id)
         is Term.Ref -> {
-            val element = lazy { !evalTerm(term.element) }
+            val element = lazy { evalTerm(term.element) }
             VTerm.Ref(element, term.id)
         }
         is Term.Eq -> {
-            val left = lazy { !evalTerm(term.left) }
-            val right = lazy { !evalTerm(term.right) }
+            val left = lazy { evalTerm(term.left) }
+            val right = lazy { evalTerm(term.right) }
             VTerm.Eq(left, right, term.id)
         }
         is Term.Fun -> VTerm.Fun(term.params, term.resultant, term.effs, term.id)
         is Term.Code -> {
-            val element = lazy { !evalTerm(term.element) }
+            val element = lazy { evalTerm(term.element) }
             VTerm.Code(element, term.id)
         }
         is Term.Type -> VTerm.Type(term.id)
     }
-}
 
 /**
  * Checks if the [pat] matches the [term], binding the matched terms to the normalizer.
  */
-private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
+private fun Store<Normalizer>.match(pat: Pat, term: VTerm): Boolean =
     when {
         pat is Pat.Var -> {
-            !modify { bind(lazyOf(term)) }
+            value = value.bind(lazyOf(term))
             true
         }
         pat is Pat.UnitOf && term is VTerm.UnitOf -> true
@@ -260,55 +247,50 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
         pat is Pat.StringOf && term is VTerm.StringOf -> term.value == pat.value
         pat is Pat.ByteArrayOf && term is VTerm.ByteArrayOf ->
             if (pat.elements.size == term.elements.size) {
-                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+                (pat.elements zip term.elements).all { (pattern, value) -> match(pattern, value.value) }
             } else false
         pat is Pat.IntArrayOf && term is VTerm.IntArrayOf ->
             if (pat.elements.size == term.elements.size) {
-                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+                (pat.elements zip term.elements).all { (pattern, value) -> match(pattern, value.value) }
             } else false
         pat is Pat.LongArrayOf && term is VTerm.LongArrayOf ->
             if (pat.elements.size == term.elements.size) {
-                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+                (pat.elements zip term.elements).all { (pattern, value) -> match(pattern, value.value) }
             } else false
         pat is Pat.ListOf && term is VTerm.ListOf ->
             if (pat.elements.size == term.elements.size) {
-                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+                (pat.elements zip term.elements).all { (pattern, value) -> match(pattern, value.value) }
             } else false
         pat is Pat.CompoundOf && term is VTerm.CompoundOf ->
-            !pat.elements.allM { (name, element) ->
-                {
-                    term.elements[name.text]?.let { !match(element, it.element.value) } ?: false
-                }
+            pat.elements.all { (name, element) ->
+                term.elements[name.text]?.let { match(element, it.element.value) } ?: false
             }
         pat is Pat.TupleOf && term is VTerm.TupleOf ->
             if (pat.elements.size == term.elements.size) {
-                !(pat.elements zip term.elements).allM { (pattern, value) -> match(pattern, value.value) }
+                (pat.elements zip term.elements).all { (pattern, value) -> match(pattern, value.value) }
             } else false
-        pat is Pat.RefOf && term is VTerm.RefOf -> !match(pat.element, term.element.value)
+        pat is Pat.RefOf && term is VTerm.RefOf -> match(pat.element, term.element.value)
         pat is Pat.Refl && term is VTerm.Refl -> true
         else -> false
     }
-}
 
 /**
  * Quotes the [term] to a syntactic term under the normalizer.
  */
 @Suppress("NAME_SHADOWING")
-fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
-    when (val term = !gets { force(term) }) {
+fun Store<Normalizer>.quoteTerm(term: VTerm): Term =
+    when (val term = value.force(term)) {
         is VTerm.Hole -> Term.Hole(term.id)
         is VTerm.Meta -> Term.Meta(term.index, term.id)
         is VTerm.Var -> Term.Var(term.name, term.level, term.id)
         is VTerm.Def -> {
-            val arguments = !term.arguments.mapM { quoteTerm(it.value) }
+            val arguments = term.arguments.map { quoteTerm(it.value) }
             Term.Def(term.name, arguments, term.id)
         }
         is VTerm.Match -> {
-            val scrutinee = !quoteTerm(term.scrutinee)
-            val clauses = !term.clauses.mapM { clause ->
-                {
-                    clause.first to !quoteTerm(clause.second.value)
-                }
+            val scrutinee = quoteTerm(term.scrutinee)
+            val clauses = term.clauses.map { clause ->
+                clause.first to quoteTerm(clause.second.value)
             }
             Term.Match(scrutinee, clauses, term.id)
         }
@@ -322,64 +304,62 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
         is VTerm.DoubleOf -> Term.DoubleOf(term.value, term.id)
         is VTerm.StringOf -> Term.StringOf(term.value, term.id)
         is VTerm.ByteArrayOf -> {
-            val elements = !term.elements.mapM { quoteTerm(it.value) }
+            val elements = term.elements.map { quoteTerm(it.value) }
             Term.ByteArrayOf(elements, term.id)
         }
         is VTerm.IntArrayOf -> {
-            val elements = !term.elements.mapM { quoteTerm(it.value) }
+            val elements = term.elements.map { quoteTerm(it.value) }
             Term.IntArrayOf(elements, term.id)
         }
         is VTerm.LongArrayOf -> {
-            val elements = !term.elements.mapM { quoteTerm(it.value) }
+            val elements = term.elements.map { quoteTerm(it.value) }
             Term.LongArrayOf(elements, term.id)
         }
         is VTerm.ListOf -> {
-            val elements = !term.elements.mapM { quoteTerm(it.value) }
+            val elements = term.elements.map { quoteTerm(it.value) }
             Term.ListOf(elements, term.id)
         }
         is VTerm.CompoundOf -> {
-            val elements = (!term.elements.entries.mapM { (_, element) ->
-                {
-                    Term.CompoundOf.Entry(element.name, !quoteTerm(element.element.value))
-                }
+            val elements = (term.elements.entries.map { (_, element) ->
+                Term.CompoundOf.Entry(element.name, quoteTerm(element.element.value))
             })
             Term.CompoundOf(elements, term.id)
         }
         is VTerm.TupleOf -> {
-            val elements = !term.elements.mapM { quoteTerm(it.value) }
+            val elements = term.elements.map { quoteTerm(it.value) }
             Term.TupleOf(elements, term.id)
         }
         is VTerm.RefOf -> {
-            val element = !quoteTerm(term.element.value)
+            val element = quoteTerm(term.element.value)
             Term.RefOf(element, term.id)
         }
         is VTerm.Refl -> Term.Refl(term.id)
         is VTerm.FunOf -> {
-            !term.params.forEachM { parameter ->
-                modify { bind(lazyOf(VTerm.Var(parameter.text, size, freshId()))) }
+            term.params.forEach { parameter ->
+                value = value.bind(lazyOf(VTerm.Var(parameter.text, value.size, freshId())))
             }
-            val body = !normTerm(term.body)
+            val body = normTerm(term.body)
             Term.FunOf(term.params, body, term.id)
         }
         is VTerm.Apply -> {
-            val function = !quoteTerm(term.function)
-            val arguments = !term.arguments.mapM { quoteTerm(it.value) }
+            val function = quoteTerm(term.function)
+            val arguments = term.arguments.map { quoteTerm(it.value) }
             Term.Apply(function, arguments, term.id)
         }
         is VTerm.CodeOf -> {
-            val element = !quoteTerm(term.element.value)
+            val element = quoteTerm(term.element.value)
             Term.CodeOf(element, term.id)
         }
         is VTerm.Splice -> {
-            val element = !quoteTerm(term.element.value)
+            val element = quoteTerm(term.element.value)
             Term.Splice(element, term.id)
         }
         is VTerm.Or -> {
-            val variants = !term.variants.mapM { quoteTerm(it.value) }
+            val variants = term.variants.map { quoteTerm(it.value) }
             Term.Or(variants, term.id)
         }
         is VTerm.And -> {
-            val variants = !term.variants.mapM { quoteTerm(it.value) }
+            val variants = term.variants.map { quoteTerm(it.value) }
             Term.And(variants, term.id)
         }
         is VTerm.Unit -> Term.Unit(term.id)
@@ -395,73 +375,70 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
         is VTerm.IntArray -> Term.IntArray(term.id)
         is VTerm.LongArray -> Term.LongArray(term.id)
         is VTerm.List -> {
-            val element = !quoteTerm(term.element.value)
-            val size = !quoteTerm(term.size.value)
+            val element = quoteTerm(term.element.value)
+            val size = quoteTerm(term.size.value)
             Term.List(element, size, term.id)
         }
         is VTerm.Compound -> {
-            val elements = term.elements.map { (_, element) -> Term.Compound.Entry(element.relevant, element.name, !quoteTerm(element.type.value), element.id) }
+            val elements = term.elements.map { (_, element) -> Term.Compound.Entry(element.relevant, element.name, quoteTerm(element.type.value), element.id) }
             Term.Compound(elements, term.id)
         }
         is VTerm.Tuple -> Term.Tuple(term.elements, term.id)
         is VTerm.Ref -> {
-            val element = !quoteTerm(term.element.value)
+            val element = quoteTerm(term.element.value)
             Term.Ref(element, term.id)
         }
         is VTerm.Eq -> {
-            val left = !quoteTerm(term.left.value)
-            val right = !quoteTerm(term.right.value)
+            val left = quoteTerm(term.left.value)
+            val right = quoteTerm(term.right.value)
             Term.Eq(left, right, term.id)
         }
         is VTerm.Fun -> {
-            !term.params.forEachM { parameter ->
-                modify { bind(lazyOf(VTerm.Var(parameter.name, size, freshId()))) }
+            term.params.forEach { parameter ->
+                value = value.bind(lazyOf(VTerm.Var(parameter.name, value.size, freshId())))
             }
-            val resultant = !normTerm(term.resultant)
+            val resultant = normTerm(term.resultant)
             Term.Fun(term.params, resultant, term.effs, term.id)
         }
         is VTerm.Code -> {
-            val element = !quoteTerm(term.element.value)
+            val element = quoteTerm(term.element.value)
             Term.Code(element, term.id)
         }
         is VTerm.Type -> Term.Type(term.id)
     }
-}
 
 /**
  * Normalizes the [term] to a term.
  */
-fun normTerm(term: Term): State<Normalizer, Term> = { !quoteTerm(!evalTerm(term)) }
+fun Store<Normalizer>.normTerm(term: Term): Term = quoteTerm(evalTerm(term))
 
 /**
  * Evaluates the [module] to a semantic module.
  */
-fun evalModule(module: Module): State<Normalizer, VModule> = {
+fun Normalizer.evalModule(module: Module): VModule =
     when (module) {
         is Module.Var -> {
-            val item = !gets { getItem(module.name) } as Item.Mod;
-            !evalModule(item.body)
+            val item = getItem(module.name) as Item.Mod
+            evalModule(item.body)
         }
         is Module.Str -> VModule.Str(module.items, module.id)
         is Module.Sig -> {
-            val signatures = !(module.signatures.mapM { evalSignature(it) })
+            val signatures = module.signatures.map { evalSignature(it) }
             VModule.Sig(signatures, module.id)
         }
         is Module.Type -> VModule.Type(module.id)
     }
-}
 
 /**
  * Evaluates the [signature] to a semantic signature.
  */
-fun evalSignature(signature: Signature): State<Normalizer, VSignature> = {
+fun Normalizer.evalSignature(signature: Signature): VSignature =
     when (signature) {
         is Signature.Def -> VSignature.Def(signature.name, signature.params, signature.resultant, signature.id)
         is Signature.Mod -> {
-            val type = !evalModule(signature.type)
+            val type = evalModule(signature.type)
             VSignature.Mod(signature.name, type, signature.id)
         }
         is Signature.Test -> VSignature.Test(signature.name, signature.id)
         is Signature.Pack -> VSignature.Pack(signature.id)
     }
-}
