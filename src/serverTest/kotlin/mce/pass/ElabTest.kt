@@ -241,4 +241,10 @@ class ElabTest {
         val result = elaborate("abstract_not_unfolded")
         assert(result.diagnostics.any { it is Diagnostic.TermMismatch }) { result.diagnostics.joinToString("\n") }
     }
+
+    @Test
+    fun compound_subtyping() {
+        val result = elaborate("compound_subtyping")
+        assert(result.diagnostics.any { it is Diagnostic.SizeMismatch }) { result.diagnostics.joinToString("\n") }
+    }
 }

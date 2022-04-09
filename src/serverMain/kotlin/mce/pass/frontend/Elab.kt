@@ -555,6 +555,9 @@ class Elab private constructor(
                 CTerm.ListOf(elements, term.id)
             }
             term is STerm.CompoundOf && type is CVTerm.Compound -> {
+                if (type.elements.size != term.elements.size) {
+                    diagnose(Diagnostic.SizeMismatch(type.elements.size, term.elements.size, term.id))
+                }
                 val elements = !(term.elements zip type.elements.values).mapM { (element, entry) ->
                     {
                         val tElement = !checkTerm(element.element, entry.type.value)
@@ -816,21 +819,22 @@ class Elab private constructor(
                 !subtypeTerms(term1.element.value, term2.element.value) &&
                         !lift({ normalizer }, unifyTerms(term1.size.value, term2.size.value))
             term1 is CVTerm.Compound && term2 is CVTerm.Compound ->
-                !restore {
-                    !term2.elements.entries.allM { (key2, element2) ->
-                        {
-                            val element1 = term1.elements[key2]
-                            if (element1 != null) {
-                                element1.relevant == element2.relevant && run {
-                                    val upper1 = element1.type.value
-                                    !subtypeTerms(upper1, element2.type.value).also {
-                                        !modify { bindUnchecked(Entry(false, key2, null, upper1, true, TYPE, stage)) }
-                                    }
+                term1.elements.size == term2.elements.size &&
+                        !restore {
+                            !term2.elements.entries.allM { (key2, element2) ->
+                                {
+                                    val element1 = term1.elements[key2]
+                                    if (element1 != null) {
+                                        element1.relevant == element2.relevant && run {
+                                            val upper1 = element1.type.value
+                                            !subtypeTerms(upper1, element2.type.value).also {
+                                                !modify { bindUnchecked(Entry(false, key2, null, upper1, true, TYPE, stage)) }
+                                            }
+                                        }
+                                    } else false
                                 }
-                            } else false
+                            }
                         }
-                    }
-                }
             term1 is CVTerm.Tuple && term2 is CVTerm.Tuple ->
                 !restore {
                     !(term1.elements zip term2.elements).allM { (element1, element2) ->
