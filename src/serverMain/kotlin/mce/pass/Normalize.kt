@@ -286,27 +286,6 @@ private fun match(pat: Pat, term: VTerm): State<Normalizer, Boolean> = {
             } else false
         pat is Pat.RefOf && term is VTerm.RefOf -> !match(pat.element, term.element.value)
         pat is Pat.Refl && term is VTerm.Refl -> true
-        // TODO: Or
-        // TODO: And
-        pat is Pat.Unit && term is VTerm.Unit -> true
-        pat is Pat.Bool && term is VTerm.Bool -> true
-        pat is Pat.Byte && term is VTerm.Byte -> true
-        pat is Pat.Short && term is VTerm.Short -> true
-        pat is Pat.Int && term is VTerm.Int -> true
-        pat is Pat.Long && term is VTerm.Long -> true
-        pat is Pat.Float && term is VTerm.Float -> true
-        pat is Pat.Double && term is VTerm.Double -> true
-        pat is Pat.String && term is VTerm.String -> true
-        pat is Pat.ByteArray && term is VTerm.ByteArray -> true
-        pat is Pat.IntArray && term is VTerm.IntArray -> true
-        pat is Pat.LongArray && term is VTerm.LongArray -> true
-        pat is Pat.List && term is VTerm.List -> !match(pat.element, term.element.value) && !match(pat.size, term.size.value)
-        pat is Pat.Compound && term is VTerm.Compound -> TODO()
-        pat is Pat.Tuple && term is VTerm.Tuple -> TODO()
-        pat is Pat.Ref && term is VTerm.Ref -> !match(pat.element, term.element.value)
-        pat is Pat.Eq && term is VTerm.Eq -> !match(pat.left, term.left.value) && !match(pat.right, term.right.value)
-        pat is Pat.Code && term is VTerm.Code -> !match(pat.element, term.element.value)
-        pat is Pat.Type && term is VTerm.Type -> true
         else -> false
     }
 }
@@ -359,7 +338,7 @@ fun quoteTerm(term: VTerm): State<Normalizer, Term> = {
             Term.ListOf(elements, term.id)
         }
         is VTerm.CompoundOf -> {
-            val elements = (!term.elements.entries.mapM { (name, element) ->
+            val elements = (!term.elements.entries.mapM { (_, element) ->
                 {
                     Term.CompoundOf.Entry(element.name, !quoteTerm(element.element.value))
                 }

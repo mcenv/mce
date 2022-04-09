@@ -361,11 +361,6 @@ class Parse private constructor(
             val left = parsePat()
             when (val char = peekChar()) {
                 ')' -> left
-                '=' -> {
-                    skip()
-                    val right = parsePat()
-                    Pat.Eq(left, right, id)
-                }
                 else -> error("unexpected operator '$char'")
             }.also { expect(')') }
         }
@@ -402,56 +397,6 @@ class Parse private constructor(
             "false" -> Pat.BoolOf(false, id)
             "true" -> Pat.BoolOf(true, id)
             "refl" -> Pat.Refl(id)
-            "or" -> {
-                val variants = parseList('{', '}') { parsePat() }
-                Pat.Or(variants, id)
-            }
-            "end" -> Pat.Or(emptyList(), id)
-            "and" -> {
-                val variants = parseList('{', '}') { parsePat() }
-                Pat.And(variants, id)
-            }
-            "any" -> Pat.And(emptyList(), id)
-            "unit" -> Pat.Unit(id)
-            "bool" -> Pat.Bool(id)
-            "byte" -> Pat.Byte(id)
-            "short" -> Pat.Short(id)
-            "int" -> Pat.Int(id)
-            "long" -> Pat.Long(id)
-            "float" -> Pat.Float(id)
-            "double" -> Pat.Double(id)
-            "string" -> Pat.String(id)
-            "byte_array" -> Pat.ByteArray(id)
-            "int_array" -> Pat.IntArray(id)
-            "long_array" -> Pat.LongArray(id)
-            "list" -> {
-                val element = parsePat()
-                val size = parsePat()
-                Pat.List(element, size, id)
-            }
-            "compound" -> {
-                val elements = parseList('{', '}') {
-                    val left = parsePat()
-                    if (peekChar() == ',' || peekChar() == '}') {
-                        Name("", freshId()) to left
-                    } else {
-                        expect(':')
-                        val right = parsePat()
-                        Name((left as? Pat.Var)?.name ?: error("name expected"), freshId()) to right
-                    }
-                }
-                Pat.Compound(elements, id)
-            }
-            "tuple" -> {
-                val elements = parseList('⟨', '⟩') { parsePat() }
-                Pat.Tuple(elements, id)
-            }
-            "ref" -> {
-                val element = parsePat()
-                Pat.Ref(element, id)
-            }
-            "code" -> Pat.Code(parsePat(), id)
-            "type" -> Pat.Type(id)
             else -> when {
                 BYTE_EXPRESSION.matches(word) -> Pat.ByteOf(word.dropLast(1).toByte(), id)
                 SHORT_EXPRESSION.matches(word) -> Pat.ShortOf(word.dropLast(1).toShort(), id)

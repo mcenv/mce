@@ -954,57 +954,6 @@ class Elab private constructor(
                 val left = lazy { !lift({ normalizer }, fresh(pat.id)) }
                 CPat.Refl(pat.id) to CVTerm.Eq(left, left)
             }
-            is SPat.Or -> {
-                val variants = !pat.variants.mapM { checkPat(it, TYPE) }
-                CPat.Or(variants, pat.id) to TYPE
-            }
-            is SPat.And -> {
-                val variants = !pat.variants.mapM { checkPat(it, TYPE) }
-                CPat.And(variants, pat.id) to TYPE
-            }
-            is SPat.Unit -> CPat.Unit(pat.id) to TYPE
-            is SPat.Bool -> CPat.Bool(pat.id) to TYPE
-            is SPat.Byte -> CPat.Byte(pat.id) to TYPE
-            is SPat.Short -> CPat.Short(pat.id) to TYPE
-            is SPat.Int -> CPat.Int(pat.id) to TYPE
-            is SPat.Long -> CPat.Long(pat.id) to TYPE
-            is SPat.Float -> CPat.Float(pat.id) to TYPE
-            is SPat.Double -> CPat.Double(pat.id) to TYPE
-            is SPat.String -> CPat.String(pat.id) to TYPE
-            is SPat.ByteArray -> CPat.ByteArray(pat.id) to TYPE
-            is SPat.IntArray -> CPat.IntArray(pat.id) to TYPE
-            is SPat.LongArray -> CPat.LongArray(pat.id) to TYPE
-            is SPat.List -> {
-                val element = !checkPat(pat.element, TYPE)
-                val size = !checkPat(pat.size, INT)
-                CPat.List(element, size, pat.id) to TYPE
-            }
-            is SPat.Compound -> {
-                val elements = !pat.elements.mapM { (name, element) ->
-                    {
-                        name to !checkPat(element, TYPE)
-                    }
-                }
-                CPat.Compound(elements, pat.id) to TYPE
-            }
-            is SPat.Tuple -> {
-                val elements = !pat.elements.mapM { element -> checkPat(element, TYPE) }
-                CPat.Tuple(elements, pat.id) to TYPE
-            }
-            is SPat.Ref -> {
-                val element = !checkPat(pat.element, TYPE)
-                CPat.Ref(element, pat.id) to TYPE
-            }
-            is SPat.Eq -> {
-                val left = !inferPat(pat.left)
-                val right = !checkPat(pat.right, left.second)
-                CPat.Eq(left.first, right, pat.id) to TYPE
-            }
-            is SPat.Code -> {
-                val element = !checkPat(pat.element, TYPE)
-                CPat.Code(element, pat.id) to TYPE
-            }
-            is SPat.Type -> CPat.Type(pat.id) to TYPE
         }.also { (_, type) ->
             types[pat.id] = type
         }

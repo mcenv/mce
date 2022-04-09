@@ -229,19 +229,19 @@ class Pack private constructor() {
             }
             is Pat.LongOf -> { // TODO: benchmark other methods
                 +SetData(MAIN, SCRUTINEE, From(MAIN, path))
-                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Long(pat.value)))))), Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Long(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.FloatOf -> {
                 +SetData(MAIN, SCRUTINEE, From(MAIN, path))
-                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Float(pat.value)))))), Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Float(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.DoubleOf -> {
                 +SetData(MAIN, SCRUTINEE, From(MAIN, path))
-                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Double(pat.value)))))), Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.Double(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.StringOf -> {
                 +SetData(MAIN, SCRUTINEE, From(MAIN, path))
-                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(NbtNode.MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.String(pat.value)))))), Run(SetScore(R0, REG, 0))))
+                +Execute(E.CheckMatchingData(false, MAIN, NbtPath(listOf(MatchRootObject(Nbt.Compound(mapOf(SCRUTINEE_KEY to Nbt.String(pat.value)))))), Run(SetScore(R0, REG, 0))))
             }
             is Pat.ByteArrayOf -> {
                 +Execute(E.CheckMatchingData(false, MAIN, path[pat.elements.lastIndex], Run(SetScore(R0, REG, 0))))
@@ -283,74 +283,6 @@ class Pack private constructor() {
             }
             is Pat.RefOf -> Unit
             is Pat.Refl -> TODO()
-            is Pat.Or -> TODO()
-            is Pat.And -> TODO()
-            is Pat.Unit -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(20), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Bool -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(21), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Byte -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(22), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Short -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(23), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Int -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(24), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Long -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(25), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Float -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(26), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Double -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(27), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.String -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(28), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.ByteArray -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(29), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.IntArray -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(30), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.LongArray -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(31), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.List -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(32), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Compound -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(33), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Tuple -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(34), Run(SetScore(R0, REG, 0))))
-            }
-            is Pat.Ref -> TODO()
-            is Pat.Eq -> TODO()
-            is Pat.Type -> {
-                +Execute(StoreValue(RESULT, R1, REG, Run(GetData(MAIN, path))))
-                +Execute(E.CheckScore(false, R1, REG, EqConst(37), Run(SetScore(R0, REG, 0))))
-            }
         }
     }
 

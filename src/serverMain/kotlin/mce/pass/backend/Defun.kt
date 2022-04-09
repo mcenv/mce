@@ -250,50 +250,6 @@ class Defun private constructor(
             DPat.RefOf(element, getType(pat.id))
         }
         is CPat.Refl -> DPat.Refl(getType(pat.id))
-        is CPat.Or -> {
-            val variants = pat.variants.map { defunPat(it) }
-            DPat.Or(variants, getType(pat.id))
-        }
-        is CPat.And -> {
-            val variants = pat.variants.map { defunPat(it) }
-            DPat.And(variants, getType(pat.id))
-        }
-        is CPat.Unit -> DPat.Unit(getType(pat.id))
-        is CPat.Bool -> DPat.Bool(getType(pat.id))
-        is CPat.Byte -> DPat.Byte(getType(pat.id))
-        is CPat.Short -> DPat.Short(getType(pat.id))
-        is CPat.Int -> DPat.Int(getType(pat.id))
-        is CPat.Long -> DPat.Long(getType(pat.id))
-        is CPat.Float -> DPat.Float(getType(pat.id))
-        is CPat.Double -> DPat.Double(getType(pat.id))
-        is CPat.String -> DPat.String(getType(pat.id))
-        is CPat.ByteArray -> DPat.ByteArray(getType(pat.id))
-        is CPat.IntArray -> DPat.IntArray(getType(pat.id))
-        is CPat.LongArray -> DPat.LongArray(getType(pat.id))
-        is CPat.List -> {
-            val element = defunPat(pat.element)
-            val size = defunPat(pat.size)
-            DPat.List(element, size, getType(pat.id))
-        }
-        is CPat.Compound -> {
-            val elements = pat.elements.map { (name, element) -> name to defunPat(element) }
-            DPat.Compound(elements, getType(pat.id))
-        }
-        is CPat.Tuple -> {
-            val elements = pat.elements.map { defunPat(it) }
-            DPat.Tuple(elements, getType(pat.id))
-        }
-        is CPat.Ref -> {
-            val element = defunPat(pat.element)
-            DPat.Ref(element, getType(pat.id))
-        }
-        is CPat.Eq -> {
-            val left = defunPat(pat.left)
-            val right = defunPat(pat.right)
-            DPat.Eq(left, right, getType(pat.id))
-        }
-        is CPat.Code -> throw Error()
-        is CPat.Type -> DPat.Type(getType(pat.id))
     }
 
     private fun defunEff(eff: CEff): DEff = when (eff) {
