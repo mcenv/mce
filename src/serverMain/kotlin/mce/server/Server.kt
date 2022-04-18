@@ -1,5 +1,7 @@
 package mce.server
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import mce.pass.Config
 import mce.pass.frontend.printTerm
 import mce.pass.quoteTerm
@@ -26,5 +28,14 @@ class Server(config: Config) {
         return result.completions[request.target]?.let { completions ->
             completions.map { (name, type) -> CompletionResponse(name, printTerm(Store(result.normalizer).quoteTerm(type)), request.id) }
         } ?: emptyList()
+    }
+
+    suspend fun build() {
+        val result = build.fetch(Key.GenResult("main"))
+        withContext(Dispatchers.IO) {
+            ZipGenerator("main").use { generator ->
+                result.generate(generator)
+            }
+        }
     }
 }
