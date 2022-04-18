@@ -205,7 +205,7 @@ class Gen(
             is Execute.StoreValue -> {
                 generator.write("store ")
                 genConsumer(execute.consumer)
-                generator.write(' ')
+                generator.write(" score ")
                 genScoreHolder(execute.targets)
                 generator.write(' ')
                 genObjective(execute.objective)
@@ -215,7 +215,7 @@ class Gen(
             is Execute.StoreData -> {
                 generator.write("store ")
                 genConsumer(execute.consumer)
-                generator.write(' ')
+                generator.write(" storage ")
                 genResourceLocation(execute.target)
                 generator.write(' ')
                 genNbtPath(execute.path)
