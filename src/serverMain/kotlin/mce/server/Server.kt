@@ -9,10 +9,11 @@ import mce.protocol.HoverRequest
 import mce.protocol.HoverResponse
 import mce.server.build.Build
 import mce.server.build.Key
+import mce.server.pack.Packs
 import mce.util.Store
 
 class Server(config: Config) {
-    internal val build: Build = Build(config)
+    internal val build: Build = Build(config, Packs)
 
     suspend fun hover(request: HoverRequest): HoverResponse {
         val result = build.fetch(Key.ElabResult(request.name))

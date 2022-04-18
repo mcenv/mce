@@ -13,13 +13,14 @@ import mce.pass.backend.Stage
 import mce.pass.frontend.Elab
 import mce.pass.frontend.Parse
 import mce.pass.frontend.Zonk
-import mce.server.Server
+import mce.server.pack.Packs
 
 /**
  * A build system with constructive traces rebuilder and suspending scheduler.
  */
 class Build(
     private val config: Config,
+    private val packs: Packs,
 ) {
     private val values: MutableMap<Key<*>, Any> = mutableMapOf()
     private val counter: MutableMap<Key<*>, Int> = mutableMapOf()
@@ -29,7 +30,7 @@ class Build(
         getValue(key) ?: run {
             incrementCount(key)
             when (key) {
-                is Key.Source -> read(key.name) as V
+                is Key.Source -> packs.fetch(key.name)!! /* TODO */ as V
                 is Key.SurfaceItem -> Parse(key.name, fetch(Key.Source(key.name))) as V
                 is Key.ElabResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
@@ -57,11 +58,6 @@ class Build(
             }
         }
     }
-
-    private fun read(name: String): String =
-        Server::class.java.getResourceAsStream("/std/src/$name.mce")!!.use { // TODO: pack registration
-            it.readAllBytes().toString(Charsets.UTF_8)
-        }
 
     private fun visible(item: Item, name: String): Boolean =
         item.modifiers.contains(Modifier.BUILTIN) ||
