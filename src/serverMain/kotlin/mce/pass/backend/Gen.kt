@@ -480,12 +480,15 @@ class Gen(
             val gen = Gen(generator)
             input.functions.forEach { gen.genFunction(it) }
 
-            PFunction(APPLY, listOf(
-                E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
-                Pop(MAIN, INT),
-            ) + input.defunctions.map { (tag, defunction) ->
-                E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(defunction.name))))
-            })
+            gen.genFunction(
+                PFunction(APPLY, listOf(
+                    E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
+                    Pop(MAIN, INT),
+                ) + input.defunctions.map { (tag, defunction) ->
+                    gen.genFunction(defunction)
+                    E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(defunction.name))))
+                })
+            )
         }
     }
 }
