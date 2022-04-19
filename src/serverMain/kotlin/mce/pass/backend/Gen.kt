@@ -1,8 +1,15 @@
 package mce.pass.backend
 
 import mce.ast.pack.*
+import mce.ast.pack.Command.GetData
+import mce.ast.pack.Command.RunFunction
+import mce.ast.pack.Consumer.RESULT
+import mce.ast.pack.Execute.Run
+import mce.ast.pack.Execute.StoreValue
+import mce.ast.pack.SourceComparator.EqConst
 import mce.pass.Config
 import mce.pass.Pass
+import mce.ast.pack.Command.Execute as E
 import mce.ast.pack.Function as PFunction
 
 class Gen(
@@ -472,7 +479,13 @@ class Gen(
         override operator fun invoke(config: Config, input: Pack.Result): Result = Result { generator ->
             val gen = Gen(generator)
             input.functions.forEach { gen.genFunction(it) }
-            // TODO: gen defunctions
+
+            PFunction(APPLY, listOf(
+                E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
+                Pop(MAIN, INT),
+            ) + input.defunctions.map { (tag, defunction) ->
+                E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(defunction.name))))
+            })
         }
     }
 }

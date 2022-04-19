@@ -1,12 +1,10 @@
 package mce.pass
 
-import mce.ast.pack.*
 import mce.ast.pack.Command.Append
-import mce.ast.pack.Command.GetData
-import mce.ast.pack.Consumer.RESULT
-import mce.ast.pack.Execute.Run
-import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.Function
+import mce.ast.pack.Nbt
+import mce.ast.pack.NbtType
+import mce.ast.pack.ResourceLocation
 import mce.ast.pack.SourceProvider.Value
 import mce.emulator.*
 import mce.fetch
@@ -24,19 +22,13 @@ class PackTest {
             Pack.Result(
                 listOf(
                     Function(
-                        ResourceLocation("apply"),
-                        listOf(
-                            Command.Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
-                            Pop(MAIN, INT),
-                        ),
-                    ),
-                    Function(
                         ResourceLocation("const"),
                         listOf(
                             Append(MAIN, BYTE, Value(Nbt.Byte(0))),
                         ),
                     ),
                 ),
+                emptyMap(),
             ),
             pack("const"),
         )
