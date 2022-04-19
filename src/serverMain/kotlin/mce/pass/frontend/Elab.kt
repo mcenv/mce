@@ -51,7 +51,8 @@ class Elab private constructor(
                 val vResultant = Store(value.normalizer).evalTerm(resultant)
                 val effs = item.effs.map { elabEff(it) }.toSet()
                 val body = if (item.modifiers.contains(SModifier.BUILTIN)) {
-                    CTerm.Hole(item.body.id)
+                    types[item.body.id] = vResultant
+                    CTerm.Builtin(item.body.id)
                 } else {
                     value = value.copy(termRelevant = true, typeRelevant = false)
                     checkTerm(item.body, vResultant)

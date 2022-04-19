@@ -114,6 +114,7 @@ sealed class VSignature {
 sealed class Term {
     abstract val id: Id?
 
+    data class Builtin(override val id: Id?) : Term()
     data class Hole(override val id: Id?) : Term()
     data class Meta(val index: KInt, override val id: Id?) : Term()
     data class Block(val elements: KList<Term>, override val id: Id?) : Term()

@@ -468,10 +468,11 @@ class Gen(
         val generate: (Generator) -> Unit,
     )
 
-    companion object : Pass<List<PFunction>, Result> {
-        override operator fun invoke(config: Config, input: List<PFunction>): Result = Result { generator ->
+    companion object : Pass<Pack.Result, Result> {
+        override operator fun invoke(config: Config, input: Pack.Result): Result = Result { generator ->
             val gen = Gen(generator)
-            input.forEach { gen.genFunction(it) }
+            input.functions.forEach { gen.genFunction(it) }
+            // TODO: gen defunctions
         }
     }
 }

@@ -89,6 +89,7 @@ class Defun private constructor(
     }
 
     private fun defunTerm(term: CTerm): DTerm = when (term) {
+        is CTerm.Builtin -> DTerm.Builtin(getType(term.id!!))
         is CTerm.Hole -> throw Error()
         is CTerm.Meta -> throw Error()
         is CTerm.Block -> {

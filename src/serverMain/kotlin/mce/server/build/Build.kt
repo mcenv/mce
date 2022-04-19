@@ -14,6 +14,7 @@ import mce.pass.frontend.Elab
 import mce.pass.frontend.Parse
 import mce.pass.frontend.Zonk
 import mce.server.pack.Packs
+import mce.ast.pack.Function as PFunction
 
 /**
  * A build system with constructive traces rebuilder and suspending scheduler.
@@ -51,7 +52,13 @@ class Build(
                         .map { async { fetch(Key.PackResult(it)).functions } }
                         .awaitAll()
                         .flatten()
-                    Gen(config, functions) as V
+                    val defunctions = (surfaceItem.imports + key.name)
+                        .map { async { fetch(Key.PackResult(it)).defunctions } }
+                        .awaitAll()
+                        .fold(mutableMapOf<Int, PFunction>()) { acc, defunctions ->
+                            acc.also { it.putAll(defunctions) }
+                        }
+                    Gen(config, Pack.Result(functions, defunctions)) as V
                 }
             }.also {
                 setValue(key, it)

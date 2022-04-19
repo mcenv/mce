@@ -1,6 +1,7 @@
 package mce.pass.backend
 
 import mce.ast.defun.Item
+import mce.ast.defun.Modifier
 import mce.ast.defun.Pat
 import mce.ast.defun.Term
 import mce.ast.pack.*
@@ -15,6 +16,7 @@ import mce.ast.pack.SourceProvider.From
 import mce.ast.pack.SourceProvider.Value
 import mce.pass.Config
 import mce.pass.Pass
+import mce.pass.builtin.builtins
 import mce.ast.core.VTerm as Type
 import mce.ast.pack.Execute as E
 import mce.ast.pack.Function as PFunction
@@ -22,20 +24,15 @@ import mce.ast.pack.Function as PFunction
 @Suppress("NAME_SHADOWING")
 class Pack private constructor() {
     private val functions: MutableList<PFunction> = mutableListOf()
+    private val defunctions: MutableMap<Int, PFunction> = mutableMapOf()
 
     private fun pack(terms: Map<Int, Term>, item: Item) {
-        +Context(APPLY).apply {
-            +Execute(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1]))))
-            +Pop(MAIN, INT)
-            // TODO: use 4-ary search
-            terms.forEach { (tag, term) ->
-                val name = ResourceLocation("$tag")
-                +Context(name).apply {
-                    packTerm(term)
-                    +SetScore(R0, REG, tag)
-                }
-                +Execute(E.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
-            }
+        terms.forEach { (tag, term) ->
+            val name = ResourceLocation("$tag")
+            defunctions[tag] = Context(name).apply {
+                packTerm(term)
+                +SetScore(R0, REG, tag)
+            }.toFunction()
         }
 
         packItem(item)
@@ -43,7 +40,15 @@ class Pack private constructor() {
 
     private fun packItem(item: Item) {
         when (item) {
-            is Item.Def -> +Context(ResourceLocation(item.name)).apply { packTerm(item.body) }
+            is Item.Def -> {
+                +Context(ResourceLocation(item.name)).apply {
+                    if (item.modifiers.contains(Modifier.BUILTIN)) {
+                        builtins[item.name]!!.pack().forEach { +it }
+                    } else {
+                        packTerm(item.body)
+                    }
+                }
+            }
             is Item.Mod -> TODO()
             is Item.Test -> TODO()
         }
@@ -51,6 +56,7 @@ class Pack private constructor() {
 
     private fun Context.packTerm(term: Term) {
         when (term) {
+            is Term.Builtin -> Unit
             is Term.Block -> {
                 val size = this.size
                 term.elements.forEach { packTerm(it) }
@@ -370,12 +376,13 @@ class Pack private constructor() {
 
     data class Result(
         val functions: List<PFunction>,
+        val defunctions: Map<Int, PFunction>,
     )
 
     companion object : Pass<Defun.Result, Result> {
         override operator fun invoke(config: Config, input: Defun.Result): Result = Pack().run {
             pack(input.functions, input.item)
-            Result(functions)
+            Result(functions, defunctions)
         }
     }
 }

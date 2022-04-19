@@ -75,6 +75,7 @@ private tailrec fun Normalizer.forceSubst(term: VTerm): VTerm = when (term) {
  */
 fun Store<Normalizer>.evalTerm(term: Term): VTerm =
     when (term) {
+        is Term.Builtin -> throw Error()
         is Term.Hole -> VTerm.Hole(term.id)
         is Term.Meta -> value.getSolution(term.index) ?: VTerm.Meta(term.index, term.id)
         is Term.Block -> {

@@ -68,6 +68,7 @@ abstract class Transform {
     }
 
     protected fun transformTermInternal(term: Term): Term = when (term) {
+        is Term.Builtin -> term
         is Term.Hole -> term
         is Term.Meta -> term
         is Term.Block -> Term.Block(term.elements.map { transformTerm(it) }, term.id)
