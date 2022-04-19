@@ -17,7 +17,9 @@ class GenTest {
         gen("const").generate(generator)
         assertEquals(
             mapOf(
-                ResourceLocation("const") to """data modify storage 0 a append value 0b"""
+                ResourceLocation("apply") to """execute store result score 0 0 run data get storage 0 c[-1]
+                    |data remove storage 0 c[-1]""".trimMargin(),
+                ResourceLocation("const") to """data modify storage 0 a append value 0b""",
             ),
             generator.dump(),
         )

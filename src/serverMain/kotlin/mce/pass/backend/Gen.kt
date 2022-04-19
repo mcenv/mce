@@ -478,7 +478,6 @@ class Gen(
     companion object : Pass<Pack.Result, Result> {
         override operator fun invoke(config: Config, input: Pack.Result): Result = Result { generator ->
             val gen = Gen(generator)
-            input.functions.forEach { gen.genFunction(it) }
 
             gen.genFunction(
                 PFunction(APPLY, listOf(
@@ -489,6 +488,8 @@ class Gen(
                     E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(defunction.name))))
                 })
             )
+
+            input.functions.forEach { gen.genFunction(it) }
         }
     }
 }
