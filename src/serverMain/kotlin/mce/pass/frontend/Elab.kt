@@ -451,6 +451,7 @@ class Elab private constructor(
                 val types = computation.params.map { value.normalizer.fresh(computation.id) }
                 restore {
                     (computation.params zip types).forEach { (param, type) ->
+                        this@Elab.types[param.id] = type
                         value = value.bind(param.id, Entry(true /* TODO */, param.text, END, ANY, true, type, value.stage))
                     }
                     val body = inferComputation(computation.body)
@@ -616,6 +617,7 @@ class Elab private constructor(
                         val lower = param.lower?.let { Store(value.normalizer).evalTerm(it) }
                         val upper = param.upper?.let { Store(value.normalizer).evalTerm(it) }
                         val type = Store(value.normalizer).evalTerm(param.type)
+                        this@Elab.types[param.id] = type
                         value = value.bind(name.id, Entry(param.termRelevant, name.text, lower, upper, param.typeRelevant, type, value.stage))
                     }
                     val resultant = checkComputation(computation.body, Store(value.normalizer).evalTerm(type.resultant), effs)

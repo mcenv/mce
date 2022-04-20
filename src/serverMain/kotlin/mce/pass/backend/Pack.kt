@@ -26,12 +26,13 @@ class Pack private constructor() {
     private val functions: MutableList<PFunction> = mutableListOf()
     private val defunctions: MutableMap<Int, PFunction> = mutableMapOf()
 
-    private fun pack(terms: Map<Int, Term>, item: Item) {
-        terms.forEach { (tag, term) ->
-            val name = ResourceLocation("$tag")
-            defunctions[tag] = Context(name).apply {
-                packTerm(term)
-                +SetScore(R0, REG, tag)
+    private fun pack(defunctions: List<Defun.Defunction>, item: Item) {
+        defunctions.forEach { defunction ->
+            val name = ResourceLocation("${defunction.tag}")
+            this.defunctions[defunction.tag] = Context(name).apply {
+                defunction.params.forEach { (name, type) -> bind(eraseType(type), name) }
+                packTerm(defunction.body)
+                +SetScore(R0, REG, defunction.tag)
             }.toFunction()
         }
 
@@ -69,6 +70,7 @@ class Pack private constructor() {
                 val path = type.toPath()
                 val index = getIndex(type, term.name)
                 +Append(MAIN, path, From(MAIN, path[index]))
+                bind(type)
             }
             is Term.Def -> {
                 term.arguments.forEach { packTerm(it) }
@@ -80,15 +82,42 @@ class Pack private constructor() {
                 bind(type, term.name)
             }
             is Term.Match -> packMatch(term)
-            is Term.UnitOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.BoolOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(if (term.value) 1 else 0)))
-            is Term.ByteOf -> +Append(MAIN, BYTE, Value(Nbt.Byte(term.value)))
-            is Term.ShortOf -> +Append(MAIN, SHORT, Value(Nbt.Short(term.value)))
-            is Term.IntOf -> +Append(MAIN, INT, Value(Nbt.Int(term.value)))
-            is Term.LongOf -> +Append(MAIN, LONG, Value(Nbt.Long(term.value)))
-            is Term.FloatOf -> +Append(MAIN, FLOAT, Value(Nbt.Float(term.value)))
-            is Term.DoubleOf -> +Append(MAIN, DOUBLE, Value(Nbt.Double(term.value)))
-            is Term.StringOf -> +Append(MAIN, STRING, Value(Nbt.String(term.value)))
+            is Term.UnitOf -> {
+                +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
+                bind(NbtType.BYTE)
+            }
+            is Term.BoolOf -> {
+                +Append(MAIN, BYTE, Value(Nbt.Byte(if (term.value) 1 else 0)))
+                bind(NbtType.BYTE)
+            }
+            is Term.ByteOf -> {
+                +Append(MAIN, BYTE, Value(Nbt.Byte(term.value)))
+                bind(NbtType.BYTE)
+            }
+            is Term.ShortOf -> {
+                +Append(MAIN, SHORT, Value(Nbt.Short(term.value)))
+                bind(NbtType.SHORT)
+            }
+            is Term.IntOf -> {
+                +Append(MAIN, INT, Value(Nbt.Int(term.value)))
+                bind(NbtType.INT)
+            }
+            is Term.LongOf -> {
+                +Append(MAIN, LONG, Value(Nbt.Long(term.value)))
+                bind(NbtType.LONG)
+            }
+            is Term.FloatOf -> {
+                +Append(MAIN, FLOAT, Value(Nbt.Float(term.value)))
+                bind(NbtType.FLOAT)
+            }
+            is Term.DoubleOf -> {
+                +Append(MAIN, DOUBLE, Value(Nbt.Double(term.value)))
+                bind(NbtType.DOUBLE)
+            }
+            is Term.StringOf -> {
+                +Append(MAIN, STRING, Value(Nbt.String(term.value)))
+                bind(NbtType.STRING)
+            }
             is Term.ByteArrayOf -> {
                 val elements = term.elements.map {
                     when (it) {
@@ -104,6 +133,7 @@ class Pack private constructor() {
                         +Pop(MAIN, BYTE)
                     }
                 }
+                bind(NbtType.BYTE_ARRAY)
             }
             is Term.IntArrayOf -> {
                 val elements = term.elements.map {
@@ -120,6 +150,7 @@ class Pack private constructor() {
                         +Pop(MAIN, INT)
                     }
                 }
+                bind(NbtType.INT_ARRAY)
             }
             is Term.LongArrayOf -> {
                 val elements = term.elements.map {
@@ -136,6 +167,7 @@ class Pack private constructor() {
                         +Pop(MAIN, LONG)
                     }
                 }
+                bind(NbtType.LONG_ARRAY)
             }
             is Term.ListOf -> {
                 +Append(MAIN, LIST, Value(Nbt.List(emptyList())))
@@ -149,6 +181,7 @@ class Pack private constructor() {
                         +RemoveData(MAIN, sourcePath)
                     }
                 }
+                bind(NbtType.LIST)
             }
             is Term.CompoundOf -> {
                 +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
@@ -162,6 +195,7 @@ class Pack private constructor() {
                         +RemoveData(MAIN, sourcePath)
                     }
                 }
+                bind(NbtType.COMPOUND)
             }
             is Term.TupleOf -> {
                 +Append(MAIN, COMPOUND, Value(Nbt.Compound(emptyMap())))
@@ -175,36 +209,46 @@ class Pack private constructor() {
                         +RemoveData(MAIN, sourcePath)
                     }
                 }
+                bind(NbtType.COMPOUND)
             }
             is Term.RefOf -> TODO()
-            is Term.Refl -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.FunOf -> +Append(MAIN, INT, Value(Nbt.Int(term.tag)))
+            is Term.Refl -> {
+                +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
+                bind(NbtType.BYTE)
+            }
+            is Term.FunOf -> {
+                +Append(MAIN, INT, Value(Nbt.Int(term.tag)))
+                bind(NbtType.INT)
+            }
             is Term.Apply -> {
                 term.arguments.forEach { packTerm(it) }
                 packTerm(term.function)
                 +RunFunction(APPLY)
             }
-            is Term.Or -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.And -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Unit -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Bool -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Byte -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Short -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Int -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Long -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Float -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Double -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.String -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.ByteArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.IntArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.LongArray -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.List -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Compound -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Tuple -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Ref -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Eq -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Fun -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
-            is Term.Type -> +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
+            is Term.Or,
+            is Term.And,
+            is Term.Unit,
+            is Term.Bool,
+            is Term.Byte,
+            is Term.Short,
+            is Term.Int,
+            is Term.Long,
+            is Term.Float,
+            is Term.Double,
+            is Term.String,
+            is Term.ByteArray,
+            is Term.IntArray,
+            is Term.LongArray,
+            is Term.List,
+            is Term.Compound,
+            is Term.Tuple,
+            is Term.Ref,
+            is Term.Eq,
+            is Term.Fun,
+            is Term.Type -> {
+                +Append(MAIN, BYTE, Value(Nbt.Byte(0)))
+                bind(NbtType.BYTE)
+            }
         }
     }
 
@@ -358,7 +402,7 @@ class Pack private constructor() {
             return entry.lastIndexOf(name) - entry.size
         }
 
-        fun bind(type: NbtType, name: String) {
+        fun bind(type: NbtType, name: String = "") {
             entries += type to name
             entriesByType[type]!! += name
         }
@@ -381,7 +425,7 @@ class Pack private constructor() {
 
     companion object : Pass<Defun.Result, Result> {
         override operator fun invoke(config: Config, input: Defun.Result): Result = Pack().run {
-            pack(input.functions, input.item)
+            pack(input.defunctions, input.item)
             Result(functions, defunctions)
         }
     }

@@ -26,7 +26,7 @@ import mce.ast.defun.Term as DTerm
 class Defun private constructor(
     private val types: Map<Id, CVTerm>,
 ) {
-    private val functions: MutableMap<Int, DTerm> = mutableMapOf()
+    private val defunctions: MutableList<Defunction> = mutableListOf()
 
     private fun defunItem(item: CItem): DItem {
         val modifiers = item.modifiers.map { defunModifier(it) }.toSet()
@@ -147,9 +147,10 @@ class Defun private constructor(
         is CTerm.Refl -> DTerm.Refl(getType(term.id!!))
         is CTerm.FunOf -> {
             val tag = freshTag()
-            DTerm.FunOf(tag, getType(term.id!!)).also {
+            val type = getType(term.id!!) as CVTerm.Fun
+            DTerm.FunOf(tag, type).also {
                 val body = defunTerm(term.body)
-                functions[tag] = body
+                defunctions += Defunction(tag, (term.params zip type.params).map { (name, param) -> name.text to getType(param.id) }, body)
             }
         }
         is CTerm.Apply -> {
@@ -259,9 +260,15 @@ class Defun private constructor(
 
     private fun getType(id: Id): CVTerm = types[id]!!
 
+    data class Defunction(
+        val tag: Int,
+        val params: List<Pair<String, CVTerm>>,
+        val body: DTerm,
+    )
+
     data class Result(
         val item: DItem,
-        val functions: Map<Int, DTerm>,
+        val defunctions: List<Defunction>,
     )
 
     companion object : Pass<Stage.Result, Result> {
@@ -270,7 +277,7 @@ class Defun private constructor(
         private fun freshTag(): Int = tag.getAndIncrement()
 
         override operator fun invoke(config: Config, input: Stage.Result): Result = Defun(input.types).run {
-            Result(defunItem(input.item), functions)
+            Result(defunItem(input.item), defunctions)
         }
     }
 }

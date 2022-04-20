@@ -1,0 +1,1 @@
+def defun_context [] : fun [int, int] → list int 2 ≔ λ [a, b] → [a, b]
