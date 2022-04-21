@@ -13,7 +13,6 @@ import kotlin.String as KString
 import kotlin.collections.List as KList
 
 data class Function(
-    val name: ResourceLocation,
     val commands: KList<Command>,
 )
 

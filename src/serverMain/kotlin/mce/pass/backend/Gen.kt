@@ -17,8 +17,8 @@ import mce.ast.pack.Function as PFunction
 class Gen(
     private val generator: Generator,
 ) {
-    private fun genFunction(function: PFunction) {
-        generator.entry(ResourceType.FUNCTION, function.name) {
+    private fun genFunction(name: ResourceLocation, function: PFunction) {
+        generator.entry(ResourceType.FUNCTION, name) {
             function.commands.forEachIndexed { index, command ->
                 if (index != 0) {
                     generator.write('\n')
@@ -488,16 +488,18 @@ class Gen(
             val gen = Gen(generator)
 
             gen.genFunction(
-                PFunction(APPLY, listOf(
+                APPLY,
+                PFunction(listOf(
                     E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
                     Pop(MAIN, INT),
                 ) + input.defunctions.map { (tag, defunction) ->
-                    gen.genFunction(defunction)
-                    E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(defunction.name))))
+                    val name = ResourceLocation("$tag")
+                    gen.genFunction(name, defunction)
+                    E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
                 })
             )
 
-            input.functions.forEach { gen.genFunction(it) }
+            input.functions.forEach { (name, function) -> gen.genFunction(name, function) }
             input.advancements.forEach { (name, advancement) -> gen.genAdvancement(name, advancement) }
         }
     }

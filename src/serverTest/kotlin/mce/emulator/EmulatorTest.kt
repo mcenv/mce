@@ -19,7 +19,6 @@ class EmulatorTest {
         val executor = Executor(
             functions = mapOf(
                 a to PFunction(
-                    a,
                     listOf(
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(0))),
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(1))),
@@ -54,7 +53,6 @@ class EmulatorTest {
         val executor = Executor(
             functions = mapOf(
                 a to PFunction(
-                    a,
                     listOf(
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(0))),
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(1))),
@@ -62,7 +60,6 @@ class EmulatorTest {
                     ),
                 ),
                 b to PFunction(
-                    b,
                     listOf(
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(2))),
                         Command.InsertAtIndex(a, nbtPath["a"], -1, Value(Nbt.Int(3))),

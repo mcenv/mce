@@ -20,9 +20,8 @@ class PackTest {
     fun byte() {
         assertEquals(
             Pack.Result(
-                listOf(
-                    Function(
-                        ResourceLocation("const"),
+                mapOf(
+                    ResourceLocation("const") to Function(
                         listOf(
                             Append(MAIN, BYTE, Value(Nbt.Byte(0))),
                         ),
@@ -41,7 +40,7 @@ class PackTest {
 
         val storage = NbtStorage()
         Executor(
-            functions = result.functions.associateBy { it.name },
+            functions = result.functions,
             scoreboard = Scoreboard(mutableMapOf(REG.name to REG)),
             storage = storage,
         ).runTopFunction(ResourceLocation("match_boolean"))
@@ -67,7 +66,7 @@ class PackTest {
 
         val storage = NbtStorage()
         Executor(
-            functions = result.functions.associateBy { it.name },
+            functions = result.functions,
             scoreboard = Scoreboard(mutableMapOf(REG.name to REG)),
             storage = storage,
         ).runTopFunction(ResourceLocation("match_variable"))
@@ -93,7 +92,7 @@ class PackTest {
 
         val storage = NbtStorage()
         Executor(
-            functions = result.functions.associateBy { it.name },
+            functions = result.functions,
             scoreboard = Scoreboard(mutableMapOf(REG.name to REG)),
             storage = storage,
         ).runTopFunction(ResourceLocation("pack_match"))

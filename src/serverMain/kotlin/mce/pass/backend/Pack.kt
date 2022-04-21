@@ -23,7 +23,7 @@ import mce.ast.pack.Function as PFunction
 
 @Suppress("NAME_SHADOWING")
 class Pack private constructor() {
-    private val functions: MutableList<PFunction> = mutableListOf()
+    private val functions: MutableMap<ResourceLocation, PFunction> = mutableMapOf()
     private val advancements: MutableMap<ResourceLocation, Advancement> = mutableMapOf()
     private val defunctions: MutableMap<Int, PFunction> = mutableMapOf()
 
@@ -387,7 +387,7 @@ class Pack private constructor() {
     }
 
     private operator fun Context.unaryPlus() {
-        functions += toFunction()
+        functions[name] = toFunction()
     }
 
     private data class Context(
@@ -420,11 +420,11 @@ class Pack private constructor() {
 
         fun withName(name: ResourceLocation): Context = copy(name = name, commands = mutableListOf())
 
-        fun toFunction(): PFunction = PFunction(name, commands)
+        fun toFunction(): PFunction = PFunction(commands)
     }
 
     data class Result(
-        val functions: List<PFunction>,
+        val functions: Map<ResourceLocation, PFunction>,
         val advancements: Map<ResourceLocation, Advancement>,
         val defunctions: Map<Int, PFunction>,
     )

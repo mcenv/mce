@@ -53,9 +53,9 @@ class Build(
                     val results = (surfaceItem.imports + key.name)
                         .map { async { fetch(Key.PackResult(it)) } }
                         .awaitAll()
-                    val functions = results.flatMap { it.functions }
-                    val advancements = results.fold(mutableMapOf<ResourceLocation, Advancement>()) { acc, result -> acc.also { it.putAll(result.advancements) } }
-                    val defunctions = results.fold(mutableMapOf<Int, PFunction>()) { acc, result -> acc.also { it.putAll(result.defunctions) } }
+                    val functions = results.fold(mutableMapOf<ResourceLocation, PFunction>()) { functions, result -> functions.also { it.putAll(result.functions) } }
+                    val advancements = results.fold(mutableMapOf<ResourceLocation, Advancement>()) { advancements, result -> advancements.also { it.putAll(result.advancements) } }
+                    val defunctions = results.fold(mutableMapOf<Int, PFunction>()) { defunctions, result -> defunctions.also { it.putAll(result.defunctions) } }
                     Gen(config, Pack.Result(functions, advancements, defunctions)) as V
                 }
             }.also {
