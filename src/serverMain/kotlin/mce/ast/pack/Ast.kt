@@ -12,8 +12,27 @@ import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
 
-data class Function(
-    val commands: KList<Command>,
+@Serializable
+data class PackMetadata(
+    val pack: PackMetadataSection,
+    val filter: ResourceFilterSection? = null,
+)
+
+@Serializable
+data class PackMetadataSection(
+    val description: kotlin.String, // TODO: use [Component]
+    @SerialName("pack_format") val packFormat: kotlin.Int,
+)
+
+@Serializable
+data class ResourceFilterSection(
+    val block: kotlin.collections.List<ResourceLocationPattern>,
+)
+
+@Serializable
+data class ResourceLocationPattern(
+    val namespace: kotlin.String? = null,
+    val path: kotlin.String? = null,
 )
 
 @Serializable
@@ -240,6 +259,42 @@ sealed interface Criterion {
     @SerialName("avoid_vibration")
     object AvoidVibration : Criterion
 }
+
+
+@Serializable
+data class Tag(
+    val values: kotlin.collections.List<@Serializable(with = Entry.Serializer::class) Entry>,
+    val replace: Boolean = false,
+)
+
+@Serializable
+data class Entry(
+    val id: @Serializable(with = ResourceLocation.Serializer::class) ResourceLocation,
+    val required: Boolean = true,
+) {
+    object Serializer : JsonTransformingSerializer<Entry>(serializer()) {
+        override fun transformSerialize(element: JsonElement): JsonElement =
+            if (element.jsonObject["required"]?.jsonPrimitive?.boolean != false) {
+                element.jsonObject["id"]!!
+            } else {
+                element
+            }
+
+
+        override fun transformDeserialize(element: JsonElement): JsonElement =
+            when (element) {
+                is JsonPrimitive -> buildJsonObject {
+                    put("id", element.content)
+                    put("required", true)
+                }
+                else -> element
+            }
+    }
+}
+
+data class Function(
+    val commands: KList<Command>,
+)
 
 sealed class Command {
     data class Execute(val execute: mce.ast.pack.Execute) : Command()

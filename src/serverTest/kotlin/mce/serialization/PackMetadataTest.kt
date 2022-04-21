@@ -2,10 +2,10 @@ package mce.serialization
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import mce.minecraft.PackMetadata
-import mce.minecraft.PackMetadataSection
-import mce.minecraft.ResourceFilterSection
-import mce.minecraft.ResourceLocationPattern
+import mce.ast.pack.PackMetadata
+import mce.ast.pack.PackMetadataSection
+import mce.ast.pack.ResourceFilterSection
+import mce.ast.pack.ResourceLocationPattern
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

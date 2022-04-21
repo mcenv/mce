@@ -1,5 +1,10 @@
 package mce.server
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
+import mce.ast.pack.PackMetadata
+import mce.ast.pack.PackMetadataSection
 import mce.ast.pack.ResourceLocation
 import mce.pass.backend.Generator
 import mce.pass.backend.ResourceType
@@ -9,6 +14,7 @@ import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+@ExperimentalSerializationApi
 @Suppress("NOTHING_TO_INLINE", "OVERRIDE_BY_INLINE")
 class ZipGenerator(name: String) : Generator, Closeable {
     val output: ZipOutputStream = ZipOutputStream(File("$name.zip").outputStream().buffered())
@@ -16,7 +22,7 @@ class ZipGenerator(name: String) : Generator, Closeable {
 
     init {
         output.putNextEntry(ZipEntry("pack.mcmeta"))
-        output.write("""{"pack":{"description":"","pack_format":$DATA_PACK_FORMAT}}""".toByteArray())
+        Json.encodeToStream(PackMetadata(PackMetadataSection("", DATA_PACK_FORMAT)), output)
         output.closeEntry()
     }
 

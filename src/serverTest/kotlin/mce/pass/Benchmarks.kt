@@ -37,5 +37,5 @@ class Benchmarks {
     fun pack(): Pack.Result = fetch(Key.PackResult("elaborate"))
 
     @Benchmark
-    fun gen(): Gen.Result = fetch(Key.GenResult("elaborate"))
+    fun gen(): Gen.Result = fetch(Key.GenResult)
 }
