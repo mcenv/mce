@@ -2,6 +2,7 @@ package mce.minecraft
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import mce.ast.pack.ResourceLocation
 
 @Serializable
 data class Tag(

@@ -55,6 +55,14 @@ class Parse private constructor(
                 val body = parseTerm()
                 Item.Pack(body, id)
             }
+            "advancement" -> {
+                val name = readWord()
+                val body = run {
+                    expectString("≔")
+                    parseTerm()
+                }
+                Item.Advancement(imports, exports, modifiers, name, body, id)
+            }
             else -> error("unexpected item '$word'")
         }
     }

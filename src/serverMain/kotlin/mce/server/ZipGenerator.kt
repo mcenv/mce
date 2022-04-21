@@ -2,6 +2,7 @@ package mce.server
 
 import mce.ast.pack.ResourceLocation
 import mce.pass.backend.Generator
+import mce.pass.backend.ResourceType
 import mce.util.DATA_PACK_FORMAT
 import java.io.Closeable
 import java.io.File
@@ -19,8 +20,8 @@ class ZipGenerator(name: String) : Generator, Closeable {
         output.closeEntry()
     }
 
-    override inline fun entry(name: ResourceLocation, block: Generator.() -> Unit) {
-        output.putNextEntry(ZipEntry("data/${name.namespace}/functions/${name.path}.mcfunction"))
+    override inline fun entry(type: ResourceType, name: ResourceLocation, block: Generator.() -> Unit) {
+        output.putNextEntry(ZipEntry("data/${name.namespace}/${type.type}/${name.path}.${type.extension}"))
         block()
         output.closeEntry()
     }

@@ -56,6 +56,16 @@ sealed class Item {
     ) : Item()
 
     @Serializable
+    data class Advancement(
+        override val imports: KList<KString>,
+        override val exports: KList<KString>,
+        override val modifiers: KList<Modifier>,
+        override val name: KString,
+        val body: Term,
+        override val id: Id,
+    ) : Item()
+
+    @Serializable
     data class Pack(
         val body: Term,
         override val id: Id,

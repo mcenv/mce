@@ -29,6 +29,7 @@ class PackTest {
                     ),
                 ),
                 emptyMap(),
+                emptyMap(),
             ),
             pack("const"),
         )

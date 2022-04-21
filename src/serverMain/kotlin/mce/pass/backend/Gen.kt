@@ -1,5 +1,7 @@
 package mce.pass.backend
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import mce.ast.pack.*
 import mce.ast.pack.Command.GetData
 import mce.ast.pack.Command.RunFunction
@@ -16,13 +18,19 @@ class Gen(
     private val generator: Generator,
 ) {
     private fun genFunction(function: PFunction) {
-        generator.entry(function.name) {
+        generator.entry(ResourceType.FUNCTION, function.name) {
             function.commands.forEachIndexed { index, command ->
                 if (index != 0) {
                     generator.write('\n')
                 }
                 genCommand(command)
             }
+        }
+    }
+
+    private fun genAdvancement(name: ResourceLocation, advancement: Advancement) {
+        generator.entry(ResourceType.ADVANCEMENT, name) {
+            generator.write(Json.encodeToString(serializer(), advancement)) // TODO: use stream
         }
     }
 
@@ -458,7 +466,7 @@ class Gen(
     }
 
     private fun genResourceLocation(location: ResourceLocation) {
-        if (location.namespace != ResourceLocation.DEFAULT) {
+        if (location.namespace != ResourceLocation.DEFAULT_NAMESPACE) {
             generator.write(location.namespace)
             generator.write(':')
         }
@@ -490,14 +498,20 @@ class Gen(
             )
 
             input.functions.forEach { gen.genFunction(it) }
+            input.advancements.forEach { (name, advancement) -> gen.genAdvancement(name, advancement) }
         }
     }
 }
 
 interface Generator {
-    fun entry(name: ResourceLocation, block: Generator.() -> Unit)
+    fun entry(type: ResourceType, name: ResourceLocation, block: Generator.() -> Unit)
 
     fun write(char: Char)
 
     fun write(string: String)
+}
+
+enum class ResourceType(val type: String, val extension: String) {
+    FUNCTION("functions", "mcfunction"),
+    ADVANCEMENT("advancements", "json"),
 }

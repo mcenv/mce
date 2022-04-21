@@ -27,6 +27,10 @@ abstract class Transform {
             val body = transformTerm(item.body)
             Item.Test(item.modifiers, item.name, body, item.id)
         }
+        is Item.Advancement -> {
+            val body = transformTerm(item.body)
+            Item.Advancement(item.modifiers, item.name, body, item.id)
+        }
         is Item.Pack -> {
             val body = transformTerm(item.body)
             Item.Pack(body, item.id)
@@ -63,7 +67,8 @@ abstract class Transform {
             val type = transformModule(signature.type)
             Signature.Mod(signature.name, type, signature.id)
         }
-        is Signature.Test -> Signature.Test(signature.name, signature.id)
+        is Signature.Test -> signature
+        is Signature.Advancement -> signature
         is Signature.Pack -> signature
     }
 

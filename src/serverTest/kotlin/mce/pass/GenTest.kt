@@ -4,6 +4,7 @@ import mce.ast.pack.ResourceLocation
 import mce.fetch
 import mce.pass.backend.Gen
 import mce.pass.backend.Generator
+import mce.pass.backend.ResourceType
 import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,7 +53,7 @@ class GenTest {
         private var name: ResourceLocation? = null
         private val commands: MutableMap<ResourceLocation, StringBuilder> = mutableMapOf()
 
-        override fun entry(name: ResourceLocation, block: Generator.() -> Unit) {
+        override fun entry(type: ResourceType, name: ResourceLocation, block: Generator.() -> Unit) {
             this.name = name
             commands[name] = StringBuilder()
             block()

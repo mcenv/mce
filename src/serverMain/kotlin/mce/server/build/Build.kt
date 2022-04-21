@@ -3,6 +3,8 @@ package mce.server.build
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import mce.ast.pack.Advancement
+import mce.ast.pack.ResourceLocation
 import mce.ast.surface.Item
 import mce.ast.surface.Modifier
 import mce.pass.Config
@@ -48,17 +50,13 @@ class Build(
                 is Key.PackResult -> Pack(config, fetch(Key.DefunResult(key.name))) as V
                 is Key.GenResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
-                    val functions = (surfaceItem.imports + key.name)
-                        .map { async { fetch(Key.PackResult(it)).functions } }
+                    val results = (surfaceItem.imports + key.name)
+                        .map { async { fetch(Key.PackResult(it)) } }
                         .awaitAll()
-                        .flatten()
-                    val defunctions = (surfaceItem.imports + key.name)
-                        .map { async { fetch(Key.PackResult(it)).defunctions } }
-                        .awaitAll()
-                        .fold(mutableMapOf<Int, PFunction>()) { acc, defunctions ->
-                            acc.also { it.putAll(defunctions) }
-                        }
-                    Gen(config, Pack.Result(functions, defunctions)) as V
+                    val functions = results.flatMap { it.functions }
+                    val advancements = results.fold(mutableMapOf<ResourceLocation, Advancement>()) { acc, result -> acc.also { it.putAll(result.advancements) } }
+                    val defunctions = results.fold(mutableMapOf<Int, PFunction>()) { acc, result -> acc.also { it.putAll(result.defunctions) } }
+                    Gen(config, Pack.Result(functions, advancements, defunctions)) as V
                 }
             }.also {
                 setValue(key, it)

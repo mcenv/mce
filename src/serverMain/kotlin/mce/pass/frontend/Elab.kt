@@ -71,8 +71,13 @@ class Elab private constructor(
                 CItem.Test(modifiers, item.name, body, item.id) to CVSignature.Test(item.name, null)
             }
             is SItem.Pack -> {
-                val body = checkTerm(item.body, ANY) // TODO
+                val body = checkTerm(item.body, ANY) // TODO: type
                 CItem.Pack(body, item.id) to CVSignature.Pack(null)
+            }
+            is SItem.Advancement -> {
+                value = value.copy(meta = true)
+                val body = checkTerm(item.body, ANY) // TODO: type
+                CItem.Advancement(modifiers, item.name, body, item.id) to CVSignature.Advancement(item.name, null)
             }
         }
     }
@@ -192,6 +197,9 @@ class Elab private constructor(
                         signature1.name == signature2.name
             is CVSignature.Pack ->
                 signature2 is CVSignature.Pack
+            is CVSignature.Advancement ->
+                signature2 is CVSignature.Advancement &&
+                        signature1.name == signature2.name
         }
 
     /**

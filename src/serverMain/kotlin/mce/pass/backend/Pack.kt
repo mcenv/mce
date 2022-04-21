@@ -24,6 +24,7 @@ import mce.ast.pack.Function as PFunction
 @Suppress("NAME_SHADOWING")
 class Pack private constructor() {
     private val functions: MutableList<PFunction> = mutableListOf()
+    private val advancements: MutableMap<ResourceLocation, Advancement> = mutableMapOf()
     private val defunctions: MutableMap<Int, PFunction> = mutableMapOf()
 
     private fun pack(defunctions: List<Defun.Defunction>, item: Item) {
@@ -52,6 +53,10 @@ class Pack private constructor() {
             }
             is Item.Mod -> TODO()
             is Item.Test -> TODO()
+            is Item.Advancement -> {
+                val body = item.body as Term.CompoundOf
+                advancements[ResourceLocation(item.name)] = Advancement(criteria = emptyMap()) // TODO
+            }
         }
     }
 
@@ -420,13 +425,14 @@ class Pack private constructor() {
 
     data class Result(
         val functions: List<PFunction>,
+        val advancements: Map<ResourceLocation, Advancement>,
         val defunctions: Map<Int, PFunction>,
     )
 
     companion object : Pass<Defun.Result, Result> {
         override operator fun invoke(config: Config, input: Defun.Result): Result = Pack().run {
             pack(input.defunctions, input.item)
-            Result(functions, defunctions)
+            Result(functions, advancements, defunctions)
         }
     }
 }

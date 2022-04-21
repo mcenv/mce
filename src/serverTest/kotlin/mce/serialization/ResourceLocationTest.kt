@@ -1,6 +1,7 @@
-package mce.minecraft
+package mce.serialization
 
 import kotlinx.serialization.json.Json
+import mce.ast.pack.ResourceLocation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

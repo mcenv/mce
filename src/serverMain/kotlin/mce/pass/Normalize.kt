@@ -441,5 +441,6 @@ fun Normalizer.evalSignature(signature: Signature): VSignature =
             VSignature.Mod(signature.name, type, signature.id)
         }
         is Signature.Test -> VSignature.Test(signature.name, signature.id)
+        is Signature.Advancement -> VSignature.Advancement(signature.name, signature.id)
         is Signature.Pack -> VSignature.Pack(signature.id)
     }

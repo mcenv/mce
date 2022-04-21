@@ -90,6 +90,7 @@ class ElabTest {
         "tuple",
         "irrelevant_tuple_entries",
         "compound_unordered",
+        "advancement",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

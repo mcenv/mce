@@ -35,6 +35,12 @@ sealed class Item {
         override val name: KString,
         val body: Term,
     ) : Item()
+
+    data class Advancement(
+        override val modifiers: KSet<Modifier>,
+        override val name: KString,
+        val body: Term,
+    ) : Item()
 }
 
 enum class Modifier {
@@ -54,6 +60,7 @@ sealed class Module {
 sealed class Signature {
     data class Def(val name: KString, val params: KList<Param>, val resultant: Term) : Signature()
     data class Mod(val name: KString, val type: Module) : Signature()
+    data class Advancement(val name: KString) : Signature()
     data class Test(val name: KString) : Signature()
 }
 
