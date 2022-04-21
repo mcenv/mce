@@ -7,4 +7,6 @@ object Packs {
         packs.firstNotNullOfOrNull {
             it.fetch(name)
         }
+
+    fun list(): Set<String> = packs.flatMap { it.list() }.toSet()
 }

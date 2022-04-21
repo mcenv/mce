@@ -30,8 +30,8 @@ class Build(
 
     @Suppress("UNCHECKED_CAST")
     suspend fun <V> fetch(key: Key<V>): V = coroutineScope {
-        getValue(key) ?: run {
-            incrementCount(key)
+        values[key] as V? ?: run {
+            counter[key] = (counter[key] ?: 0) + 1
             when (key) {
                 is Key.Source -> packs.fetch(key.name)!! /* TODO */ as V
                 is Key.SurfaceItem -> Parse(key.name, fetch(Key.Source(key.name))) as V
@@ -49,8 +49,7 @@ class Build(
                 is Key.DefunResult -> Defun(config, fetch(Key.StageResult(key.name))) as V
                 is Key.PackResult -> Pack(config, fetch(Key.DefunResult(key.name))) as V
                 is Key.GenResult -> {
-                    val surfaceItem = fetch(Key.SurfaceItem(key.name))
-                    val results = (surfaceItem.imports + key.name)
+                    val results = packs.list()
                         .map { async { fetch(Key.PackResult(it)) } }
                         .awaitAll()
                     val functions = results.fold(mutableMapOf<ResourceLocation, PFunction>()) { functions, result -> functions.also { it.putAll(result.functions) } }
@@ -59,7 +58,7 @@ class Build(
                     Gen(config, Pack.Result(functions, advancements, defunctions)) as V
                 }
             }.also {
-                setValue(key, it)
+                values[key] = it!!
             }
         }
     }
@@ -70,15 +69,4 @@ class Build(
                 item.exports.contains(name)
 
     fun getCount(key: Key<*>): Int = counter[key] ?: 0
-
-    private fun incrementCount(key: Key<*>) {
-        counter[key] = (counter[key] ?: 0) + 1
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <V> getValue(key: Key<V>): V? = values[key] as V?
-
-    private fun <V> setValue(key: Key<V>, value: V) {
-        values[key] = value!!
-    }
 }

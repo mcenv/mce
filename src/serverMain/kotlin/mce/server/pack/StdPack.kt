@@ -5,4 +5,6 @@ object StdPack : Pack {
         StdPack::class.java.getResourceAsStream("/std/src/$name.mce")?.use {
             it.readAllBytes().toString(Charsets.UTF_8)
         }
+
+    override fun list(): Set<String> = emptySet()
 }

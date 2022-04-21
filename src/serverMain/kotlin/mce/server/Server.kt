@@ -31,9 +31,9 @@ class Server(config: Config) {
     }
 
     suspend fun build() {
-        val result = build.fetch(Key.GenResult("main"))
+        val result = build.fetch(Key.GenResult)
         withContext(Dispatchers.IO) {
-            ZipGenerator("main").use { generator ->
+            ZipGenerator("out").use { generator ->
                 result.generate(generator)
             }
         }

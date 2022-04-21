@@ -9,14 +9,12 @@ import mce.pass.frontend.Zonk
 import mce.ast.surface.Item as SItem
 
 sealed class Key<V> {
-    abstract val name: String
-
-    data class Source(override val name: String) : Key<String>()
-    data class SurfaceItem(override val name: String) : Key<SItem>()
-    data class ElabResult(override val name: String) : Key<Elab.Result>()
-    data class ZonkResult(override val name: String) : Key<Zonk.Result>()
-    data class StageResult(override val name: String) : Key<Stage.Result>()
-    data class DefunResult(override val name: String) : Key<Defun.Result>()
-    data class PackResult(override val name: String) : Key<Pack.Result>()
-    data class GenResult(override val name: String) : Key<Gen.Result>()
+    data class Source(val name: String) : Key<String>()
+    data class SurfaceItem(val name: String) : Key<SItem>()
+    data class ElabResult(val name: String) : Key<Elab.Result>()
+    data class ZonkResult(val name: String) : Key<Zonk.Result>()
+    data class StageResult(val name: String) : Key<Stage.Result>()
+    data class DefunResult(val name: String) : Key<Defun.Result>()
+    data class PackResult(val name: String) : Key<Pack.Result>()
+    object GenResult : Key<Gen.Result>()
 }
