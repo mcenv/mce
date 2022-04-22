@@ -6,7 +6,6 @@ import kotlinx.benchmark.State
 import mce.ast.surface.Item
 import mce.fetch
 import mce.pass.backend.Defun
-import mce.pass.backend.Gen
 import mce.pass.backend.Pack
 import mce.pass.backend.Stage
 import mce.pass.frontend.Elab
@@ -37,5 +36,5 @@ class Benchmarks {
     fun pack(): Pack.Result = fetch(Key.PackResult("elaborate"))
 
     @Benchmark
-    fun gen(): Gen.Result = fetch(Key.GenResult)
+    fun gen(): Unit = fetch(Key.GenResult)
 }

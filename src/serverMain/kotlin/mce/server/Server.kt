@@ -31,11 +31,8 @@ class Server(config: Config) {
     }
 
     suspend fun build() {
-        val result = build.fetch(Key.GenResult)
         withContext(Dispatchers.IO) {
-            ZipGenerator("out").use { generator ->
-                result.generate(generator)
-            }
+            build.fetch(Key.GenResult)
         }
     }
 }

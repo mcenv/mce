@@ -1,7 +1,8 @@
 package mce.pass.backend
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
+import kotlinx.serialization.json.encodeToStream
 import mce.ast.pack.*
 import mce.ast.pack.Command.GetData
 import mce.ast.pack.Command.RunFunction
@@ -11,17 +12,29 @@ import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.EqConst
 import mce.pass.Config
 import mce.pass.Pass
+import mce.util.DATA_PACK_FORMAT
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import mce.ast.pack.Command.Execute as E
 import mce.ast.pack.Function as PFunction
 
-class Gen(
-    private val generator: Generator,
-) {
+@ExperimentalSerializationApi
+class Gen {
+    private val output: ZipOutputStream = ZipOutputStream(File("out.zip").outputStream().buffered())
+    private val arrays: MutableMap<String, ByteArray> = mutableMapOf()
+
+    init {
+        output.putNextEntry(ZipEntry("pack.mcmeta"))
+        Json.encodeToStream(PackMetadata(PackMetadataSection("", DATA_PACK_FORMAT)), output)
+        output.closeEntry()
+    }
+
     private fun genFunction(name: ResourceLocation, function: PFunction) {
-        generator.entry(ResourceType.FUNCTION, name) {
+        entry(ResourceType.FUNCTION, name) {
             function.commands.forEachIndexed { index, command ->
                 if (index != 0) {
-                    generator.write('\n')
+                    write('\n')
                 }
                 genCommand(command)
             }
@@ -29,157 +42,157 @@ class Gen(
     }
 
     private fun genAdvancement(name: ResourceLocation, advancement: Advancement) {
-        generator.entry(ResourceType.ADVANCEMENT, name) {
-            generator.write(Json.encodeToString(serializer(), advancement)) // TODO: use stream
+        entry(ResourceType.ADVANCEMENT, name) {
+            Json.encodeToStream(advancement, output)
         }
     }
 
     private fun genCommand(command: Command) {
         when (command) {
             is Command.Execute -> {
-                generator.write("execute ")
+                write("execute ")
                 genExecute(command.execute)
             }
             is Command.CheckScore -> { // TODO: omit 'execute' when possible
                 if (command.success) {
-                    generator.write("execute if score ")
+                    write("execute if score ")
                 } else {
-                    generator.write("execute unless score ")
+                    write("execute unless score ")
                 }
                 genScoreHolder(command.target)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.targetObjective)
-                generator.write(' ')
+                write(' ')
                 genSourceComparator(command.source)
             }
             is Command.CheckMatchingData -> { // TODO: omit 'execute' when possible
                 if (command.success) {
-                    generator.write("execute if data storage ")
+                    write("execute if data storage ")
                 } else {
-                    generator.write("execute unless data storage ")
+                    write("execute unless data storage ")
                 }
                 genResourceLocation(command.source)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
             }
             is Command.GetData -> {
-                generator.write("data get storage ")
+                write("data get storage ")
                 genResourceLocation(command.target)
                 command.path?.let {
-                    generator.write(' ')
+                    write(' ')
                     genNbtPath(it)
                 }
             }
             is Command.GetNumeric -> {
-                generator.write("data get storage ")
+                write("data get storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
-                generator.write(' ')
-                generator.write(command.scale.toString()) // TODO: optimize representation for faster parsing and lower footprint
+                write(' ')
+                write(command.scale.toString()) // TODO: optimize representation for faster parsing and lower footprint
             }
             is Command.RemoveData -> {
-                generator.write("data remove storage ")
+                write("data remove storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
             }
             is Command.InsertAtIndex -> {
-                generator.write("data modify storage ")
+                write("data modify storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
-                generator.write(" insert ")
-                generator.write(command.index.toString())
-                generator.write(' ')
+                write(" insert ")
+                write(command.index.toString())
+                write(' ')
                 genSourceProvider(command.source)
             }
             is Command.Prepend -> {
-                generator.write("data modify storage ")
+                write("data modify storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
-                generator.write(" prepend ")
+                write(" prepend ")
                 genSourceProvider(command.source)
             }
             is Command.Append -> {
-                generator.write("data modify storage ")
+                write("data modify storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
-                generator.write(" append ")
+                write(" append ")
                 genSourceProvider(command.source)
             }
             is Command.SetData -> {
-                generator.write("data modify storage ")
+                write("data modify storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
-                generator.write(" set ")
+                write(" set ")
                 genSourceProvider(command.source)
             }
             is Command.MergeData -> { // TODO: root merge
-                generator.write("data modify storage ")
+                write("data modify storage ")
                 genResourceLocation(command.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(command.path)
-                generator.write(" merge ")
+                write(" merge ")
                 genSourceProvider(command.source)
             }
             is Command.RunFunction -> {
-                generator.write("function ")
+                write("function ")
                 genResourceLocation(command.name)
             }
             is Command.SetScore -> {
-                generator.write("scoreboard players set ")
+                write("scoreboard players set ")
                 genScoreHolder(command.targets)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.objective)
-                generator.write(' ')
-                generator.write(command.score.toString())
+                write(' ')
+                write(command.score.toString())
             }
             is Command.GetScore -> {
-                generator.write("scoreboard players get ")
+                write("scoreboard players get ")
                 genScoreHolder(command.target)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.objective)
             }
             is Command.AddScore -> {
-                generator.write("scoreboard players add ")
+                write("scoreboard players add ")
                 genScoreHolder(command.targets)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.objective)
-                generator.write(' ')
-                generator.write(command.score.toString())
+                write(' ')
+                write(command.score.toString())
             }
             is Command.RemoveScore -> {
-                generator.write("scoreboard players remove ")
+                write("scoreboard players remove ")
                 genScoreHolder(command.targets)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.objective)
-                generator.write(' ')
-                generator.write(command.score.toString())
+                write(' ')
+                write(command.score.toString())
             }
             is Command.ResetScores -> {
-                generator.write("scoreboard players reset ")
+                write("scoreboard players reset ")
                 genScoreHolder(command.targets)
             }
             is Command.ResetScore -> {
-                generator.write("scoreboard players reset ")
+                write("scoreboard players reset ")
                 genScoreHolder(command.targets)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.objective)
             }
             is Command.PerformOperation -> {
-                generator.write("scoreboard players operation ")
+                write("scoreboard players operation ")
                 genScoreHolder(command.targets)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.targetObjective)
-                generator.write(' ')
+                write(' ')
                 genOperation(command.operation)
-                generator.write(' ')
+                write(' ')
                 genScoreHolder(command.source)
-                generator.write(' ')
+                write(' ')
                 genObjective(command.sourceObjective)
             }
         }
@@ -188,57 +201,57 @@ class Gen(
     private fun genExecute(execute: Execute) {
         when (execute) {
             is Execute.Run -> {
-                generator.write("run ")
+                write("run ")
                 genCommand(execute.command)
             }
             is Execute.CheckScore -> {
                 if (execute.success) {
-                    generator.write("if score ")
+                    write("if score ")
                 } else {
-                    generator.write("unless score ")
+                    write("unless score ")
                 }
                 genScoreHolder(execute.target)
-                generator.write(' ')
+                write(' ')
                 genObjective(execute.targetObjective)
-                generator.write(' ')
+                write(' ')
                 genSourceComparator(execute.source)
-                generator.write(' ')
+                write(' ')
                 genExecute(execute.execute)
             }
             is Execute.CheckMatchingData -> {
                 if (execute.success) {
-                    generator.write("if data storage ")
+                    write("if data storage ")
                 } else {
-                    generator.write("unless data storage ")
+                    write("unless data storage ")
                 }
                 genResourceLocation(execute.source)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(execute.path)
-                generator.write(' ')
+                write(' ')
                 genExecute(execute.execute)
             }
             is Execute.StoreValue -> {
-                generator.write("store ")
+                write("store ")
                 genConsumer(execute.consumer)
-                generator.write(" score ")
+                write(" score ")
                 genScoreHolder(execute.targets)
-                generator.write(' ')
+                write(' ')
                 genObjective(execute.objective)
-                generator.write(' ')
+                write(' ')
                 genExecute(execute.execute)
             }
             is Execute.StoreData -> {
-                generator.write("store ")
+                write("store ")
                 genConsumer(execute.consumer)
-                generator.write(" storage ")
+                write(" storage ")
                 genResourceLocation(execute.target)
-                generator.write(' ')
+                write(' ')
                 genNbtPath(execute.path)
-                generator.write(' ')
+                write(' ')
                 genStoreType(execute.type)
-                generator.write(' ')
-                generator.write(execute.scale.toString()) // TODO: optimize representation for faster parsing and lower footprint
-                generator.write(' ')
+                write(' ')
+                write(execute.scale.toString()) // TODO: optimize representation for faster parsing and lower footprint
+                write(' ')
                 genExecute(execute.execute)
             }
         }
@@ -246,26 +259,26 @@ class Gen(
 
     private fun genStoreType(type: StoreType) {
         when (type) {
-            StoreType.BYTE -> generator.write("byte")
-            StoreType.SHORT -> generator.write("short")
-            StoreType.INT -> generator.write("int")
-            StoreType.LONG -> generator.write("long")
-            StoreType.FLOAT -> generator.write("float")
-            StoreType.DOUBLE -> generator.write("double")
+            StoreType.BYTE -> write("byte")
+            StoreType.SHORT -> write("short")
+            StoreType.INT -> write("int")
+            StoreType.LONG -> write("long")
+            StoreType.FLOAT -> write("float")
+            StoreType.DOUBLE -> write("double")
         }
     }
 
     private fun genSourceProvider(provider: SourceProvider) {
         when (provider) {
             is SourceProvider.Value -> {
-                generator.write("value ")
+                write("value ")
                 genNbt(provider.value)
             }
             is SourceProvider.From -> {
-                generator.write("from storage ")
+                write("from storage ")
                 genResourceLocation(provider.source)
                 provider.path?.let {
-                    generator.write(' ')
+                    write(' ')
                     genNbtPath(it)
                 }
             }
@@ -277,7 +290,7 @@ class Gen(
         path.nodes.drop(1).forEach {
             when (it) {
                 is NbtNode.MatchElement, is NbtNode.AllElements, is NbtNode.IndexedElement -> Unit
-                else -> generator.write('.')
+                else -> write('.')
             }
             genNbtNode(it)
         }
@@ -287,230 +300,230 @@ class Gen(
         when (node) {
             is NbtNode.MatchRootObject -> genNbt(node.pattern)
             is NbtNode.MatchElement -> {
-                generator.write('[')
+                write('[')
                 genNbt(node.pattern)
-                generator.write(']')
+                write(']')
             }
-            is NbtNode.AllElements -> generator.write("[]")
+            is NbtNode.AllElements -> write("[]")
             is NbtNode.IndexedElement -> {
-                generator.write('[')
-                generator.write(node.index.toString())
-                generator.write(']')
+                write('[')
+                write(node.index.toString())
+                write(']')
             }
             is NbtNode.MatchObject -> {
-                generator.write(node.name)
+                write(node.name)
                 genNbt(node.pattern)
             }
-            is NbtNode.CompoundChild -> generator.write(node.name)
+            is NbtNode.CompoundChild -> write(node.name)
         }
     }
 
     private fun genNbt(nbt: Nbt) {
         when (nbt) {
             is Nbt.Byte -> {
-                generator.write(nbt.data.toString())
-                generator.write('b')
+                write(nbt.data.toString())
+                write('b')
             }
             is Nbt.Short -> {
-                generator.write(nbt.data.toString())
-                generator.write('s')
+                write(nbt.data.toString())
+                write('s')
             }
-            is Nbt.Int -> generator.write(nbt.data.toString())
+            is Nbt.Int -> write(nbt.data.toString())
             is Nbt.Long -> {
-                generator.write(nbt.data.toString())
-                generator.write('l')
+                write(nbt.data.toString())
+                write('l')
             }
             is Nbt.Float -> {
-                generator.write(nbt.data.toString()) // TODO: optimize representation for faster parsing and lower footprint
-                generator.write('f')
+                write(nbt.data.toString()) // TODO: optimize representation for faster parsing and lower footprint
+                write('f')
             }
             is Nbt.Double -> {
-                generator.write(nbt.data.toString()) // TODO: optimize representation for faster parsing and lower footprint
-                generator.write('d') // TODO: omit 'd' depending on the configuration
+                write(nbt.data.toString()) // TODO: optimize representation for faster parsing and lower footprint
+                write('d') // TODO: omit 'd' depending on the configuration
             }
             is Nbt.ByteArray -> {
-                generator.write("[B;")
+                write("[B;")
                 nbt.elements.forEachIndexed { index, element ->
                     if (index != 0) {
-                        generator.write(',')
+                        write(',')
                     }
-                    generator.write(element.toString())
-                    generator.write('b')
+                    write(element.toString())
+                    write('b')
                 }
-                generator.write(']')
+                write(']')
             }
             is Nbt.String -> genQuotedString(nbt.data)
             is Nbt.List -> {
-                generator.write('[')
+                write('[')
                 nbt.elements.forEachIndexed { index, element ->
                     if (index != 0) {
-                        generator.write(',')
+                        write(',')
                     }
                     genNbt(element)
                 }
-                generator.write(']')
+                write(']')
             }
             is Nbt.Compound -> {
-                generator.write('{')
+                write('{')
                 nbt.elements.entries.forEachIndexed { index, (key, element) ->
                     if (index != 0) {
-                        generator.write(',')
+                        write(',')
                     }
                     genQuotedString(key)
-                    generator.write(':')
+                    write(':')
                     genNbt(element)
                 }
-                generator.write('}')
+                write('}')
             }
             is Nbt.IntArray -> {
-                generator.write("[I;")
+                write("[I;")
                 nbt.elements.forEachIndexed { index, element ->
                     if (index != 0) {
-                        generator.write(',')
+                        write(',')
                     }
-                    generator.write(element.toString())
+                    write(element.toString())
                 }
-                generator.write(']')
+                write(']')
             }
             is Nbt.LongArray -> {
-                generator.write("[L;")
+                write("[L;")
                 nbt.elements.forEachIndexed { index, element ->
                     if (index != 0) {
-                        generator.write(',')
+                        write(',')
                     }
-                    generator.write(element.toString())
-                    generator.write('l')
+                    write(element.toString())
+                    write('l')
                 }
-                generator.write(']')
+                write(']')
             }
         }
     }
 
     private fun genObjective(objective: Objective) {
-        generator.write(objective.name)
+        write(objective.name)
     }
 
     private fun genScoreHolder(holder: ScoreHolder) {
-        generator.write(holder.name)
+        write(holder.name)
     }
 
     private fun genOperation(operation: Operation) {
         when (operation) {
-            Operation.ASSIGN -> generator.write('=')
-            Operation.PLUS_ASSIGN -> generator.write("+=")
-            Operation.MINUS_ASSIGN -> generator.write("-=")
-            Operation.TIMES_ASSIGN -> generator.write("*=")
-            Operation.DIV_ASSIGN -> generator.write("/=")
-            Operation.MOD_ASSIGN -> generator.write("%=")
-            Operation.MIN_ASSIGN -> generator.write('<')
-            Operation.MAX_ASSIGN -> generator.write('>')
-            Operation.SWAP -> generator.write("><")
+            Operation.ASSIGN -> write('=')
+            Operation.PLUS_ASSIGN -> write("+=")
+            Operation.MINUS_ASSIGN -> write("-=")
+            Operation.TIMES_ASSIGN -> write("*=")
+            Operation.DIV_ASSIGN -> write("/=")
+            Operation.MOD_ASSIGN -> write("%=")
+            Operation.MIN_ASSIGN -> write('<')
+            Operation.MAX_ASSIGN -> write('>')
+            Operation.SWAP -> write("><")
         }
     }
 
     private fun genSourceComparator(comparator: SourceComparator) {
         when (comparator) {
             is SourceComparator.EqScore -> {
-                generator.write("= ")
+                write("= ")
                 genScoreHolder(comparator.source)
-                generator.write(' ')
+                write(' ')
                 genObjective(comparator.sourceObjective)
             }
             is SourceComparator.LtScore -> {
-                generator.write("< ")
+                write("< ")
                 genScoreHolder(comparator.source)
-                generator.write(' ')
+                write(' ')
                 genObjective(comparator.sourceObjective)
             }
             is SourceComparator.LeScore -> {
-                generator.write("<= ")
+                write("<= ")
                 genScoreHolder(comparator.source)
-                generator.write(' ')
+                write(' ')
                 genObjective(comparator.sourceObjective)
             }
             is SourceComparator.GtScore -> {
-                generator.write("> ")
+                write("> ")
                 genScoreHolder(comparator.source)
-                generator.write(' ')
+                write(' ')
                 genObjective(comparator.sourceObjective)
             }
             is SourceComparator.GeScore -> {
-                generator.write(">= ")
+                write(">= ")
                 genScoreHolder(comparator.source)
-                generator.write(' ')
+                write(' ')
                 genObjective(comparator.sourceObjective)
             }
             is SourceComparator.EqConst -> {
-                generator.write("matches ")
-                generator.write(comparator.value.toString())
-                generator.write("..")
-                generator.write(comparator.value.toString())
+                write("matches ")
+                write(comparator.value.toString())
+                write("..")
+                write(comparator.value.toString())
             }
             is SourceComparator.LeConst -> {
-                generator.write("matches ..")
-                generator.write(comparator.value.toString())
+                write("matches ..")
+                write(comparator.value.toString())
             }
             is SourceComparator.GeConst -> {
-                generator.write("matches ")
-                generator.write(comparator.value.toString())
-                generator.write("..")
+                write("matches ")
+                write(comparator.value.toString())
+                write("..")
             }
         }
     }
 
     private fun genConsumer(consumer: Consumer) {
         when (consumer) {
-            Consumer.RESULT -> generator.write("result")
-            Consumer.SUCCESS -> generator.write("success")
+            Consumer.RESULT -> write("result")
+            Consumer.SUCCESS -> write("success")
         }
     }
 
     private fun genResourceLocation(location: ResourceLocation) {
         if (location.namespace != ResourceLocation.DEFAULT_NAMESPACE) {
-            generator.write(location.namespace)
-            generator.write(':')
+            write(location.namespace)
+            write(':')
         }
-        generator.write(location.path)
+        write(location.path)
     }
 
     private fun genQuotedString(string: String) {
-        generator.write('"')
-        generator.write(string) // TODO: handle escape sequences
-        generator.write('"')
+        write('"')
+        write(string) // TODO: handle escape sequences
+        write('"')
     }
 
-    data class Result(
-        val generate: (Generator) -> Unit,
-    )
+    private inline fun entry(type: ResourceType, name: ResourceLocation, block: () -> Unit) {
+        output.putNextEntry(ZipEntry("data/${name.namespace}/${type.type}/${name.path}.${type.extension}"))
+        block()
+        output.closeEntry()
+    }
 
-    companion object : Pass<Pack.Result, Result> {
-        override operator fun invoke(config: Config, input: Pack.Result): Result = Result { generator ->
-            val gen = Gen(generator)
+    private fun write(char: Char) {
+        output.write(char.code)
+    }
 
-            gen.genFunction(
+    private fun write(string: String) {
+        output.write(arrays.computeIfAbsent(string) { string.toByteArray() })
+    }
+
+    companion object : Pass<Pack.Result, Unit> {
+        override operator fun invoke(config: Config, input: Pack.Result): Unit = Gen().run {
+            genFunction(
                 APPLY,
                 PFunction(listOf(
                     E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
                     Pop(MAIN, INT),
                 ) + input.defunctions.map { (tag, defunction) ->
                     val name = ResourceLocation("$tag")
-                    gen.genFunction(name, defunction)
+                    genFunction(name, defunction)
                     E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
                 })
             )
 
-            input.functions.forEach { (name, function) -> gen.genFunction(name, function) }
-            input.advancements.forEach { (name, advancement) -> gen.genAdvancement(name, advancement) }
+            input.functions.forEach { (name, function) -> genFunction(name, function) }
+            input.advancements.forEach { (name, advancement) -> genAdvancement(name, advancement) }
         }
     }
-}
-
-interface Generator {
-    fun entry(type: ResourceType, name: ResourceLocation, block: Generator.() -> Unit)
-
-    fun write(char: Char)
-
-    fun write(string: String)
 }
 
 enum class ResourceType(val type: String, val extension: String) {

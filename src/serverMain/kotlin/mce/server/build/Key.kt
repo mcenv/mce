@@ -1,7 +1,6 @@
 package mce.server.build
 
 import mce.pass.backend.Defun
-import mce.pass.backend.Gen
 import mce.pass.backend.Pack
 import mce.pass.backend.Stage
 import mce.pass.frontend.Elab
@@ -16,5 +15,5 @@ sealed class Key<V> {
     data class StageResult(val name: String) : Key<Stage.Result>()
     data class DefunResult(val name: String) : Key<Defun.Result>()
     data class PackResult(val name: String) : Key<Pack.Result>()
-    object GenResult : Key<Gen.Result>()
+    object GenResult : Key<Unit>()
 }
