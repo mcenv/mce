@@ -31,7 +31,7 @@ class Gen {
     }
 
     private fun genFunction(name: ResourceLocation, function: PFunction) {
-        entry(ResourceType.FUNCTION, name) {
+        entry(ResourceType.Functions, name) {
             function.commands.forEachIndexed { index, command ->
                 if (index != 0) {
                     write('\n')
@@ -42,7 +42,7 @@ class Gen {
     }
 
     private fun genAdvancement(name: ResourceLocation, advancement: Advancement) {
-        entry(ResourceType.ADVANCEMENT, name) {
+        entry(ResourceType.Advancements, name) {
             Json.encodeToStream(advancement, output)
         }
     }
@@ -493,7 +493,7 @@ class Gen {
     }
 
     private inline fun entry(type: ResourceType, name: ResourceLocation, block: () -> Unit) {
-        output.putNextEntry(ZipEntry("data/${name.namespace}/${type.type}/${name.path}.${type.extension}"))
+        output.putNextEntry(ZipEntry("data/${name.namespace}/${type.directory}/${name.path}.${type.extension}"))
         block()
         output.closeEntry()
     }
@@ -526,7 +526,12 @@ class Gen {
     }
 }
 
-enum class ResourceType(val type: String, val extension: String) {
-    FUNCTION("functions", "mcfunction"),
-    ADVANCEMENT("advancements", "json"),
+sealed class ResourceType(val directory: String, val extension: String) {
+    object Recipes : ResourceType("recipes", "json")
+    class Tags(path: String) : ResourceType("tags/$path", "json")
+    object Predicates : ResourceType("predicates", "json")
+    object LootTables : ResourceType("loot_tables", "json")
+    object ItemModifiers : ResourceType("item_modifiers", "json")
+    object Advancements : ResourceType("advancements", "json")
+    object Functions : ResourceType("functions", "mcfunction")
 }
