@@ -116,26 +116,26 @@ class Defun private constructor(
             val clauses = term.clauses.map { defunPat(it.first) to defunTerm(it.second) }
             DTerm.Match(scrutinee, clauses, getType(term.id!!))
         }
-        is CTerm.UnitOf -> DTerm.UnitOf(getType(term.id!!))
-        is CTerm.BoolOf -> DTerm.BoolOf(term.value, getType(term.id!!))
-        is CTerm.ByteOf -> DTerm.ByteOf(term.value, getType(term.id!!))
-        is CTerm.ShortOf -> DTerm.ShortOf(term.value, getType(term.id!!))
-        is CTerm.IntOf -> DTerm.IntOf(term.value, getType(term.id!!))
-        is CTerm.LongOf -> DTerm.LongOf(term.value, getType(term.id!!))
-        is CTerm.FloatOf -> DTerm.FloatOf(term.value, getType(term.id!!))
-        is CTerm.DoubleOf -> DTerm.DoubleOf(term.value, getType(term.id!!))
-        is CTerm.StringOf -> DTerm.StringOf(term.value, getType(term.id!!))
+        is CTerm.UnitOf -> DTerm.UnitOf(CVTerm.Unit())
+        is CTerm.BoolOf -> DTerm.BoolOf(term.value, CVTerm.Bool())
+        is CTerm.ByteOf -> DTerm.ByteOf(term.value, CVTerm.Byte())
+        is CTerm.ShortOf -> DTerm.ShortOf(term.value, CVTerm.Short())
+        is CTerm.IntOf -> DTerm.IntOf(term.value, CVTerm.Int())
+        is CTerm.LongOf -> DTerm.LongOf(term.value, CVTerm.Long())
+        is CTerm.FloatOf -> DTerm.FloatOf(term.value, CVTerm.Float())
+        is CTerm.DoubleOf -> DTerm.DoubleOf(term.value, CVTerm.Double())
+        is CTerm.StringOf -> DTerm.StringOf(term.value, CVTerm.String())
         is CTerm.ByteArrayOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.ByteArrayOf(elements, getType(term.id!!))
+            DTerm.ByteArrayOf(elements, CVTerm.ByteArray())
         }
         is CTerm.IntArrayOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.IntArrayOf(elements, getType(term.id!!))
+            DTerm.IntArrayOf(elements, CVTerm.IntArray())
         }
         is CTerm.LongArrayOf -> {
             val elements = term.elements.map { defunTerm(it) }
-            DTerm.LongArrayOf(elements, getType(term.id!!))
+            DTerm.LongArrayOf(elements, CVTerm.LongArray())
         }
         is CTerm.ListOf -> {
             val elements = term.elements.map { defunTerm(it) }
@@ -171,54 +171,54 @@ class Defun private constructor(
         is CTerm.Splice -> throw Error()
         is CTerm.Or -> {
             val variants = term.variants.map { defunTerm(it) }
-            DTerm.Or(variants, getType(term.id!!))
+            DTerm.Or(variants, CVTerm.Type())
         }
         is CTerm.And -> {
             val variants = term.variants.map { defunTerm(it) }
-            DTerm.And(variants, getType(term.id!!))
+            DTerm.And(variants, CVTerm.Type())
         }
-        is CTerm.Unit -> DTerm.Unit(getType(term.id!!))
-        is CTerm.Bool -> DTerm.Bool(getType(term.id!!))
-        is CTerm.Byte -> DTerm.Byte(getType(term.id!!))
-        is CTerm.Short -> DTerm.Short(getType(term.id!!))
-        is CTerm.Int -> DTerm.Int(getType(term.id!!))
-        is CTerm.Long -> DTerm.Long(getType(term.id!!))
-        is CTerm.Float -> DTerm.Float(getType(term.id!!))
-        is CTerm.Double -> DTerm.Double(getType(term.id!!))
-        is CTerm.String -> DTerm.String(getType(term.id!!))
-        is CTerm.ByteArray -> DTerm.ByteArray(getType(term.id!!))
-        is CTerm.IntArray -> DTerm.IntArray(getType(term.id!!))
-        is CTerm.LongArray -> DTerm.LongArray(getType(term.id!!))
+        is CTerm.Unit -> DTerm.Unit(CVTerm.Type())
+        is CTerm.Bool -> DTerm.Bool(CVTerm.Type())
+        is CTerm.Byte -> DTerm.Byte(CVTerm.Type())
+        is CTerm.Short -> DTerm.Short(CVTerm.Type())
+        is CTerm.Int -> DTerm.Int(CVTerm.Type())
+        is CTerm.Long -> DTerm.Long(CVTerm.Type())
+        is CTerm.Float -> DTerm.Float(CVTerm.Type())
+        is CTerm.Double -> DTerm.Double(CVTerm.Type())
+        is CTerm.String -> DTerm.String(CVTerm.Type())
+        is CTerm.ByteArray -> DTerm.ByteArray(CVTerm.Type())
+        is CTerm.IntArray -> DTerm.IntArray(CVTerm.Type())
+        is CTerm.LongArray -> DTerm.LongArray(CVTerm.Type())
         is CTerm.List -> {
             val element = defunTerm(term.element)
             val size = defunTerm(term.size)
-            DTerm.List(element, size, getType(term.id!!))
+            DTerm.List(element, size, CVTerm.Type())
         }
         is CTerm.Compound -> {
             val elements = term.elements.map { element -> DTerm.Compound.Entry(element.relevant, element.name, defunTerm(element.type)) }
-            DTerm.Compound(elements, getType(term.id!!))
+            DTerm.Compound(elements, CVTerm.Type())
         }
         is CTerm.Tuple -> {
             val elements = term.elements.map { DTerm.Tuple.Entry(it.relevant, defunTerm(it.type)) }
-            DTerm.Tuple(elements, getType(term.id!!))
+            DTerm.Tuple(elements, CVTerm.Type())
         }
         is CTerm.Ref -> {
             val element = defunTerm(term.element)
-            DTerm.Ref(element, getType(term.id!!))
+            DTerm.Ref(element, CVTerm.Type())
         }
         is CTerm.Eq -> {
             val left = defunTerm(term.left)
             val right = defunTerm(term.right)
-            DTerm.Eq(left, right, getType(term.id!!))
+            DTerm.Eq(left, right, CVTerm.Type())
         }
         is CTerm.Fun -> {
             val parameters = term.params.map { defunParam(it) }
             val resultant = defunTerm(term.resultant)
             val effects = term.effs.map { defunEff(it) }.toSet()
-            DTerm.Fun(parameters, resultant, effects, getType(term.id!!))
+            DTerm.Fun(parameters, resultant, effects, CVTerm.Type())
         }
         is CTerm.Code -> throw Error()
-        is CTerm.Type -> DTerm.Type(getType(term.id!!))
+        is CTerm.Type -> DTerm.Type(CVTerm.Type())
     }
 
     private fun defunPat(pat: CPat): DPat = when (pat) {
