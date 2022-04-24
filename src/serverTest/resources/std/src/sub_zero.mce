@@ -1,3 +1,3 @@
-import {int/sub}
+import {-}
 
-def sub_zero [a : int] : ((a int/sub 0) = a) ≔ refl
+def sub_zero [a : int] : ((a - 0) = a) ≔ refl

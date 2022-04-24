@@ -1,4 +1,4 @@
-package mce.pass.builtin.src.int
+package mce.pass.builtin.src
 
 import mce.ast.core.VTerm
 import mce.ast.pack.Command
@@ -15,10 +15,10 @@ import mce.pass.builtin.commuter
 import mce.ast.pack.Execute as E
 
 @Suppress("ClassName")
-object eq : BuiltinDef2("int/eq") {
+object `≡` : BuiltinDef2("≡") {
     override fun eval(a: VTerm, b: VTerm): VTerm = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.BoolOf(a.value == b.value)
-        // a == a = true
+        // a ≡ a = true
         a is VTerm.Var && b is VTerm.Var && a.level == b.level -> VTerm.BoolOf(true)
         else -> VTerm.Def(name, listOf(a, b).sortedWith(commuter).map { lazyOf(it) })
     }

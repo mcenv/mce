@@ -3,28 +3,21 @@ package mce.pass.builtin
 import mce.ast.core.VTerm
 import mce.ast.pack.Command
 import mce.pass.Normalizer
-import mce.pass.builtin.src.identity
+import mce.pass.builtin.src.*
 import mce.pass.builtin.src.byte_array.size as byte_array_size
-import mce.pass.builtin.src.int.add as int_add
-import mce.pass.builtin.src.int.div as int_div
-import mce.pass.builtin.src.int.eq as int_eq
-import mce.pass.builtin.src.int.mod as int_mod
-import mce.pass.builtin.src.int.mul as int_mul
-import mce.pass.builtin.src.int.ne as int_ne
-import mce.pass.builtin.src.int.sub as int_sub
 import mce.pass.builtin.src.int_array.size as int_array_size
 import mce.pass.builtin.src.list.size as list_size
 import mce.pass.builtin.src.long_array.size as long_array_size
 
 val builtins: Map<String, BuiltinDef> = listOf(
     identity,
-    int_eq,
-    int_ne,
-    int_add,
-    int_sub,
-    int_mul,
-    int_div,
-    int_mod,
+    `+`,
+    `-`,
+    `×`,
+    `÷`,
+    `%`,
+    `≡`,
+    `≢`,
     byte_array_size,
     int_array_size,
     long_array_size,

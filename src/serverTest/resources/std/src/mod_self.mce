@@ -1,3 +1,3 @@
-import {int/mod}
+import {%}
 
-def mod_self [a : int] : ((a int/mod a) = 0) ≔ refl
+def mod_self [a : int] : ((a % a) = 0) ≔ refl

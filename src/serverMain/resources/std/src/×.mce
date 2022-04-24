@@ -1,0 +1,1 @@
+{builtin} def × [a : int, b : int] : int ≔ _

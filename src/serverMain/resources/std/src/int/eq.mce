@@ -1,1 +1,0 @@
-{builtin} def int/eq [a : int, b : int] : bool ≔ _

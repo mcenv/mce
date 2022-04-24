@@ -1,4 +1,4 @@
-package mce.pass.builtin.src.int
+package mce.pass.builtin.src
 
 import mce.ast.core.VTerm
 import mce.ast.pack.Command
@@ -15,7 +15,7 @@ import mce.pass.builtin.commuter
 import mce.ast.pack.Execute as E
 
 @Suppress("ClassName")
-object ne : BuiltinDef2("int/ne") {
+object `≢` : BuiltinDef2("≢") {
     override fun eval(a: VTerm, b: VTerm): VTerm = when {
         a is VTerm.IntOf && b is VTerm.IntOf -> VTerm.BoolOf(a.value != b.value)
         else -> VTerm.Def(name, listOf(a, b).sortedWith(commuter).map { lazyOf(it) })

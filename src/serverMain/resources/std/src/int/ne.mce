@@ -1,1 +1,0 @@
-{builtin} def int/ne [a : int, b : int] : bool ≔ _
