@@ -53,7 +53,7 @@ class Build(
                     val results = packs.list()
                         .map { async { fetch(Key.PackResult(it)) } }
                         .awaitAll()
-                    val tags = results.fold(mutableMapOf<ResourceLocation, Tag>()) { tags, result -> tags.also { it.putAll(result.tags) } }
+                    val tags = results.fold(mutableMapOf<Pair<String, ResourceLocation>, Tag>()) { tags, result -> tags.also { it.putAll(result.tags) } }
                     val advancements = results.fold(mutableMapOf<ResourceLocation, Advancement>()) { advancements, result -> advancements.also { it.putAll(result.advancements) } }
                     val functions = results.fold(mutableMapOf<ResourceLocation, PFunction>()) { functions, result -> functions.also { it.putAll(result.functions) } }
                     val defunctions = results.fold(mutableMapOf<Int, PFunction>()) { defunctions, result -> defunctions.also { it.putAll(result.defunctions) } }

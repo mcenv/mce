@@ -20,35 +20,75 @@ data class PackMetadata(
 
 @Serializable
 data class PackMetadataSection(
-    val description: kotlin.String, // TODO: use [Component]
-    @SerialName("pack_format") val packFormat: kotlin.Int,
+    val description: KString, // TODO: use [Component]
+    @SerialName("pack_format") val packFormat: KInt,
 )
 
 @Serializable
 data class ResourceFilterSection(
-    val block: kotlin.collections.List<ResourceLocationPattern>,
+    val block: KList<ResourceLocationPattern>,
 )
 
 @Serializable
 data class ResourceLocationPattern(
-    val namespace: kotlin.String? = null,
-    val path: kotlin.String? = null,
+    val namespace: KString? = null,
+    val path: KString? = null,
 )
+
+sealed class ResourceType(val directory: KString, val extension: KString) {
+    object Recipes : ResourceType("recipes", "json")
+    class Tags(path: KString) : ResourceType("tags/$path", "json")
+    object Predicates : ResourceType("predicates", "json")
+    object LootTables : ResourceType("loot_tables", "json")
+    object ItemModifiers : ResourceType("item_modifiers", "json")
+    object Advancements : ResourceType("advancements", "json")
+    object Functions : ResourceType("functions", "mcfunction")
+}
+
+@Serializable
+data class Tag(
+    val values: KList<@Serializable(with = Entry.Serializer::class) Entry>,
+    val replace: Boolean = false,
+)
+
+@Serializable
+data class Entry(
+    val id: @Serializable(with = ResourceLocation.Serializer::class) ResourceLocation,
+    val required: Boolean = true,
+) {
+    object Serializer : JsonTransformingSerializer<Entry>(serializer()) {
+        override fun transformSerialize(element: JsonElement): JsonElement =
+            if (element.jsonObject["required"]?.jsonPrimitive?.boolean != false) {
+                element.jsonObject["id"]!!
+            } else {
+                element
+            }
+
+        override fun transformDeserialize(element: JsonElement): JsonElement =
+            when (element) {
+                is JsonPrimitive -> buildJsonObject {
+                    put("id", element.content)
+                    put("required", true)
+                }
+                else -> element
+            }
+    }
+}
 
 @Serializable
 data class Advancement(
     val parent: @Serializable(with = ResourceLocation.Serializer::class) ResourceLocation? = null,
     // TODO: display
     val rewards: AdvancementRewards? = null,
-    val criteria: Map<kotlin.String, Criterion>,
-    val requirements: kotlin.collections.List<kotlin.collections.List<kotlin.String>> = emptyList(),
+    val criteria: Map<KString, Criterion>,
+    val requirements: KList<KList<KString>> = emptyList(),
 )
 
 @Serializable
 data class AdvancementRewards(
-    val experience: kotlin.Int = 0,
-    val loot: kotlin.collections.List<@Serializable(with = ResourceLocation.Serializer::class) ResourceLocation> = emptyList(),
-    val recipes: kotlin.collections.List<@Serializable(with = ResourceLocation.Serializer::class) ResourceLocation> = emptyList(),
+    val experience: KInt = 0,
+    val loot: KList<@Serializable(with = ResourceLocation.Serializer::class) ResourceLocation> = emptyList(),
+    val recipes: KList<@Serializable(with = ResourceLocation.Serializer::class) ResourceLocation> = emptyList(),
     val function: @Serializable(with = ResourceLocation.Serializer::class) ResourceLocation? = null,
 )
 
@@ -258,38 +298,6 @@ sealed interface Criterion {
     @Serializable
     @SerialName("avoid_vibration")
     object AvoidVibration : Criterion
-}
-
-
-@Serializable
-data class Tag(
-    val values: kotlin.collections.List<@Serializable(with = Entry.Serializer::class) Entry>,
-    val replace: Boolean = false,
-)
-
-@Serializable
-data class Entry(
-    val id: @Serializable(with = ResourceLocation.Serializer::class) ResourceLocation,
-    val required: Boolean = true,
-) {
-    object Serializer : JsonTransformingSerializer<Entry>(serializer()) {
-        override fun transformSerialize(element: JsonElement): JsonElement =
-            if (element.jsonObject["required"]?.jsonPrimitive?.boolean != false) {
-                element.jsonObject["id"]!!
-            } else {
-                element
-            }
-
-
-        override fun transformDeserialize(element: JsonElement): JsonElement =
-            when (element) {
-                is JsonPrimitive -> buildJsonObject {
-                    put("id", element.content)
-                    put("required", true)
-                }
-                else -> element
-            }
-    }
 }
 
 data class Function(

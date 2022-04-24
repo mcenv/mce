@@ -23,7 +23,7 @@ import mce.ast.pack.Function as PFunction
 
 @Suppress("NAME_SHADOWING")
 class Pack private constructor() {
-    private val tags: MutableMap<ResourceLocation, Tag> = mutableMapOf()
+    private val tags: MutableMap<Pair<String, ResourceLocation>, Tag> = mutableMapOf()
     private val advancements: MutableMap<ResourceLocation, Advancement> = mutableMapOf()
     private val functions: MutableMap<ResourceLocation, PFunction> = mutableMapOf()
     private val defunctions: MutableMap<Int, PFunction> = mutableMapOf()
@@ -54,7 +54,7 @@ class Pack private constructor() {
                 }
 
                 when (item.name) {
-                    "load", "tick" -> tags[location] = Tag(listOf(Entry(location)), true)
+                    "load", "tick" -> tags["functions" to location] = Tag(listOf(Entry(location)), true)
                 }
             }
             is Item.Mod -> TODO()
@@ -434,7 +434,7 @@ class Pack private constructor() {
     }
 
     data class Result(
-        val tags: Map<ResourceLocation, Tag>,
+        val tags: Map<Pair<String, ResourceLocation>, Tag>,
         val advancements: Map<ResourceLocation, Advancement>,
         val functions: Map<ResourceLocation, PFunction>,
         val defunctions: Map<Int, PFunction>,

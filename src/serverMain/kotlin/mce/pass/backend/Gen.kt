@@ -30,8 +30,8 @@ class Gen {
         output.closeEntry()
     }
 
-    private fun genTag(name: ResourceLocation, tag: Tag) {
-        entry(ResourceType.Tags("functions"), name) {
+    private fun genTag(path: String, name: ResourceLocation, tag: Tag) {
+        entry(ResourceType.Tags(path), name) {
             Json.encodeToStream(tag, output)
         }
     }
@@ -517,7 +517,7 @@ class Gen {
 
     companion object : Pass<Pack.Result, Unit> {
         override operator fun invoke(config: Config, input: Pack.Result): Unit = Gen().run {
-            input.tags.forEach { (name, tag) -> genTag(name, tag) }
+            input.tags.forEach { (key, tag) -> genTag(key.first, key.second, tag) }
             input.advancements.forEach { (name, advancement) -> genAdvancement(name, advancement) }
             input.functions.forEach { (name, function) -> genFunction(name, function) }
 
@@ -537,14 +537,4 @@ class Gen {
             output.close()
         }
     }
-}
-
-sealed class ResourceType(val directory: String, val extension: String) {
-    object Recipes : ResourceType("recipes", "json")
-    class Tags(path: String) : ResourceType("tags/$path", "json")
-    object Predicates : ResourceType("predicates", "json")
-    object LootTables : ResourceType("loot_tables", "json")
-    object ItemModifiers : ResourceType("item_modifiers", "json")
-    object Advancements : ResourceType("advancements", "json")
-    object Functions : ResourceType("functions", "mcfunction")
 }
