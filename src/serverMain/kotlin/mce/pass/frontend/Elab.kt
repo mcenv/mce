@@ -527,6 +527,8 @@ class Elab private constructor(
                     Typing(CTerm.Fun(params, resultant, effs, computation.id), TYPE)
                 }
             else -> inferTerm(computation)
+        }.also {
+            types[computation.id] = it.type
         }
 
     /**

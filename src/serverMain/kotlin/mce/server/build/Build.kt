@@ -51,6 +51,8 @@ class Build(
                 is Key.PackResult -> Pack(config, fetch(Key.DefunResult(key.name))) as V
                 is Key.GenResult -> {
                     val results = packs.list()
+                        .flatMap { fetch(Key.SurfaceItem(it)).imports + it }
+                        .toSet()
                         .map { async { fetch(Key.PackResult(it)) } }
                         .awaitAll()
                     val tags = results.fold(mutableMapOf<Pair<String, ResourceLocation>, Tag>()) { tags, result -> tags.also { it.putAll(result.tags) } }
