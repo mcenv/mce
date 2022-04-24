@@ -525,6 +525,8 @@ class Gen {
 
             input.functions.forEach { (name, function) -> genFunction(name, function) }
             input.advancements.forEach { (name, advancement) -> genAdvancement(name, advancement) }
+
+            output.close()
         }
     }
 }
