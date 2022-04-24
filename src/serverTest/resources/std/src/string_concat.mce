@@ -1,0 +1,3 @@
+import {string/+}
+
+def string_concat [] : ("ab" = ("a" string/+ "b")) ≔ refl

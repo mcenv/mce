@@ -1,0 +1,1 @@
+{builtin, static} def string/+ [a : string, b : string] : string ≔ _

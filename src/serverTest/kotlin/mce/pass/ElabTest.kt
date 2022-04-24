@@ -92,6 +92,8 @@ class ElabTest {
         "compound_unordered",
         "advancement",
         "command",
+        "string_concat",
+        "concat_command",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

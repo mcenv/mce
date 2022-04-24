@@ -41,4 +41,15 @@ class StageTest {
         assertIs<Term.StringOf>(command)
         assertEquals("say command", command.value)
     }
+
+    @Test
+    fun concat_command() {
+        val result = stage("concat_command")
+        val def = result.item as Item.Def
+        val body = def.body
+        assertIs<Term.Command>(body)
+        val command = body.body
+        assertIs<Term.StringOf>(command)
+        assertEquals("say command", command.value)
+    }
 }

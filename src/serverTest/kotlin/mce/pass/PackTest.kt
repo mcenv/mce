@@ -155,4 +155,23 @@ class PackTest {
             pack("stage_command"),
         )
     }
+
+    @Test
+    fun concat_command() {
+        assertEquals(
+            Pack.Result(
+                emptyMap(),
+                emptyMap(),
+                mapOf(
+                    ResourceLocation("concat_command") to Function(
+                        listOf(
+                            Raw("say command"),
+                        ),
+                    ),
+                ),
+                emptyMap(),
+            ),
+            pack("concat_command"),
+        )
+    }
 }
