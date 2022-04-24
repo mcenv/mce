@@ -23,8 +23,9 @@ import mce.ast.pack.Function as PFunction
 
 @Suppress("NAME_SHADOWING")
 class Pack private constructor() {
-    private val functions: MutableMap<ResourceLocation, PFunction> = mutableMapOf()
+    private val tags: MutableMap<ResourceLocation, Tag> = mutableMapOf()
     private val advancements: MutableMap<ResourceLocation, Advancement> = mutableMapOf()
+    private val functions: MutableMap<ResourceLocation, PFunction> = mutableMapOf()
     private val defunctions: MutableMap<Int, PFunction> = mutableMapOf()
 
     private fun pack(defunctions: List<Defun.Defunction>, item: Item) {
@@ -41,21 +42,26 @@ class Pack private constructor() {
     }
 
     private fun packItem(item: Item) {
+        val location = ResourceLocation(item.name)
         when (item) {
             is Item.Def -> {
-                +Context(ResourceLocation(item.name)).apply {
+                +Context(location).apply {
                     if (item.modifiers.contains(Modifier.BUILTIN)) {
                         builtins[item.name]!!.pack().forEach { +it }
                     } else {
                         packTerm(item.body)
                     }
                 }
+
+                when (item.name) {
+                    "load", "tick" -> tags[location] = Tag(listOf(Entry(location)), true)
+                }
             }
             is Item.Mod -> TODO()
             is Item.Test -> TODO()
             is Item.Advancement -> {
                 val body = item.body as Term.CompoundOf
-                advancements[ResourceLocation(item.name)] = Advancement(criteria = emptyMap()) // TODO
+                advancements[location] = Advancement(criteria = emptyMap()) // TODO
             }
         }
     }
@@ -428,15 +434,16 @@ class Pack private constructor() {
     }
 
     data class Result(
-        val functions: Map<ResourceLocation, PFunction>,
+        val tags: Map<ResourceLocation, Tag>,
         val advancements: Map<ResourceLocation, Advancement>,
+        val functions: Map<ResourceLocation, PFunction>,
         val defunctions: Map<Int, PFunction>,
     )
 
     companion object : Pass<Defun.Result, Result> {
         override operator fun invoke(config: Config, input: Defun.Result): Result = Pack().run {
             pack(input.defunctions, input.item)
-            Result(functions, advancements, defunctions)
+            Result(tags, advancements, functions, defunctions)
         }
     }
 }

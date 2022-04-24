@@ -21,6 +21,8 @@ class PackTest {
     fun byte() {
         assertEquals(
             Pack.Result(
+                emptyMap(),
+                emptyMap(),
                 mapOf(
                     ResourceLocation("const") to Function(
                         listOf(
@@ -28,7 +30,6 @@ class PackTest {
                         ),
                     ),
                 ),
-                emptyMap(),
                 emptyMap(),
             ),
             pack("const"),
@@ -121,6 +122,8 @@ class PackTest {
     fun command() {
         assertEquals(
             Pack.Result(
+                emptyMap(),
+                emptyMap(),
                 mapOf(
                     ResourceLocation("command") to Function(
                         listOf(
@@ -128,7 +131,6 @@ class PackTest {
                         ),
                     ),
                 ),
-                emptyMap(),
                 emptyMap(),
             ),
             pack("command"),
@@ -139,6 +141,8 @@ class PackTest {
     fun stage_command() {
         assertEquals(
             Pack.Result(
+                emptyMap(),
+                emptyMap(),
                 mapOf(
                     ResourceLocation("stage_command") to Function(
                         listOf(
@@ -146,7 +150,6 @@ class PackTest {
                         ),
                     ),
                 ),
-                emptyMap(),
                 emptyMap(),
             ),
             pack("stage_command"),

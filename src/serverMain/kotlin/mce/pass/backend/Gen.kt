@@ -30,6 +30,18 @@ class Gen {
         output.closeEntry()
     }
 
+    private fun genTag(name: ResourceLocation, tag: Tag) {
+        entry(ResourceType.Tags("functions"), name) {
+            Json.encodeToStream(tag, output)
+        }
+    }
+
+    private fun genAdvancement(name: ResourceLocation, advancement: Advancement) {
+        entry(ResourceType.Advancements, name) {
+            Json.encodeToStream(advancement, output)
+        }
+    }
+
     private fun genFunction(name: ResourceLocation, function: PFunction) {
         entry(ResourceType.Functions, name) {
             function.commands.forEachIndexed { index, command ->
@@ -38,12 +50,6 @@ class Gen {
                 }
                 genCommand(command)
             }
-        }
-    }
-
-    private fun genAdvancement(name: ResourceLocation, advancement: Advancement) {
-        entry(ResourceType.Advancements, name) {
-            Json.encodeToStream(advancement, output)
         }
     }
 
@@ -511,20 +517,22 @@ class Gen {
 
     companion object : Pass<Pack.Result, Unit> {
         override operator fun invoke(config: Config, input: Pack.Result): Unit = Gen().run {
+            input.tags.forEach { (name, tag) -> genTag(name, tag) }
+            input.advancements.forEach { (name, advancement) -> genAdvancement(name, advancement) }
+            input.functions.forEach { (name, function) -> genFunction(name, function) }
+
             genFunction(
                 APPLY,
-                PFunction(listOf(
-                    E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
-                    Pop(MAIN, INT),
-                ) + input.defunctions.map { (tag, defunction) ->
-                    val name = ResourceLocation("$tag")
-                    genFunction(name, defunction)
-                    E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
-                })
+                PFunction(
+                    listOf(
+                        E(StoreValue(RESULT, R0, REG, Run(GetData(MAIN, INT[-1])))),
+                        Pop(MAIN, INT),
+                    ) + input.defunctions.map { (tag, defunction) ->
+                        val name = ResourceLocation("$tag")
+                        genFunction(name, defunction)
+                        E(Execute.CheckScore(true, R0, REG, EqConst(tag), Run(RunFunction(name))))
+                    })
             )
-
-            input.functions.forEach { (name, function) -> genFunction(name, function) }
-            input.advancements.forEach { (name, advancement) -> genAdvancement(name, advancement) }
 
             output.close()
         }

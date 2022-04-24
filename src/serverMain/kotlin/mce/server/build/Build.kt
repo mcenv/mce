@@ -5,6 +5,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import mce.ast.pack.Advancement
 import mce.ast.pack.ResourceLocation
+import mce.ast.pack.Tag
 import mce.ast.surface.Item
 import mce.ast.surface.Modifier
 import mce.pass.Config
@@ -52,10 +53,11 @@ class Build(
                     val results = packs.list()
                         .map { async { fetch(Key.PackResult(it)) } }
                         .awaitAll()
-                    val functions = results.fold(mutableMapOf<ResourceLocation, PFunction>()) { functions, result -> functions.also { it.putAll(result.functions) } }
+                    val tags = results.fold(mutableMapOf<ResourceLocation, Tag>()) { tags, result -> tags.also { it.putAll(result.tags) } }
                     val advancements = results.fold(mutableMapOf<ResourceLocation, Advancement>()) { advancements, result -> advancements.also { it.putAll(result.advancements) } }
+                    val functions = results.fold(mutableMapOf<ResourceLocation, PFunction>()) { functions, result -> functions.also { it.putAll(result.functions) } }
                     val defunctions = results.fold(mutableMapOf<Int, PFunction>()) { defunctions, result -> defunctions.also { it.putAll(result.defunctions) } }
-                    Gen(config, Pack.Result(functions, advancements, defunctions)) as V
+                    Gen(config, Pack.Result(tags, advancements, functions, defunctions)) as V
                 }
             }.also {
                 values[key] = it!!
