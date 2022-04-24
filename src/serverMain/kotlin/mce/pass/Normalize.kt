@@ -78,6 +78,10 @@ fun Store<Normalizer>.evalTerm(term: Term): VTerm =
         is Term.Builtin -> throw Error()
         is Term.Hole -> VTerm.Hole(term.id)
         is Term.Meta -> value.getSolution(term.index) ?: VTerm.Meta(term.index, term.id)
+        is Term.Command -> {
+            val body = lazy { evalTerm(term.body) }
+            VTerm.Command(body, term.id)
+        }
         is Term.Block -> {
             term.elements.dropLast(1).forEach { element -> evalTerm(element) }
             term.elements.lastOrNull()?.let { evalTerm(it) } ?: VTerm.UnitOf()
@@ -283,6 +287,10 @@ fun Store<Normalizer>.quoteTerm(term: VTerm): Term =
     when (val term = value.force(term)) {
         is VTerm.Hole -> Term.Hole(term.id)
         is VTerm.Meta -> Term.Meta(term.index, term.id)
+        is VTerm.Command -> {
+            val body = quoteTerm(term.body.value)
+            Term.Command(body, term.id)
+        }
         is VTerm.Var -> Term.Var(term.name, term.level, term.id)
         is VTerm.Def -> {
             val arguments = term.arguments.map { quoteTerm(it.value) }

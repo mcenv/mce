@@ -13,6 +13,7 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Builtin -> throw Error()
     is CTerm.Hole -> STerm.Hole(term.id ?: freshId())
     is CTerm.Meta -> STerm.Meta(term.id ?: freshId())
+    is CTerm.Command -> STerm.Command(printTerm(term.body), term.id ?: freshId())
     is CTerm.Block -> STerm.Block(term.elements.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.Var -> STerm.Var(term.name, term.id ?: freshId())
     is CTerm.Def -> STerm.Def(term.name, term.arguments.map { printTerm(it) }, term.id ?: freshId())

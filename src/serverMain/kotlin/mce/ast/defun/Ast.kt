@@ -68,6 +68,7 @@ sealed class Term {
     abstract val type: VTerm
 
     data class Builtin(override val type: VTerm) : Term()
+    data class Command(val body: Term, override val type: VTerm) : Term()
     data class Block(val elements: KList<Term>, override val type: VTerm) : Term()
     data class Var(val name: KString, val level: KInt, override val type: VTerm) : Term()
     data class Def(val name: KString, val arguments: KList<Term>, override val type: VTerm) : Term()

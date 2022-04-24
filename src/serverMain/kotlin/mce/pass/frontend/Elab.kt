@@ -45,7 +45,7 @@ class Elab private constructor(
         val modifiers = item.modifiers.mapTo(mutableSetOf()) { elabModifier(it) }
         return when (item) {
             is SItem.Def -> {
-                value = value.copy(meta = item.modifiers.contains(SModifier.STATIC), termRelevant = false, typeRelevant = true)
+                value = value.copy(static = item.modifiers.contains(SModifier.STATIC), termRelevant = false, typeRelevant = true)
                 val params = bindParams(item.params)
                 val resultant = checkTerm(item.resultant, TYPE)
                 val vResultant = Store(value.normalizer).evalTerm(resultant)
@@ -75,7 +75,7 @@ class Elab private constructor(
                 CItem.Pack(body, item.id) to CVSignature.Pack(null)
             }
             is SItem.Advancement -> {
-                value = value.copy(meta = true)
+                value = value.copy(static = true)
                 val body = checkTerm(item.body, ANY) // TODO: type
                 CItem.Advancement(modifiers, item.name, body, item.id) to CVSignature.Advancement(item.name, null)
             }
@@ -234,6 +234,13 @@ class Elab private constructor(
                 val type = value.normalizer.fresh(term.id)
                 val term = checkTerm(term, type)
                 Typing(term, type)
+            }
+            is STerm.Command -> {
+                restore {
+                    value = value.copy(static = true)
+                    val body = checkTerm(term.body, STRING)
+                    Typing(CTerm.Command(body, term.id), END)
+                }
             }
             is STerm.Anno ->
                 restore {
@@ -668,6 +675,7 @@ class Elab private constructor(
                     else -> unifyTerms(solved1, term2)
                 }
             term2 is CVTerm.Meta -> unifyTerms(term2, term1)
+            term1 is CVTerm.Command && term2 is CVTerm.Command -> unifyTerms(term1.body.value, term2.body.value)
             term1 is CVTerm.Var && term2 is CVTerm.Var -> term1.level == term2.level
             term1 is CVTerm.Def && term2 is CVTerm.Def && term1.name == term2.name -> true
             term1 is CVTerm.Match && term2 is CVTerm.Match -> false // TODO
@@ -1121,11 +1129,11 @@ class Elab private constructor(
         fun copy(
             entries: PersistentList<Entry> = this.entries,
             normalizer: Normalizer = this.normalizer,
-            meta: Boolean = this.meta,
+            static: Boolean = this.meta,
             stage: Int = this.stage,
             termRelevant: Boolean = this.termRelevant,
             typeRelevant: Boolean = this.typeRelevant,
-        ): Context = Context(entries, normalizer, meta, stage, termRelevant, typeRelevant)
+        ): Context = Context(entries, normalizer, static, stage, termRelevant, typeRelevant)
 
         fun checkPhase(id: Id, type: CVTerm) {
             if (!meta && type is CVTerm.Code) diagnose(Diagnostic.PhaseMismatch(id))

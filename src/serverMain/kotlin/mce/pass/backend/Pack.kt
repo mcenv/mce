@@ -63,6 +63,10 @@ class Pack private constructor() {
     private fun Context.packTerm(term: Term) {
         when (term) {
             is Term.Builtin -> Unit
+            is Term.Command -> {
+                val body = term.body as Term.StringOf
+                +Raw(body.value)
+            }
             is Term.Block -> {
                 val size = this.size
                 term.elements.forEach { packTerm(it) }
@@ -506,6 +510,7 @@ val APPLY = ResourceLocation("apply")
 private fun eraseType(type: Type): NbtType = when (type) {
     is Type.Hole -> throw Error()
     is Type.Meta -> throw Error()
+    is Type.Command -> throw Error()
     is Type.Var -> TODO()
     is Type.Def -> TODO()
     is Type.Match -> TODO()

@@ -19,6 +19,10 @@ class Stage private constructor(
     override fun transformTerm(term: Term): Term = when (term) {
         is Term.Hole -> throw Error()
         is Term.Meta -> throw Error()
+        is Term.Command -> {
+            val body = Store(normalizer).normTerm(term.body)
+            Term.Command(body, term.id)
+        }
         is Term.CodeOf -> throw Error()
         is Term.Splice -> {
             val staged = Store(normalizer).normTerm(term)

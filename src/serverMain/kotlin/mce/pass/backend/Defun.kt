@@ -97,6 +97,10 @@ class Defun private constructor(
         is CTerm.Builtin -> DTerm.Builtin(getType(term.id!!))
         is CTerm.Hole -> throw Error()
         is CTerm.Meta -> throw Error()
+        is CTerm.Command -> {
+            val body = defunTerm(term.body)
+            DTerm.Command(body, getType(term.id!!))
+        }
         is CTerm.Block -> {
             val elements = term.elements.map { defunTerm(it) }
             DTerm.Block(elements, getType(term.id!!))

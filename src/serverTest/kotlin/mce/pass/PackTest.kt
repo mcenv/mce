@@ -1,6 +1,7 @@
 package mce.pass
 
 import mce.ast.pack.Command.Append
+import mce.ast.pack.Command.Raw
 import mce.ast.pack.Function
 import mce.ast.pack.Nbt
 import mce.ast.pack.NbtType
@@ -113,6 +114,42 @@ class PackTest {
                 ),
             ),
             storage[MAIN],
+        )
+    }
+
+    @Test
+    fun command() {
+        assertEquals(
+            Pack.Result(
+                mapOf(
+                    ResourceLocation("command") to Function(
+                        listOf(
+                            Raw("say command"),
+                        ),
+                    ),
+                ),
+                emptyMap(),
+                emptyMap(),
+            ),
+            pack("command"),
+        )
+    }
+
+    @Test
+    fun stage_command() {
+        assertEquals(
+            Pack.Result(
+                mapOf(
+                    ResourceLocation("stage_command") to Function(
+                        listOf(
+                            Raw("say command"),
+                        ),
+                    ),
+                ),
+                emptyMap(),
+                emptyMap(),
+            ),
+            pack("stage_command"),
         )
     }
 }

@@ -1,0 +1,1 @@
+def command [] : unit ≔ /"say command"

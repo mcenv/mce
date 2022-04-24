@@ -49,6 +49,9 @@ class Gen {
 
     private fun genCommand(command: Command) {
         when (command) {
+            is Command.Raw -> {
+                write(command.body)
+            }
             is Command.Execute -> {
                 write("execute ")
                 genExecute(command.execute)

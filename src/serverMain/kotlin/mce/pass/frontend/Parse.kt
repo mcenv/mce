@@ -203,6 +203,11 @@ class Parse private constructor(
             skip()
             Term.Meta(id)
         }
+        '/' -> {
+            skip()
+            val body = parseTerm()
+            Term.Command(body, id)
+        }
         '⋆' -> {
             skip()
             Term.UnitOf(id)

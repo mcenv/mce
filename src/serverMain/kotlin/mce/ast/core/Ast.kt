@@ -126,6 +126,7 @@ sealed class Term {
     data class Builtin(override val id: Id?) : Term()
     data class Hole(override val id: Id?) : Term()
     data class Meta(val index: KInt, override val id: Id?) : Term()
+    data class Command(val body: Term, override val id: Id?) : Term()
     data class Block(val elements: KList<Term>, override val id: Id?) : Term()
     data class Var(val name: KString, val level: KInt, override val id: Id?) : Term()
     data class Def(val name: KString, val arguments: KList<Term>, override val id: Id?) : Term()
@@ -193,6 +194,7 @@ sealed class VTerm {
 
     data class Hole(override val id: Id? = null) : VTerm()
     data class Meta(val index: KInt, override val id: Id? = null) : VTerm()
+    data class Command(val body: Lazy<VTerm>, override val id: Id? = null) : VTerm()
     data class Var(val name: KString, val level: KInt, override val id: Id? = null) : VTerm()
     data class Def(val name: KString, val arguments: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm()
     data class Match(val scrutinee: VTerm, val clauses: KList<Pair<Pat, Lazy<VTerm>>>, override val id: Id? = null) : VTerm()

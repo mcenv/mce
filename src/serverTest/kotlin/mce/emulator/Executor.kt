@@ -33,6 +33,7 @@ class Executor(
 
     private fun runCommand(command: Command): Int {
         return when (command) {
+            is Command.Raw -> TODO()
             is Command.Execute -> runExecute(command.execute)
             is Command.CheckScore -> if (checkScore(command.success, command.target, command.targetObjective, command.source)) 1 else throw Exception()
             is Command.CheckMatchingData -> if (checkMatchingData(command.success, command.source, command.path)) 1 else throw Exception()

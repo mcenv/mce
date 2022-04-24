@@ -128,6 +128,9 @@ sealed class Term {
     data class Meta(override val id: Id) : Term()
 
     @Serializable
+    data class Command(val body: Term, override val id: Id) : Term()
+
+    @Serializable
     data class Block(val elements: KList<Term>, override val id: Id) : Term()
 
     @Serializable

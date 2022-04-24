@@ -76,6 +76,7 @@ abstract class Transform {
         is Term.Builtin -> term
         is Term.Hole -> term
         is Term.Meta -> term
+        is Term.Command -> Term.Command(transformTerm(term.body), term.id)
         is Term.Block -> Term.Block(term.elements.map { transformTerm(it) }, term.id)
         is Term.Var -> term
         is Term.Def -> Term.Def(term.name, term.arguments.map { transformTerm(it) }, term.id)
