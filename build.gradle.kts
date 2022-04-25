@@ -71,7 +71,7 @@ kotlin {
         val clientMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.5")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.331-kotlin-1.6.20")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.332-kotlin-1.6.21")
                 implementation("io.ktor:ktor-client-core:2.0.1-eap-376")
                 implementation("io.ktor:ktor-client-js:2.0.1-eap-376")
                 implementation("io.ktor:ktor-client-websockets:2.0.1-eap-376")
