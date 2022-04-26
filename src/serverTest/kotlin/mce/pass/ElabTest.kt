@@ -94,6 +94,7 @@ class ElabTest {
         "command",
         "string_concat",
         "concat_command",
+        "int_to_string",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

@@ -1,0 +1,1 @@
+{builtin, static} def int/to_string [a : int] : string ≔ _

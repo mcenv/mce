@@ -5,6 +5,7 @@ import mce.ast.pack.Command
 import mce.pass.Normalizer
 import mce.pass.builtin.src.*
 import mce.pass.builtin.src.byte_array.size as byte_array_size
+import mce.pass.builtin.src.int.to_string as int_to_string
 import mce.pass.builtin.src.int_array.size as int_array_size
 import mce.pass.builtin.src.list.size as list_size
 import mce.pass.builtin.src.long_array.size as long_array_size
@@ -19,6 +20,7 @@ val builtins: Map<String, BuiltinDef> = listOf(
     `%`,
     `≡`,
     `≢`,
+    int_to_string,
     string_concat,
     byte_array_size,
     int_array_size,
