@@ -1,5 +1,5 @@
 def bool/neg [a : bool] : bool ≔
   match a [
-    false ⇒ true,
-    true  ⇒ false,
+    false ⇒ true
+    true  ⇒ false
   ]

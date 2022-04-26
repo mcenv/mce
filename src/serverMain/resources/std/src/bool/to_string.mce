@@ -1,0 +1,5 @@
+def bool/to_string [a : bool] : string ≔
+  match a [
+    false ⇒ "false"
+    true  ⇒ "true"
+  ]
