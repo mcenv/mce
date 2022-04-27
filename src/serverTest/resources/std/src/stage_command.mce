@@ -1,1 +1,1 @@
-def stage_command [] : unit ≔ /((λ [x] → x) @ ["say command"])
+{dynamic} def stage_command [] : unit ≔ /((λ [x] → x) @ ["say command"])

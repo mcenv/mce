@@ -1,12 +1,12 @@
 package mce.pass.backend
 
 import mce.Id
+import mce.ast.Modifier
 import mce.pass.Config
 import mce.pass.Pass
 import java.util.concurrent.atomic.AtomicInteger
 import mce.ast.core.Eff as CEff
 import mce.ast.core.Item as CItem
-import mce.ast.core.Modifier as CModifier
 import mce.ast.core.Module as CModule
 import mce.ast.core.Param as CParam
 import mce.ast.core.Pat as CPat
@@ -52,10 +52,11 @@ class Defun private constructor(
         }
     }
 
-    private fun defunModifier(modifier: CModifier): DModifier = when (modifier) {
-        CModifier.ABSTRACT -> DModifier.ABSTRACT
-        CModifier.BUILTIN -> DModifier.BUILTIN
-        CModifier.STATIC -> throw Error()
+    private fun defunModifier(modifier: Modifier): DModifier = when (modifier) {
+        Modifier.ABSTRACT -> DModifier.ABSTRACT
+        Modifier.BUILTIN -> DModifier.BUILTIN
+        Modifier.DYNAMIC -> DModifier.DYNAMIC
+        Modifier.STATIC -> throw Error()
     }
 
     private fun defunParam(param: CParam): DParam {

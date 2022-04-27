@@ -3,11 +3,11 @@ package mce.server.build
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import mce.ast.Modifier
 import mce.ast.pack.Advancement
 import mce.ast.pack.ResourceLocation
 import mce.ast.pack.Tag
 import mce.ast.surface.Item
-import mce.ast.surface.Modifier
 import mce.pass.Config
 import mce.pass.backend.Defun
 import mce.pass.backend.Gen

@@ -1,3 +1,5 @@
+{dynamic}
+
 import {string/+}
 
 def concat_command [] : unit ≔ /("say " string/+ "command")

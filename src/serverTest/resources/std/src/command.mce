@@ -1,1 +1,1 @@
-def command [] : unit ≔ /"say command"
+{dynamic} def command [] : unit ≔ /"say command"

@@ -1,6 +1,7 @@
 package mce.ast.core
 
 import mce.Id
+import mce.ast.Modifier
 import mce.ast.Name
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
@@ -57,12 +58,6 @@ sealed class Item {
         override val modifiers: KSet<Modifier> = emptySet()
         override val name: KString = "pack"
     }
-}
-
-enum class Modifier {
-    ABSTRACT,
-    BUILTIN,
-    STATIC,
 }
 
 data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term, val id: Id)

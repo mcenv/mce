@@ -2,6 +2,7 @@ package mce.ast.surface
 
 import kotlinx.serialization.Serializable
 import mce.Id
+import mce.ast.Modifier
 import mce.ast.Name
 import kotlin.Boolean as KBoolean
 import kotlin.Byte as KByte
@@ -75,12 +76,6 @@ sealed class Item {
         override val modifiers: KList<Modifier> = emptyList()
         override val name: KString = "pack"
     }
-}
-
-enum class Modifier {
-    ABSTRACT,
-    BUILTIN,
-    STATIC,
 }
 
 @Serializable

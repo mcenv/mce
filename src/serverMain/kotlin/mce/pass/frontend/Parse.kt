@@ -1,6 +1,7 @@
 package mce.pass.frontend
 
 import mce.Id
+import mce.ast.Modifier
 import mce.ast.Name
 import mce.ast.surface.*
 import mce.pass.freshId
@@ -70,6 +71,7 @@ class Parse private constructor(
     private fun parseModifier(): Modifier = when (val word = readWord()) {
         "abstract" -> Modifier.ABSTRACT
         "builtin" -> Modifier.BUILTIN
+        "dynamic" -> Modifier.DYNAMIC
         "static" -> Modifier.STATIC
         else -> error("unexpected modifier '$word'")
     }

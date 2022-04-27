@@ -130,19 +130,20 @@ class ElabTest {
     @Test
     fun stage_mismatch() {
         val result = elaborate("stage_mismatch")
-        assertContains(result.diagnostics, Diagnostic.StageMismatch(1, 0, Id(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Elab.Phase.DYNAMIC, Elab.Phase.STATIC, Id(0, 0)))
     }
 
     @Test
     fun phase_mismatch() {
         val result = elaborate("phase_mismatch")
-        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Id(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Elab.Phase.STATIC, Elab.Phase.TOP, Id(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Elab.Phase.STATIC, Elab.Phase.TOP, Id(0, 1)))
     }
 
     @Test
     fun phase_mismatch_local() {
         val result = elaborate("phase_mismatch_local")
-        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Id(0, 0)))
+        assertContains(result.diagnostics, Diagnostic.PhaseMismatch(Elab.Phase.STATIC, Elab.Phase.TOP, Id(0, 0)))
     }
 
     @Test

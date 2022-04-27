@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import mce.Id
+import mce.ast.Modifier
 import mce.ast.core.*
 import mce.pass.builtin.builtins
 import mce.util.Store
