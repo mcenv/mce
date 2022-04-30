@@ -45,7 +45,12 @@ class Build(
                         .associateBy { it.name }
                     Elab(config, surfaceItem to items) as V
                 }
-                is Key.ZonkResult -> Zonk(config, fetch(Key.ElabResult(key.name))) as V
+                is Key.ZonkResult -> {
+                    Zonk(config, fetch(Key.ElabResult(key.name))).also { result ->
+                        result.diagnostics.forEach { println(it) }
+                    } as V
+                    // TODO: cancel compilation here if diagnostics are not empty
+                }
                 is Key.StageResult -> Stage(config, fetch(Key.ZonkResult(key.name))) as V
                 is Key.DefunResult -> Defun(config, fetch(Key.StageResult(key.name))) as V
                 is Key.PackResult -> Pack(config, fetch(Key.DefunResult(key.name))) as V
