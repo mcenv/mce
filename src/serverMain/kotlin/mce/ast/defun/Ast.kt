@@ -1,5 +1,6 @@
 package mce.ast.defun
 
+import mce.ast.Modifier
 import mce.ast.Name
 import mce.ast.core.VTerm
 import kotlin.Boolean as KBoolean
@@ -41,12 +42,6 @@ sealed class Item {
         override val name: KString,
         val body: Term,
     ) : Item()
-}
-
-enum class Modifier {
-    ABSTRACT,
-    BUILTIN,
-    DYNAMIC,
 }
 
 data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term)

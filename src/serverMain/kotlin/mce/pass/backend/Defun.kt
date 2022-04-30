@@ -1,7 +1,6 @@
 package mce.pass.backend
 
 import mce.Id
-import mce.ast.Modifier
 import mce.pass.Config
 import mce.pass.Pass
 import java.util.concurrent.atomic.AtomicInteger
@@ -15,7 +14,6 @@ import mce.ast.core.Term as CTerm
 import mce.ast.core.VTerm as CVTerm
 import mce.ast.defun.Eff as DEff
 import mce.ast.defun.Item as DItem
-import mce.ast.defun.Modifier as DModifier
 import mce.ast.defun.Module as DModule
 import mce.ast.defun.Param as DParam
 import mce.ast.defun.Pat as DPat
@@ -28,36 +26,27 @@ class Defun private constructor(
 ) {
     private val defunctions: MutableList<Defunction> = mutableListOf()
 
-    private fun defunItem(item: CItem): DItem {
-        val modifiers = item.modifiers.map { defunModifier(it) }.toSet()
-        return when (item) {
+    private fun defunItem(item: CItem): DItem =
+        when (item) {
             is CItem.Def -> {
                 val params = item.params.map { defunParam(it) }
                 val body = defunTerm(item.body)
-                DItem.Def(modifiers, item.name, params, body)
+                DItem.Def(item.modifiers, item.name, params, body)
             }
             is CItem.Mod -> {
                 val body = defunModule(item.body)
-                DItem.Mod(modifiers, item.name, body)
+                DItem.Mod(item.modifiers, item.name, body)
             }
             is CItem.Test -> {
                 val body = defunTerm(item.body)
-                DItem.Test(modifiers, item.name, body)
+                DItem.Test(item.modifiers, item.name, body)
             }
             is CItem.Advancement -> {
                 val body = defunTerm(item.body)
-                DItem.Advancement(modifiers, item.name, body)
+                DItem.Advancement(item.modifiers, item.name, body)
             }
             is CItem.Pack -> throw Error()
         }
-    }
-
-    private fun defunModifier(modifier: Modifier): DModifier = when (modifier) {
-        Modifier.ABSTRACT -> DModifier.ABSTRACT
-        Modifier.BUILTIN -> DModifier.BUILTIN
-        Modifier.DYNAMIC -> DModifier.DYNAMIC
-        Modifier.STATIC -> throw Error()
-    }
 
     private fun defunParam(param: CParam): DParam {
         val lower = param.lower?.let { defunTerm(it) }

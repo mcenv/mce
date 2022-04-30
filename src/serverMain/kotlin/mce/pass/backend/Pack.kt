@@ -1,7 +1,7 @@
 package mce.pass.backend
 
+import mce.ast.Modifier
 import mce.ast.defun.Item
-import mce.ast.defun.Modifier
 import mce.ast.defun.Pat
 import mce.ast.defun.Term
 import mce.ast.pack.*
@@ -45,16 +45,19 @@ class Pack private constructor() {
         val location = ResourceLocation(item.name)
         when (item) {
             is Item.Def -> {
-                +Context(location).apply {
-                    if (item.modifiers.contains(Modifier.BUILTIN)) {
-                        builtins[item.name]!!.pack().forEach { +it }
-                    } else {
-                        packTerm(item.body)
+                if (!item.modifiers.contains(Modifier.STATIC)) {
+                    +Context(location).apply {
+                        when {
+                            item.modifiers.contains(Modifier.BUILTIN) -> {
+                                builtins[item.name]!!.pack().forEach { +it }
+                            }
+                            else -> packTerm(item.body)
+                        }
                     }
-                }
 
-                when (item.name) {
-                    "load", "tick" -> tags["functions" to location] = Tag(listOf(Entry(location)), true)
+                    when (item.name) {
+                        "load", "tick" -> tags["functions" to location] = Tag(listOf(Entry(location)), true)
+                    }
                 }
             }
             is Item.Mod -> TODO()
