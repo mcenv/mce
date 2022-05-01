@@ -39,8 +39,9 @@ class Build(
                 is Key.ElabResult -> {
                     val surfaceItem = fetch(Key.SurfaceItem(key.name))
                     val items = surfaceItem.imports
-                        .filter { visible(fetch(Key.SurfaceItem(it)), surfaceItem.name) }
-                        .map { async { fetch(Key.ElabResult(it)).item } }
+                        .filter { visible(fetch(Key.SurfaceItem(it)), surfaceItem.name) } // filter by visibility
+                        .flatMap { fetch(Key.SurfaceItem(it)).imports + it }              // import dependencies recursively
+                        .map { async { fetch(Key.ElabResult(it)).item } }                 // elab it
                         .awaitAll()
                         .associateBy { it.name }
                     Elab(config, surfaceItem to items) as V
@@ -56,9 +57,10 @@ class Build(
                 is Key.PackResult -> Pack(config, fetch(Key.DefunResult(key.name))) as V
                 is Key.GenResult -> {
                     val results = packs.list()
-                        .flatMap { fetch(Key.SurfaceItem(it)).imports + it }
-                        .toSet()
-                        .map { async { fetch(Key.PackResult(it)) } }
+                        .flatMap { fetch(Key.SurfaceItem(it)).imports + it }                        // import dependencies recursively
+                        .toSet()                                                                    // deduplicate dependencies
+                        .filter { !fetch(Key.SurfaceItem(it)).modifiers.contains(Modifier.STATIC) } // filter out static dependencies
+                        .map { async { fetch(Key.PackResult(it)) } }                                // pack it
                         .awaitAll()
                     val tags = results.fold(mutableMapOf<Pair<String, ResourceLocation>, Tag>()) { tags, result -> tags.also { it.putAll(result.tags) } }
                     val advancements = results.fold(mutableMapOf<ResourceLocation, Advancement>()) { advancements, result -> advancements.also { it.putAll(result.advancements) } }

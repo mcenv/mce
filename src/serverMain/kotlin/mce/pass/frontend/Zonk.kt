@@ -36,7 +36,7 @@ class Zonk private constructor(
 
     companion object : Pass<Elab.Result, Result> {
         override operator fun invoke(config: Config, input: Elab.Result): Result = Zonk(input.normalizer).run {
-            Result(transformItem(input.item), input.types, normalizer, input.diagnostics + diagnostics)
+            Result(transformItem(input.item), input.types, input.normalizer, input.diagnostics + diagnostics)
         }
     }
 }
