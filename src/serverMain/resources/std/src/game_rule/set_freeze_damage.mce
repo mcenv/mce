@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def game_rule/set_freeze_damage [value : bool] : code unit ≔
+  `/("gamerule freezeDamage " string/+ (bool/to_string [value]))

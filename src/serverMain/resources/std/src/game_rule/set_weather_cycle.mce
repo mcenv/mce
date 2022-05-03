@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def game_rule/set_weather_cycle [value : bool] : code unit ≔
+  `/("gamerule doWeatherCycle " string/+ (bool/to_string [value]))

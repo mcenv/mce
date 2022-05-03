@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def game_rule/set_do_mob_loot [value : bool] : code unit ≔
+  `/("gamerule doMobLoot " string/+ (bool/to_string [value]))

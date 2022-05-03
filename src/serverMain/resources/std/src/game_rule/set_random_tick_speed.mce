@@ -1,0 +1,11 @@
+{static}
+
+import {
+  int/to_string
+  string/+
+}
+
+export {*}
+
+def game_rule/set_random_tick_speed [value : int] : code unit ≔
+  `/("gamerule randomTickSpeed " string/+ (int/to_string [value]))

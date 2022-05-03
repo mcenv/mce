@@ -1,0 +1,11 @@
+{static}
+
+import {
+  int/to_string
+  string/+
+}
+
+export {*}
+
+def game_rule/set_players_sleeping_percentage [value : int] : code unit ≔
+  `/("gamerule playersSleepingPercentage " string/+ (int/to_string [value]))

@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def game_rule/set_do_fire_tick [value : bool] : code unit ≔
+  `/("gamerule doFireTick " string/+ (bool/to_string [value]))
