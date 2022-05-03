@@ -30,7 +30,7 @@ import mce.ast.surface.Term as STerm
 // TODO: check/synth effects and stages
 @Suppress("NAME_SHADOWING")
 class Elab private constructor(
-    private val items: Map<String, CItem>,
+    private val items: MutableMap<String, CItem>,
 ) {
     private val diagnostics: MutableList<Diagnostic> = mutableListOf()
     private val completions: MutableMap<Id, List<Pair<String, CVTerm>>> = mutableMapOf()
@@ -54,6 +54,10 @@ class Elab private constructor(
                     types[item.body.id] = vResultant
                     Typing(CTerm.Builtin(item.body.id), vResultant, phase, effs)
                 } else {
+                    if (modifiers.contains(Modifier.RECURSIVE)) {
+                        items[item.name] = CItem.Def(modifiers, item.name, params, resultant.term, effs, CTerm.Builtin(item.body.id), item.id)
+                    }
+
                     modify { it.copy(termRelevant = true, typeRelevant = false) }
                     checkTerm(item.body, vResultant, phase, effs)
                 }
@@ -1135,7 +1139,7 @@ class Elab private constructor(
 
         override operator fun invoke(config: Config, input: Pair<SItem, Map<String, CItem>>): Result {
             val (item, dependencies) = input
-            return Elab(dependencies).run {
+            return Elab(dependencies.toMutableMap()).run {
                 val normalizer = Normalizer(persistentListOf(), items, solutions)
                 val (item, _) = Store(Context(persistentListOf(), normalizer, Phase.TOP, true, true)).inferItem(item)
                 Result(item, types, normalizer, diagnostics, completions)

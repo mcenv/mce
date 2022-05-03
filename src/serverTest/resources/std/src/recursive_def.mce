@@ -1,0 +1,3 @@
+{recursive}
+
+def recursive_def [] : unit ≔ (recursive_def [])

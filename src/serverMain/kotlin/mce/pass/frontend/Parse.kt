@@ -73,6 +73,7 @@ class Parse private constructor(
         "builtin" -> Modifier.BUILTIN
         "dynamic" -> Modifier.DYNAMIC
         "static" -> Modifier.STATIC
+        "recursive" -> Modifier.RECURSIVE
         else -> error("unexpected modifier '$word'")
     }
 

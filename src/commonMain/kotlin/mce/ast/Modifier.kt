@@ -5,4 +5,5 @@ enum class Modifier {
     BUILTIN,
     DYNAMIC,
     STATIC,
+    RECURSIVE,
 }
