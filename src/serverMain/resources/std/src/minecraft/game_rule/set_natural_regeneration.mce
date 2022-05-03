@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def minecraft/game_rule/set_natural_regeneration [value : bool] : code unit ≔
+  `/("gamerule naturalRegeneration " string/+ (bool/to_string [value]))

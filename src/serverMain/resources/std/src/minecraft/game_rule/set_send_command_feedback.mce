@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def minecraft/game_rule/set_send_command_feedback [value : bool] : code unit ≔
+  `/("gamerule sendCommandFeedback " string/+ (bool/to_string [value]))

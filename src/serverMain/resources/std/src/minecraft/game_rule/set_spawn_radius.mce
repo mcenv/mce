@@ -1,0 +1,11 @@
+{static}
+
+import {
+  int/to_string
+  string/+
+}
+
+export {*}
+
+def minecraft/game_rule/set_spawn_radius [value : int] : code unit ≔
+  `/("gamerule spawnRadius " string/+ (int/to_string [value]))

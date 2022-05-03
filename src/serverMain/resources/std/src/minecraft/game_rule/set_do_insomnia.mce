@@ -1,0 +1,11 @@
+{static}
+
+import {
+  bool/to_string
+  string/+
+}
+
+export {*}
+
+def minecraft/game_rule/set_do_insomnia [value : bool] : code unit ≔
+  `/("gamerule doInsomnia " string/+ (bool/to_string [value]))
