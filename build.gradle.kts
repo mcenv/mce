@@ -73,7 +73,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.5")
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.334")
                 implementation("io.ktor:ktor-client-core:2.0.2-eap-391")
-                implementation("io.ktor:ktor-client-js:2.0.2-eap-390")
+                implementation("io.ktor:ktor-client-js:2.0.2-eap-391")
                 implementation("io.ktor:ktor-client-websockets:2.0.2-eap-391")
             }
         }
