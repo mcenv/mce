@@ -51,7 +51,17 @@ class Pack private constructor() {
                             item.modifiers.contains(Modifier.BUILTIN) -> {
                                 builtins[item.name]!!.pack().forEach { +it }
                             }
-                            else -> packTerm(item.body)
+                            else -> {
+                                packTerm(item.body)
+
+                                val resultant = eraseType(item.body.type)
+                                // drop parameters
+                                item.params.forEach {
+                                    val param = eraseType(it.type)
+                                    val offset = if (resultant == param) -2 else -1
+                                    +RemoveData(MAIN, param.toPath()[offset])
+                                }
+                            }
                         }
                     }
 
