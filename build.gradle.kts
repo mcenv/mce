@@ -55,7 +55,7 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3.5")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.3.2")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.3.3")
                 implementation("io.ktor:ktor-server-core:2.0.1")
                 implementation("io.ktor:ktor-server-netty:2.0.1")
                 implementation("io.ktor:ktor-server-websockets:2.0.1")
