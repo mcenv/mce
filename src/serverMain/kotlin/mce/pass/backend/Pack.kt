@@ -390,9 +390,12 @@ class Pack private constructor() {
                     +SetScore(R0, REG, 1) // TODO: avoid register restoration when possible
                 }
 
-                // TODO: optimize the last clause
-                +Execute(E.CheckScore(true, R0, REG, GeConst(1), Run(RunFunction(arm))))
-                +Execute(E.CheckScore(true, R0, REG, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
+                if (match.clauses.lastIndex == index) {
+                    +RunFunction(arm)
+                } else {
+                    +Execute(E.CheckScore(true, R0, REG, GeConst(1), Run(RunFunction(arm))))
+                    +Execute(E.CheckScore(true, R0, REG, LeConst(0), Run(RunFunction(ResourceLocation("${this@packMatch.name.path}-${index + 1}")))))
+                }
             }
         }
 
