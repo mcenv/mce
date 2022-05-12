@@ -120,6 +120,7 @@ class Elab private constructor(
             val upper = param.upper?.let { checkTerm(it, vType, phase, PURE) }
             val vUpper = upper?.let { upper -> map { it.normalizer }.evalTerm(upper.term) }
             modify { it.bind(Entry(param.termRelevant, param.name, vLower, vUpper, param.typeRelevant, vType, value.phase)) }
+            types[param.id] = vType
             CParam(param.termRelevant, param.name, lower?.term, upper?.term, param.typeRelevant, type.term, param.id)
         }
 

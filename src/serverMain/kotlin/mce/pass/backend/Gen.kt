@@ -489,10 +489,10 @@ class Gen {
 
     private fun genResourceLocation(location: ResourceLocation) {
         if (location.namespace != ResourceLocation.DEFAULT_NAMESPACE) {
-            write(location.namespace)
+            write(ResourceLocation.normalize(location.namespace))
             write(':')
         }
-        write(location.path)
+        write(ResourceLocation.normalize(location.path))
     }
 
     private fun genQuotedString(string: String) {
@@ -501,8 +501,13 @@ class Gen {
         write('"')
     }
 
-    private inline fun entry(type: ResourceType, name: ResourceLocation, block: () -> Unit) {
-        output.putNextEntry(ZipEntry("data/${name.namespace}/${type.directory}/${name.path}.${type.extension}"))
+    private inline fun entry(type: ResourceType, location: ResourceLocation, block: () -> Unit) {
+        val namespace = if (location.namespace == ResourceLocation.DEFAULT_NAMESPACE) location.namespace else ResourceLocation.normalize(location.namespace)
+        val path = when {
+            type is ResourceType.Tags && type.path == "functions" && (location.path == "load" || location.path == "tick") -> location.path
+            else -> ResourceLocation.normalize(location.path)
+        }
+        output.putNextEntry(ZipEntry("data/${namespace}/${type.directory}/${path}.${type.extension}"))
         block()
         output.closeEntry()
     }

@@ -37,7 +37,7 @@ data class ResourceLocationPattern(
 
 sealed class ResourceType(val directory: KString, val extension: KString) {
     object Recipes : ResourceType("recipes", "json")
-    class Tags(path: KString) : ResourceType("tags/$path", "json")
+    data class Tags(val path: KString) : ResourceType("tags/$path", "json")
     object Predicates : ResourceType("predicates", "json")
     object LootTables : ResourceType("loot_tables", "json")
     object ItemModifiers : ResourceType("item_modifiers", "json")
@@ -426,16 +426,16 @@ enum class Consumer {
 
 @Serializable
 data class ResourceLocation(
-    val namespace: kotlin.String,
-    val path: kotlin.String,
+    val namespace: KString,
+    val path: KString,
 ) {
-    constructor(path: kotlin.String) : this(DEFAULT_NAMESPACE, path)
+    constructor(path: KString) : this(DEFAULT_NAMESPACE, path)
 
     object Serializer : JsonTransformingSerializer<ResourceLocation>(serializer()) {
         override fun transformSerialize(element: JsonElement): JsonElement {
             val namespace = element.jsonObject["namespace"]!!.jsonPrimitive.content
             val path = element.jsonObject["path"]!!.jsonPrimitive.content
-            return JsonPrimitive("${if (DEFAULT_NAMESPACE == namespace) "" else "$namespace:"}$path")
+            return JsonPrimitive("${if (DEFAULT_NAMESPACE == namespace) "" else "${normalize(namespace)}:"}${normalize(path)}")
         }
 
         override fun transformDeserialize(element: JsonElement): JsonElement =
@@ -444,11 +444,11 @@ data class ResourceLocation(
                 when (parts.size) {
                     1 -> {
                         put("namespace", DEFAULT_NAMESPACE)
-                        put("path", parts[0])
+                        put("path", denormalize(parts[0]))
                     }
                     else -> {
-                        put("namespace", parts[0])
-                        put("path", parts[1])
+                        put("namespace", denormalize(parts[0]))
+                        put("path", denormalize(parts[1]))
                     }
                 }
             }
@@ -456,5 +456,16 @@ data class ResourceLocation(
 
     companion object {
         const val DEFAULT_NAMESPACE = "minecraft"
+
+        fun normalize(string: KString): KString =
+            string.map {
+                when (it) {
+                    '-' -> "--"
+                    in 'a'..'z', in '0'..'9', '/', '.', '_' -> it.toString()
+                    else -> "-${it.code.toString(16)}"
+                }
+            }.joinToString("")
+
+        fun denormalize(string: KString): KString = TODO()
     }
 }

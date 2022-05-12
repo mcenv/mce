@@ -51,8 +51,7 @@ class Defun private constructor(
     private fun defunParam(param: CParam): DParam {
         val lower = param.lower?.let { defunTerm(it) }
         val upper = param.upper?.let { defunTerm(it) }
-        val type = defunTerm(param.type)
-        return DParam(param.termRelevant, param.name, lower, upper, param.typeRelevant, type)
+        return DParam(param.termRelevant, param.name, lower, upper, param.typeRelevant, getType(param.id))
     }
 
     private fun defunModule(module: CModule): DModule = when (module) {

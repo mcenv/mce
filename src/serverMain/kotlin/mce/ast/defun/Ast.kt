@@ -44,7 +44,7 @@ sealed class Item {
     ) : Item()
 }
 
-data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: Term)
+data class Param(val termRelevant: KBoolean, val name: KString, val lower: Term?, val upper: Term?, val typeRelevant: KBoolean, val type: VTerm)
 
 sealed class Module {
     data class Var(val name: KString) : Module()
