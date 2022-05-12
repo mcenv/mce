@@ -90,7 +90,8 @@ fun Store<Normalizer>.evalTerm(term: Term): VTerm =
         is Term.Var -> value.lookup(term.level)
         is Term.Def -> {
             val item = value.getItem(term.name)!! as Item.Def
-            if (item.modifiers.contains(Modifier.ABSTRACT)) {
+            // TODO: allow unfolding recursive defs when they are called from other defs
+            if (item.modifiers.contains(Modifier.ABSTRACT) || item.modifiers.contains(Modifier.RECURSIVE)) {
                 val arguments = term.arguments.map { lazy { evalTerm(it) } }
                 VTerm.Def(term.name, arguments, term.id)
             } else {
