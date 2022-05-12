@@ -466,6 +466,6 @@ data class ResourceLocation(
                 }
             }.joinToString("")
 
-        fun denormalize(string: KString): KString = TODO()
+        fun denormalize(string: KString): KString = string // TODO
     }
 }

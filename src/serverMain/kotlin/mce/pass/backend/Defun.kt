@@ -88,7 +88,7 @@ class Defun private constructor(
         is CTerm.Meta -> throw Error()
         is CTerm.Command -> {
             val body = defunTerm(term.body)
-            DTerm.Command(body, CVTerm.Or(emptyList()))
+            DTerm.Command(body, CVTerm.Unit())
         }
         is CTerm.Block -> {
             val elements = term.elements.map { defunTerm(it) }

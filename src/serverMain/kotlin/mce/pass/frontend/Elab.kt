@@ -257,7 +257,7 @@ class Elab private constructor(
             term is STerm.Command && subtypePhase(phase, Phase.DYNAMIC, term.id) -> restore {
                 modify { it.copy(phase = Phase.STATIC) }
                 val body = checkTerm(term.body, STRING, Phase.STATIC, PURE)
-                Typing(CTerm.Command(body.term, term.id), END, phase, PURE)
+                Typing(CTerm.Command(body.term, term.id), UNIT, phase, PURE)
             }
             term is STerm.Block -> restore {
                 val elements = term.elements.map { inferTerm(it, phase, INFER) }
