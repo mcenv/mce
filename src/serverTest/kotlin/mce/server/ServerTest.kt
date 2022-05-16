@@ -4,8 +4,7 @@ import kotlinx.coroutines.runBlocking
 import mce.Id
 import mce.ast.surface.Term
 import mce.pass.Config
-import mce.protocol.CompletionRequest
-import mce.protocol.HoverRequest
+import mce.protocol.Request
 import mce.server.build.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,7 +22,7 @@ class ServerTest {
         runServer {
             val name = "server"
             val target = Id(0, 0)
-            assertIs<Term.Bool>(hover(HoverRequest(name, target, 0)).type)
+            assertIs<Term.Bool>(hover(Request.Hover(name, target, 0)).type)
         }
     }
 
@@ -32,9 +31,9 @@ class ServerTest {
         runServer {
             val name = "server"
             val target = Id(0, 0)
-            hover(HoverRequest(name, target, 0))
+            hover(Request.Hover(name, target, 0))
             assertEquals(1, build.getCount(Key.ElabResult(name)))
-            hover(HoverRequest(name, target, 1))
+            hover(Request.Hover(name, target, 1))
             assertEquals(1, build.getCount(Key.ElabResult(name)))
         }
     }
@@ -44,7 +43,9 @@ class ServerTest {
         runServer {
             val name = "completion"
             val id = Id(0, 0)
-            val item = completion(CompletionRequest(name, id, 0)).first()
+            val completion = completion(Request.Completion(name, id, 0))
+            assertEquals(1, completion.items.size)
+            val item = completion.items.first()
             assertEquals("a", item.name)
             assertIs<Term.Int>(item.type)
         }

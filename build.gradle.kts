@@ -72,9 +72,9 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.5")
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.337")
-                implementation("io.ktor:ktor-client-core:2.0.1")
+                implementation("io.ktor:ktor-client-core-js:2.0.1")
                 implementation("io.ktor:ktor-client-js:2.0.1")
-                implementation("io.ktor:ktor-client-websockets:2.0.1")
+                implementation("io.ktor:ktor-client-websockets-js:2.0.1")
             }
         }
 

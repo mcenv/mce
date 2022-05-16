@@ -1,3 +1,5 @@
+// @ts-check
+
 const { spawn } = require("child_process")
 const path = require("path")
 const { platform } = require("process")
@@ -32,6 +34,10 @@ const createWindow = () => {
                             win.webContents.send("open-file", filePaths[0])
                         }
                     }
+                },
+                {
+                    label: "Exit",
+                    role: "quit"
                 }
             ]
         }
@@ -39,6 +45,10 @@ const createWindow = () => {
 
     win.loadFile("index.html")
     win.webContents.openDevTools()
+
+    win.on("close", () => {
+        win.webContents.send("exit")
+    })
 }
 
 const main = async () => {
@@ -52,12 +62,12 @@ const main = async () => {
             createWindow()
         }
     })
+
+    app.on("window-all-closed", () => {
+        if (platform !== "darwin") {
+            app.quit()
+        }
+    })
 }
 
 main()
-
-app.on("window-all-closed", () => {
-    if (platform !== "darwin") {
-        app.quit()
-    }
-})

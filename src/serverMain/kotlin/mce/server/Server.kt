@@ -12,7 +12,8 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import mce.pass.Config
 import mce.pass.frontend.printTerm
 import mce.pass.quoteTerm
-import mce.protocol.*
+import mce.protocol.Request
+import mce.protocol.Response
 import mce.serialization.Mce
 import mce.server.build.Build
 import mce.server.build.Key
@@ -21,6 +22,7 @@ import mce.util.Store
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.createFile
+import kotlin.system.exitProcess
 
 class Server(config: Config) {
     internal val build: Build = Build(config, Packs)
@@ -35,15 +37,25 @@ class Server(config: Config) {
             routing {
                 webSocket {
                     while (true) {
-                        val response = when (val request = receiveDeserialized<Request>()) {
-                            is HoverRequest -> server.hover(request)
-                            is CompletionRequest -> TODO()
+                        try {
+                            val response: Response = when (val request = receiveDeserialized<Request>()) {
+                                is Request.Hover -> server.hover(request)
+                                is Request.Completion -> server.completion(request)
+                                is Request.Exit -> exit()
+                            }
+                            sendSerialized<Response>(response)
+                        } catch (t: Throwable) {
+                            t.printStackTrace()
                         }
-                        sendSerialized<Response>(response)
                     }
                 }
             }
         }.start(true)
+    }
+
+    private fun exit(): Nothing {
+        // TODO: post-process
+        exitProcess(0)
     }
 
     suspend fun init() {
@@ -53,17 +65,20 @@ class Server(config: Config) {
         }
     }
 
-    suspend fun hover(request: HoverRequest): HoverResponse {
+    suspend fun hover(request: Request.Hover): Response.Hover {
         val result = build.fetch(Key.ElabResult(request.name))
         val type = printTerm(Store(result.normalizer).quoteTerm(result.types[request.target]!!))
-        return HoverResponse(type, request.id)
+        return Response.Hover(type, request.id)
     }
 
-    suspend fun completion(request: CompletionRequest): List<CompletionResponse> {
+    suspend fun completion(request: Request.Completion): Response.Completion {
         val result = build.fetch(Key.ElabResult(request.name))
-        return result.completions[request.target]?.let { completions ->
-            completions.map { (name, type) -> CompletionResponse(name, printTerm(Store(result.normalizer).quoteTerm(type)), request.id) }
-        } ?: emptyList()
+        return Response.Completion(
+            result.completions[request.target]?.let { completions ->
+                completions.map { (name, type) -> Response.Completion.Item(name, printTerm(Store(result.normalizer).quoteTerm(type))) }
+            } ?: emptyList(),
+            request.id
+        )
     }
 
     suspend fun build() {
