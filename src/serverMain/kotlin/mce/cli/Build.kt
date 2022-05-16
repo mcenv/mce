@@ -8,7 +8,7 @@ import mce.server.Server
 
 @ExperimentalCli
 object Build : Subcommand("build", "Build pack") {
-    override fun execute() = runBlocking {
+    override fun execute(): Unit = runBlocking {
         Server(Config).build()
     }
 }
