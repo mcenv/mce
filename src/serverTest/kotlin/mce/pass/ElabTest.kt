@@ -96,6 +96,7 @@ class ElabTest {
         "concat_command",
         "int_to_string",
         "recursive_def",
+        "comm_complex",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

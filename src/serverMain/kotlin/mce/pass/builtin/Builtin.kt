@@ -28,14 +28,7 @@ val builtins: Map<String, BuiltinDef> = listOf(
     list_size,
 ).associateBy { it.name }
 
-val commuter: Comparator<VTerm> = Comparator { term1, term2 ->
-    when {
-        term1 is VTerm.Var && term2 is VTerm.Var -> term1.level.compareTo(term2.level)
-        term1 is VTerm.Var -> 1
-        term2 is VTerm.Var -> -1
-        else -> 0
-    }
-}
+val commuter: Comparator<VTerm> = Comparator { term1, term2 -> term1.hash() compareTo term2.hash() }
 
 abstract class BuiltinDef(val name: String) {
     abstract fun Normalizer.arguments(): List<Lazy<VTerm>>
