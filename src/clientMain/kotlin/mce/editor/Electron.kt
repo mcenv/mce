@@ -1,8 +1,8 @@
 package mce.editor
 
 interface Electron {
-    @JsName("onOpenFile")
-    fun onOpenFile(callback: (event: dynamic, path: String) -> Unit)
+    @JsName("onNewPack")
+    fun onNewPack(callback: (event: dynamic) -> Unit)
 
     @JsName("onExit")
     fun onExit(callback: (event: dynamic) -> Unit)

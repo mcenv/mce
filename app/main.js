@@ -4,7 +4,7 @@ const { spawn } = require("child_process")
 const http = require("http")
 const path = require("path")
 const { platform } = require("process")
-const { app, BrowserWindow, nativeImage, Menu, dialog } = require("electron")
+const { app, BrowserWindow, nativeImage, Menu } = require("electron")
 
 const launchServer = () => {
     const extension = platform === "win32" ? ".bat" : ""
@@ -28,12 +28,9 @@ const createWindow = () => {
             label: "File",
             submenu: [
                 {
-                    label: "Open File",
-                    click: async () => {
-                        const { canceled, filePaths } = await dialog.showOpenDialog({})
-                        if (!canceled) {
-                            win.webContents.send("open-file", filePaths[0])
-                        }
+                    label: "New Pack",
+                    click: () => {
+                        win.webContents.send("new-pack")
                     }
                 },
                 {

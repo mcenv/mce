@@ -40,13 +40,16 @@ class Server(config: Config) {
             routing {
                 webSocket {
                     while (true) {
-                        val request = receiveDeserialized<Request>()
-                        println(request)
-                        val response: Response = when (request) {
-                            is Request.Hover -> server.hover(request)
-                            is Request.Completion -> server.completion(request)
+                        try {
+                            val response: Response? = when (val request = receiveDeserialized<Request>()) {
+                                is Request.Init -> null.also { init() }
+                                is Request.Hover -> server.hover(request)
+                                is Request.Completion -> server.completion(request)
+                            }
+                            response?.let { sendSerialized<Response>(it) }
+                        } catch (t: Throwable) {
+                            t.printStackTrace()
                         }
-                        sendSerialized<Response>(response)
                     }
                 }
             }
