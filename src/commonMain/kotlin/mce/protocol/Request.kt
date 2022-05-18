@@ -8,11 +8,6 @@ sealed class Request {
     abstract val id: Int
 
     @Serializable
-    object Exit : Request() {
-        override val id: Int = 0
-    }
-
-    @Serializable
     data class Hover(
         val name: String,
         val target: Id,

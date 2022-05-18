@@ -22,7 +22,6 @@ import mce.util.Store
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.createFile
-import kotlin.system.exitProcess
 
 class Server(config: Config) {
     internal val build: Build = Build(config, Packs)
@@ -34,28 +33,24 @@ class Server(config: Config) {
             install(WebSockets) @ExperimentalSerializationApi {
                 contentConverter = KotlinxWebsocketSerializationConverter(Mce)
             }
+            install(ShutDownUrl.ApplicationCallPlugin) {
+                shutDownUrl = "/shutdown"
+                exitCodeSupplier = { 0 }
+            }
             routing {
                 webSocket {
                     while (true) {
-                        try {
-                            val response: Response = when (val request = receiveDeserialized<Request>()) {
-                                is Request.Hover -> server.hover(request)
-                                is Request.Completion -> server.completion(request)
-                                is Request.Exit -> exit()
-                            }
-                            sendSerialized<Response>(response)
-                        } catch (t: Throwable) {
-                            t.printStackTrace()
+                        val request = receiveDeserialized<Request>()
+                        println(request)
+                        val response: Response = when (request) {
+                            is Request.Hover -> server.hover(request)
+                            is Request.Completion -> server.completion(request)
                         }
+                        sendSerialized<Response>(response)
                     }
                 }
             }
         }.start(true)
-    }
-
-    private fun exit(): Nothing {
-        // TODO: post-process
-        exitProcess(0)
     }
 
     suspend fun init() {

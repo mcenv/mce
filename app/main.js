@@ -1,6 +1,7 @@
 // @ts-check
 
 const { spawn } = require("child_process")
+const http = require("http")
 const path = require("path")
 const { platform } = require("process")
 const { app, BrowserWindow, nativeImage, Menu, dialog } = require("electron")
@@ -45,10 +46,6 @@ const createWindow = () => {
 
     win.loadFile("index.html")
     win.webContents.openDevTools()
-
-    win.on("close", () => {
-        win.webContents.send("exit")
-    })
 }
 
 const main = async () => {
@@ -67,6 +64,10 @@ const main = async () => {
         if (platform !== "darwin") {
             app.quit()
         }
+    })
+
+    app.on("before-quit", () => {
+        http.get("http://localhost:51130/shutdown")
     })
 }
 
