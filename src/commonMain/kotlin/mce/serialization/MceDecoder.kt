@@ -45,7 +45,7 @@ class MceDecoder(private val input: ByteArrayInputStream) : Decoder, CompositeDe
 
     override fun decodeSequentially(): Boolean = true
 
-    override fun decodeElementIndex(descriptor: SerialDescriptor): Int = input.readInt()
+    override fun decodeElementIndex(descriptor: SerialDescriptor): Int = CompositeDecoder.DECODE_DONE
 
     override fun decodeCollectionSize(descriptor: SerialDescriptor): Int = input.readInt()
 

@@ -82,5 +82,5 @@ class ByteArrayOutputStream(
         write(buffer, buffer.size)
     }
 
-    fun toByteArray(): ByteArray = buffer.copyOf()
+    fun toByteArray(): ByteArray = buffer.copyOfRange(0, count)
 }
