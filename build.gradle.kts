@@ -85,7 +85,7 @@ kotlin {
 
 tasks.withType<KotlinCompile>().configureEach {
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "18"
     }
 }
 
