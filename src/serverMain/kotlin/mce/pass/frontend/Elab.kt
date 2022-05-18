@@ -659,7 +659,7 @@ class Elab private constructor(
             term2 is CVTerm.Meta -> unifyTerms(term2, term1)
             term1 is CVTerm.Command && term2 is CVTerm.Command -> unifyTerms(term1.body.value, term2.body.value)
             term1 is CVTerm.Var && term2 is CVTerm.Var -> term1.level == term2.level
-            term1 is CVTerm.Def && term2 is CVTerm.Def && term1.name == term2.name -> true
+            term1 is CVTerm.Def && term2 is CVTerm.Def && term1.name == term2.name -> (term1.arguments zip term2.arguments).all { unifyTerms(it.first.value, it.second.value) }
             term1 is CVTerm.Match && term2 is CVTerm.Match -> false // TODO
             term1 is CVTerm.UnitOf && term2 is CVTerm.UnitOf -> true
             term1 is CVTerm.BoolOf && term2 is CVTerm.BoolOf -> term1.value == term2.value
