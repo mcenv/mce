@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/seed [] : code unit ≔
+  `/"seed"

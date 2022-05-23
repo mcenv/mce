@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/size_of_players [] : code unit ≔
+  `/"list"

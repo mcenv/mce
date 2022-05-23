@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/start_jfr [] : code unit ≔
+  `/"jfr start"

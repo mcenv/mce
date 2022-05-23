@@ -1,0 +1,9 @@
+{static}
+
+export {*}
+
+def minecraft/save_all [flush : bool] : code unit ≔
+  match flush [
+    false ⇒ `/"save-all"
+    true  ⇒ `/"save-all flush"
+  ]

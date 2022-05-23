@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/size_of_player_bans [] : code unit ≔
+  `/"banlist players"

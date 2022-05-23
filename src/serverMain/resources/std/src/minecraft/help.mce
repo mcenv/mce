@@ -1,0 +1,8 @@
+{static}
+
+import {string/+}
+
+export {*}
+
+def minecraft/help [command : string] : code unit ≔
+  `/("help " string/+ command)

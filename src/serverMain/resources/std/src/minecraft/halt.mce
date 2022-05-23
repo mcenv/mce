@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/halt [] : code unit ≔
+  `/"stop"

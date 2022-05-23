@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/stop_jfr [] : code unit ≔
+  `/"jfr stop"

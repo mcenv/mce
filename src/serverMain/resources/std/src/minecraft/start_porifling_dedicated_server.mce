@@ -1,0 +1,6 @@
+{static}
+
+export {*}
+
+def minecraft/start_porifling_dedicated_server [] : code unit ≔
+  `/"perf start"
