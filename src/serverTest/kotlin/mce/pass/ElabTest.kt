@@ -98,6 +98,7 @@ class ElabTest {
         "recursive_def",
         "comm_complex",
         "comm_complex_nested",
+        "singleton_zero",
     ).map {
         dynamicTest(it) {
             val result = elaborate(it)

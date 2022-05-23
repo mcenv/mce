@@ -282,6 +282,10 @@ class Parse private constructor(
             "false" -> Term.BoolOf(false, id)
             "true" -> Term.BoolOf(true, id)
             "refl" -> Term.Refl(id)
+            "singleton" -> {
+                val element = parseTerm()
+                Term.Singleton(element, id)
+            }
             "or" -> {
                 val variants = parseList('{', '}') { parseTerm() }
                 Term.Or(variants, id)

@@ -210,6 +210,9 @@ sealed class Term {
     data class Splice(val element: Term, override val id: Id) : Term()
 
     @Serializable
+    data class Singleton(val element: Term, override val id: Id) : Term()
+
+    @Serializable
     data class Or(val variants: KList<Term>, override val id: Id) : Term()
 
     @Serializable

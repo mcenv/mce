@@ -92,6 +92,7 @@ sealed class Term {
     data class Refl(override val type: VTerm) : Term()
     data class FunOf(val tag: KInt, override val type: VTerm) : Term()
     data class Apply(val function: Term, val arguments: KList<Term>, override val type: VTerm) : Term()
+    data class Singleton(val element: Term, override val type: VTerm) : Term()
     data class Or(val variants: KList<Term>, override val type: VTerm) : Term()
     data class And(val variants: KList<Term>, override val type: VTerm) : Term()
     data class Unit(override val type: VTerm) : Term()

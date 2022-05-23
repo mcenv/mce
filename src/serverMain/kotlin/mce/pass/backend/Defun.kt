@@ -158,6 +158,10 @@ class Defun private constructor(
         }
         is CTerm.CodeOf -> throw Error()
         is CTerm.Splice -> throw Error()
+        is CTerm.Singleton -> {
+            val element = defunTerm(term.element)
+            DTerm.Singleton(element, getType(term.id!!))
+        }
         is CTerm.Or -> {
             val variants = term.variants.map { defunTerm(it) }
             DTerm.Or(variants, CVTerm.Type())

@@ -187,6 +187,10 @@ fun Store<Normalizer>.evalTerm(term: Term): VTerm =
             is VTerm.CodeOf -> element.element.value
             else -> VTerm.Splice(lazyOf(element), term.id)
         }
+        is Term.Singleton -> {
+            val element = lazy { evalTerm(term.element) }
+            VTerm.Singleton(element, term.id)
+        }
         is Term.Or -> {
             val variants = term.variants.map { lazy { evalTerm(it) } }
             VTerm.Or(variants, term.id)
@@ -364,6 +368,10 @@ fun Store<Normalizer>.quoteTerm(term: VTerm): Term =
         is VTerm.Splice -> {
             val element = quoteTerm(term.element.value)
             Term.Splice(element, term.id)
+        }
+        is VTerm.Singleton -> {
+            val element = quoteTerm(term.element.value)
+            Term.Singleton(element, term.id)
         }
         is VTerm.Or -> {
             val variants = term.variants.map { quoteTerm(it.value) }

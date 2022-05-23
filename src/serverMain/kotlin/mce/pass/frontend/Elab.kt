@@ -460,11 +460,18 @@ class Elab private constructor(
                 }
                 Typing(CTerm.Splice(element.term, term.id), type, Phase.DYNAMIC, PURE)
             }
-            term is STerm.Or -> {
+            term is STerm.Singleton -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
+                val element = inferTerm(term.element, phase, PURE)
+                Typing(CTerm.Singleton(element.term, term.id), TYPE, phase, PURE)
+            }
+            term is STerm.Or -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val variants = term.variants.map { checkTerm(it, TYPE, phase, PURE).term }
                 Typing(CTerm.Or(variants, term.id), TYPE, phase, PURE)
             }
-            term is STerm.And -> {
+            term is STerm.And -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val variants = term.variants.map { checkTerm(it, TYPE, phase, PURE).term }
                 Typing(CTerm.And(variants, term.id), TYPE, phase, PURE)
             }
@@ -480,15 +487,14 @@ class Elab private constructor(
             term is STerm.ByteArray -> Typing(CTerm.ByteArray(term.id), TYPE, phase, PURE)
             term is STerm.IntArray -> Typing(CTerm.IntArray(term.id), TYPE, phase, PURE)
             term is STerm.LongArray -> Typing(CTerm.LongArray(term.id), TYPE, phase, PURE)
-            term is STerm.List -> {
+            term is STerm.List -> restore {
                 val element = checkTerm(term.element, TYPE, phase, PURE)
-                restore {
-                    modify { it.copy(termRelevant = false, typeRelevant = true) }
-                    val size = checkTerm(term.size, INT, phase, PURE)
-                    Typing(CTerm.List(element.term, size.term, term.id), TYPE, phase, PURE)
-                }
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
+                val size = checkTerm(term.size, INT, phase, PURE)
+                Typing(CTerm.List(element.term, size.term, term.id), TYPE, phase, PURE)
             }
-            term is STerm.Compound -> {
+            term is STerm.Compound -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val elements = term.elements.map { entry ->
                     val element = checkTerm(entry.type, TYPE, phase, PURE)
                     CTerm.Compound.Entry(entry.relevant, entry.name, element.term, entry.id)
@@ -496,6 +502,7 @@ class Elab private constructor(
                 Typing(CTerm.Compound(elements, term.id), TYPE, phase, PURE)
             }
             term is STerm.Tuple -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val elements = term.elements.map { entry ->
                     val element = checkTerm(entry.type, TYPE, phase, PURE)
                     modify { it.bind(Entry(false, entry.name.text, END, ANY, true, map { it.normalizer }.evalTerm(element.term), value.phase)) }
@@ -503,22 +510,26 @@ class Elab private constructor(
                 }
                 Typing(CTerm.Tuple(elements, term.id), TYPE, phase, PURE)
             }
-            term is STerm.Ref -> {
+            term is STerm.Ref -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val element = checkTerm(term.element, TYPE, phase, PURE)
                 Typing(CTerm.Ref(element.term, term.id), TYPE, phase, PURE)
             }
-            term is STerm.Eq -> {
+            term is STerm.Eq -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val left = inferTerm(term.left, phase, PURE)
                 val right = checkTerm(term.right, left.type, phase, PURE)
                 Typing(CTerm.Eq(left.term, right.term, term.id), TYPE, phase, PURE)
             }
             term is STerm.Fun -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val params = bindParams(term.params, phase)
                 val resultant = checkTerm(term.resultant, TYPE, phase, PURE)
                 val effs = term.effs.map { elabEff(it) }.toSet()
                 Typing(CTerm.Fun(params, resultant.term, effs, term.id), TYPE, phase, PURE)
             }
-            term is STerm.Code && subtypePhase(phase, Phase.STATIC, term.id) -> {
+            term is STerm.Code && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
+                modify { it.copy(termRelevant = false, typeRelevant = true) }
                 val element = checkTerm(term.element, TYPE, phase, PURE)
                 Typing(CTerm.Code(element.term, term.id), TYPE, Phase.STATIC, PURE)
             }
@@ -707,6 +718,7 @@ class Elab private constructor(
                         (term1.arguments zip term2.arguments).all { unifyTerms(it.first.value, it.second.value) }
             term1 is CVTerm.CodeOf && term2 is CVTerm.CodeOf -> unifyTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Splice && term2 is CVTerm.Splice -> unifyTerms(term1.element.value, term2.element.value)
+            term1 is CVTerm.Singleton && term2 is CVTerm.Singleton -> unifyTerms(term1.element.value, term2.element.value)
             term1 is CVTerm.Or && term1.variants.isEmpty() && term2 is CVTerm.Or && term2.variants.isEmpty() -> true
             term1 is CVTerm.And && term1.variants.isEmpty() && term2 is CVTerm.And && term2.variants.isEmpty() -> true
             term1 is CVTerm.Unit && term2 is CVTerm.Unit -> true
@@ -778,6 +790,18 @@ class Elab private constructor(
                         (term1.arguments zip term2.arguments).all { (argument1, argument2) ->
                             map { it.normalizer }.unifyTerms(argument1.value, argument2.value) // pointwise subtyping
                         }
+            term1 is CVTerm.Singleton && term2 !is CVTerm.Singleton -> when (term1.element.value) {
+                is CVTerm.UnitOf -> term2 is CVTerm.Unit
+                is CVTerm.BoolOf -> term2 is CVTerm.Bool
+                is CVTerm.ByteOf -> term2 is CVTerm.Byte
+                is CVTerm.ShortOf -> term2 is CVTerm.Short
+                is CVTerm.IntOf -> term2 is CVTerm.Int
+                is CVTerm.LongOf -> term2 is CVTerm.Long
+                is CVTerm.FloatOf -> term2 is CVTerm.Float
+                is CVTerm.DoubleOf -> term2 is CVTerm.Double
+                is CVTerm.StringOf -> term2 is CVTerm.String
+                else -> false // TODO: other types?
+            }
             term1 is CVTerm.Or -> term1.variants.all { subtypeTerms(it.value, term2) }
             term2 is CVTerm.Or -> term2.variants.any { subtypeTerms(term1, it.value) }
             term2 is CVTerm.And -> term2.variants.all { subtypeTerms(term1, it.value) }

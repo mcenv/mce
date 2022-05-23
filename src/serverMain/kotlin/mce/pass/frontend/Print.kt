@@ -40,6 +40,7 @@ fun printTerm(term: CTerm): STerm = when (term) {
     is CTerm.Apply -> STerm.Apply(printTerm(term.function), term.arguments.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.CodeOf -> STerm.CodeOf(printTerm(term.element), term.id ?: freshId())
     is CTerm.Splice -> STerm.Splice(printTerm(term.element), term.id ?: freshId())
+    is CTerm.Singleton -> STerm.Singleton(printTerm(term.element), term.id ?: freshId())
     is CTerm.Or -> STerm.Or(term.variants.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.And -> STerm.And(term.variants.map { printTerm(it) }, term.id ?: freshId())
     is CTerm.Unit -> STerm.Unit(term.id ?: freshId())

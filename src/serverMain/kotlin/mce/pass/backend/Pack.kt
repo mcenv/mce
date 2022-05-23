@@ -253,6 +253,7 @@ class Pack private constructor() {
                 packTerm(term.function)
                 +RunFunction(APPLY)
             }
+            is Term.Singleton,
             is Term.Or,
             is Term.And,
             is Term.Unit,
@@ -558,6 +559,7 @@ private fun eraseType(type: Type): NbtType = when (type) {
     is Type.Apply -> TODO()
     is Type.CodeOf -> throw Error()
     is Type.Splice -> throw Error()
+    is Type.Singleton -> TODO()
     is Type.Or -> TODO()
     is Type.And -> TODO()
     is Type.Unit -> NbtType.BYTE

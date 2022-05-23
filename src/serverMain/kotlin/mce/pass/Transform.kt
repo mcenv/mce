@@ -103,6 +103,7 @@ abstract class Transform {
         is Term.Apply -> Term.Apply(transformTerm(term.function), term.arguments.map { transformTerm(it) }, term.id)
         is Term.CodeOf -> Term.CodeOf(transformTerm(term.element), term.id)
         is Term.Splice -> Term.Splice(transformTerm(term.element), term.id)
+        is Term.Singleton -> Term.Singleton(transformTerm(term.element), term.id)
         is Term.Or -> Term.Or(term.variants.map { transformTerm(it) }, term.id)
         is Term.And -> Term.And(term.variants.map { transformTerm(it) }, term.id)
         is Term.Unit -> term
