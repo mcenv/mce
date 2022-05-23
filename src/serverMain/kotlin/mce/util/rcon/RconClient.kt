@@ -37,9 +37,6 @@ class RconClient private constructor(
     override fun close(): Unit = socket.close()
 
     companion object {
-        suspend operator fun invoke(hostname: String, port: Int): RconClient =
-            withContext(Dispatchers.IO) {
-                RconClient(Socket(hostname, port))
-            }
+        operator fun invoke(hostname: String, port: Int): RconClient = RconClient(Socket(hostname, port))
     }
 }
