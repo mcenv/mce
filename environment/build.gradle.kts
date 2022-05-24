@@ -2,7 +2,7 @@ import kotlinx.benchmark.gradle.JvmBenchmarkTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("multiplatform") version "1.6.21"
+    kotlin("multiplatform")
     kotlin("plugin.allopen") version "1.6.21"
     kotlin("plugin.serialization") version "1.6.21"
     id("org.jetbrains.kotlinx.benchmark") version "0.4.2"
@@ -62,6 +62,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-core-jvm:2.0.1")
                 implementation("io.ktor:ktor-server-netty-jvm:2.0.1")
                 implementation("io.ktor:ktor-server-websockets-jvm:2.0.1")
+                implementation(project(":minecraft"))
             }
         }
 
