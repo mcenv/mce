@@ -8,14 +8,6 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-  - package-ecosystem: "gradle"
-    directory: "/environment"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gradle"
-    directory: "/minecraft"
-    schedule:
-      interval: "daily"
   - package-ecosystem: "npm"
     directory: "/app"
     schedule:
