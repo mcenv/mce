@@ -23,4 +23,4 @@ jobs:
       - uses: gradle/gradle-build-action@v2
         with:
           arguments: installDist
-      - run: ./app/install/bin/mce version
+      - run: ./environment/app/install/bin/mce version
