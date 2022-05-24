@@ -31,6 +31,9 @@ kotlin {
             distribution {
                 directory = file("$projectDir/app/distributions")
             }
+            webpackTask {
+                outputFileName = "${rootProject.name}.js"
+            }
         }
         binaries.executable()
     }
@@ -104,6 +107,7 @@ benchmark {
 
 application {
     mainClass.set("mce.cli.MainKt")
+    applicationName = rootProject.name
 }
 
 distributions {
