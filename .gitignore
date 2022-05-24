@@ -2,5 +2,5 @@
 .idea
 **/build/
 /kotlin-js-store/
-!src/**/build/
+!**/src/**/build/
 !gradle-wrapper.jar
