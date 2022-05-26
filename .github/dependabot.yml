@@ -9,6 +9,6 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "npm"
-    directory: "/app"
+    directory: "/environment/app"
     schedule:
       interval: "daily"
