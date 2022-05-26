@@ -11,7 +11,7 @@
   "author": "mce",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^18.0.1",
+    "electron": "^19.0.1",
     "electron-packager": "^15.4.0"
   }
 }
