@@ -10,6 +10,8 @@ import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.EqConst
+import mce.minecraft.PackMetadata
+import mce.minecraft.PackMetadataSection
 import mce.pass.Config
 import mce.pass.Pass
 import mce.util.DATA_PACK_FORMAT

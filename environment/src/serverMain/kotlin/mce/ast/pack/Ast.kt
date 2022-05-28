@@ -12,29 +12,6 @@ import kotlin.Short as KShort
 import kotlin.String as KString
 import kotlin.collections.List as KList
 
-@Serializable
-data class PackMetadata(
-    val pack: PackMetadataSection,
-    val filter: ResourceFilterSection? = null,
-)
-
-@Serializable
-data class PackMetadataSection(
-    val description: KString, // TODO: use [Component]
-    @SerialName("pack_format") val packFormat: KInt,
-)
-
-@Serializable
-data class ResourceFilterSection(
-    val block: KList<ResourceLocationPattern>,
-)
-
-@Serializable
-data class ResourceLocationPattern(
-    val namespace: KString? = null,
-    val path: KString? = null,
-)
-
 sealed class ResourceType(val directory: KString, val extension: KString) {
     object Recipes : ResourceType("recipes", "json")
     data class Tags(val path: KString) : ResourceType("tags/$path", "json")
