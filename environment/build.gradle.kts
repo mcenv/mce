@@ -59,7 +59,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3.5")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.3.3")
-                implementation("io.ktor:ktor-server-core-jvm:2.0.1")
+                implementation("io.ktor:ktor-server-core-jvm:2.0.2")
                 implementation("io.ktor:ktor-server-netty-jvm:2.0.1")
                 implementation("io.ktor:ktor-server-websockets-jvm:2.0.1")
                 implementation(project(":minecraft"))
