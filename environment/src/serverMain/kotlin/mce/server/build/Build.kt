@@ -7,9 +7,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mce.ast.Modifier
 import mce.ast.pack.Advancement
-import mce.ast.pack.ResourceLocation
-import mce.ast.pack.Tag
 import mce.ast.surface.Item
+import mce.minecraft.ResourceLocation
+import mce.minecraft.Tag
 import mce.pass.Config
 import mce.pass.backend.Defun
 import mce.pass.backend.Gen

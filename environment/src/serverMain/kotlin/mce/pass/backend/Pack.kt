@@ -14,6 +14,9 @@ import mce.ast.pack.NbtNode.*
 import mce.ast.pack.SourceComparator.*
 import mce.ast.pack.SourceProvider.From
 import mce.ast.pack.SourceProvider.Value
+import mce.minecraft.Entry
+import mce.minecraft.ResourceLocation
+import mce.minecraft.Tag
 import mce.pass.Config
 import mce.pass.Pass
 import mce.pass.builtin.builtins

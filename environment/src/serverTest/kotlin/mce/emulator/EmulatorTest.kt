@@ -3,8 +3,8 @@ package mce.emulator
 import mce.ast.pack.Command
 import mce.ast.pack.Nbt
 import mce.ast.pack.NbtType
-import mce.ast.pack.ResourceLocation
 import mce.ast.pack.SourceProvider.Value
+import mce.minecraft.ResourceLocation
 import mce.pass.backend.get
 import mce.pass.backend.nbtPath
 import kotlin.test.Test

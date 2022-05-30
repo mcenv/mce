@@ -5,10 +5,10 @@ import mce.ast.pack.Command.Raw
 import mce.ast.pack.Function
 import mce.ast.pack.Nbt
 import mce.ast.pack.NbtType
-import mce.ast.pack.ResourceLocation
 import mce.ast.pack.SourceProvider.Value
 import mce.emulator.*
 import mce.fetch
+import mce.minecraft.ResourceLocation
 import mce.pass.backend.*
 import mce.server.build.Key
 import kotlin.test.Test

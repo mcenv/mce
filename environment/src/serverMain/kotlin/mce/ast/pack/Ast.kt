@@ -2,7 +2,8 @@ package mce.ast.pack
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonClassDiscriminator
+import mce.minecraft.ResourceLocation
 import kotlin.Byte as KByte
 import kotlin.Double as KDouble
 import kotlin.Float as KFloat
@@ -20,36 +21,6 @@ sealed class ResourceType(val directory: KString, val extension: KString) {
     object ItemModifiers : ResourceType("item_modifiers", "json")
     object Advancements : ResourceType("advancements", "json")
     object Functions : ResourceType("functions", "mcfunction")
-}
-
-@Serializable
-data class Tag(
-    val values: KList<@Serializable(with = Entry.Serializer::class) Entry>,
-    val replace: Boolean = false,
-)
-
-@Serializable
-data class Entry(
-    val id: @Serializable(with = ResourceLocation.Serializer::class) ResourceLocation,
-    val required: Boolean = true,
-) {
-    object Serializer : JsonTransformingSerializer<Entry>(serializer()) {
-        override fun transformSerialize(element: JsonElement): JsonElement =
-            if (element.jsonObject["required"]?.jsonPrimitive?.boolean != false) {
-                element.jsonObject["id"]!!
-            } else {
-                element
-            }
-
-        override fun transformDeserialize(element: JsonElement): JsonElement =
-            when (element) {
-                is JsonPrimitive -> buildJsonObject {
-                    put("id", element.content)
-                    put("required", true)
-                }
-                else -> element
-            }
-    }
 }
 
 @Serializable
@@ -399,50 +370,4 @@ sealed class SourceComparator {
 enum class Consumer {
     RESULT,
     SUCCESS,
-}
-
-@Serializable
-data class ResourceLocation(
-    val namespace: KString,
-    val path: KString,
-) {
-    constructor(path: KString) : this(DEFAULT_NAMESPACE, path)
-
-    object Serializer : JsonTransformingSerializer<ResourceLocation>(serializer()) {
-        override fun transformSerialize(element: JsonElement): JsonElement {
-            val namespace = element.jsonObject["namespace"]!!.jsonPrimitive.content
-            val path = element.jsonObject["path"]!!.jsonPrimitive.content
-            return JsonPrimitive("${if (DEFAULT_NAMESPACE == namespace) "" else "${normalize(namespace)}:"}${normalize(path)}")
-        }
-
-        override fun transformDeserialize(element: JsonElement): JsonElement =
-            buildJsonObject {
-                val parts = element.jsonPrimitive.content.split(':')
-                when (parts.size) {
-                    1 -> {
-                        put("namespace", DEFAULT_NAMESPACE)
-                        put("path", denormalize(parts[0]))
-                    }
-                    else -> {
-                        put("namespace", denormalize(parts[0]))
-                        put("path", denormalize(parts[1]))
-                    }
-                }
-            }
-    }
-
-    companion object {
-        const val DEFAULT_NAMESPACE = "minecraft"
-
-        fun normalize(string: KString): KString =
-            string.map {
-                when (it) {
-                    '-' -> "--"
-                    in 'a'..'z', in '0'..'9', '/', '.', '_' -> it.toString()
-                    else -> "-${it.code.toString(16)}"
-                }
-            }.joinToString("")
-
-        fun denormalize(string: KString): KString = string // TODO
-    }
 }

@@ -7,6 +7,7 @@ import mce.emulator.NbtLens.get
 import mce.emulator.NbtLens.getOrCreate
 import mce.emulator.NbtLens.remove
 import mce.emulator.NbtLens.set
+import mce.minecraft.ResourceLocation
 import kotlin.math.max
 import kotlin.math.min
 

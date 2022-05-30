@@ -12,6 +12,8 @@ import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.EqConst
 import mce.minecraft.PackMetadata
 import mce.minecraft.PackMetadataSection
+import mce.minecraft.ResourceLocation
+import mce.minecraft.Tag
 import mce.pass.Config
 import mce.pass.Pass
 import mce.util.DATA_PACK_FORMAT
