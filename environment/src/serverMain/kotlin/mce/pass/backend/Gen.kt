@@ -10,10 +10,11 @@ import mce.ast.pack.Consumer.RESULT
 import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.EqConst
-import mce.minecraft.PackMetadata
-import mce.minecraft.PackMetadataSection
 import mce.minecraft.ResourceLocation
-import mce.minecraft.Tag
+import mce.minecraft.chat.LiteralComponent
+import mce.minecraft.packs.PackMetadata
+import mce.minecraft.packs.PackMetadataSection
+import mce.minecraft.tags.Tag
 import mce.pass.Config
 import mce.pass.Pass
 import mce.util.DATA_PACK_FORMAT
@@ -30,7 +31,7 @@ class Gen {
 
     init {
         output.putNextEntry(ZipEntry("pack.mcmeta"))
-        Json.encodeToStream(PackMetadata(PackMetadataSection("", DATA_PACK_FORMAT)), output)
+        Json.encodeToStream(PackMetadata(PackMetadataSection(LiteralComponent(""), DATA_PACK_FORMAT)), output)
         output.closeEntry()
     }
 

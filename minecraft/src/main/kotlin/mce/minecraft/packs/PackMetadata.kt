@@ -1,4 +1,4 @@
-package mce.minecraft
+package mce.minecraft.packs
 
 import kotlinx.serialization.Serializable
 

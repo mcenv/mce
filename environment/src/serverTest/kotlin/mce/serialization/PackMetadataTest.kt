@@ -2,22 +2,23 @@ package mce.serialization
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import mce.minecraft.PackMetadata
-import mce.minecraft.PackMetadataSection
-import mce.minecraft.ResourceFilterSection
-import mce.minecraft.ResourceLocationPattern
+import mce.minecraft.chat.LiteralComponent
+import mce.minecraft.packs.PackMetadata
+import mce.minecraft.packs.PackMetadataSection
+import mce.minecraft.packs.ResourceFilterSection
+import mce.minecraft.packs.ResourceLocationPattern
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PackMetadataTest {
     @Test
     fun packMetadata() {
-        val expected = """{"pack":{"description":"a","pack_format":10}}"""
+        val expected = """{"pack":{"description":{"text":"a"},"pack_format":10}}"""
         val actual = Json.encodeToString(
             serializer(),
             PackMetadata(
                 PackMetadataSection(
-                    "a",
+                    LiteralComponent("a"),
                     10,
                 ),
             ),
@@ -27,12 +28,12 @@ class PackMetadataTest {
 
     @Test
     fun emptyPackFilters() {
-        val expected = """{"pack":{"description":"a","pack_format":10},"filter":{"block":[]}}"""
+        val expected = """{"pack":{"description":{"text":"a"},"pack_format":10},"filter":{"block":[]}}"""
         val actual = Json.encodeToString(
             serializer(),
             PackMetadata(
                 PackMetadataSection(
-                    "a",
+                    LiteralComponent("a"),
                     10,
                 ),
                 ResourceFilterSection(
@@ -45,12 +46,12 @@ class PackMetadataTest {
 
     @Test
     fun packFilter() {
-        val expected = """{"pack":{"description":"a","pack_format":10},"filter":{"block":[{"namespace":"a","path":"b"}]}}"""
+        val expected = """{"pack":{"description":{"text":"a"},"pack_format":10},"filter":{"block":[{"namespace":"a","path":"b"}]}}"""
         val actual = Json.encodeToString(
             serializer(),
             PackMetadata(
                 PackMetadataSection(
-                    "a",
+                    LiteralComponent("a"),
                     10,
                 ),
                 ResourceFilterSection(
@@ -68,12 +69,12 @@ class PackMetadataTest {
 
     @Test
     fun packFilters() {
-        val expected = """{"pack":{"description":"a","pack_format":10},"filter":{"block":[{"namespace":"a","path":"b"},{"namespace":"c","path":"d"}]}}"""
+        val expected = """{"pack":{"description":{"text":"a"},"pack_format":10},"filter":{"block":[{"namespace":"a","path":"b"},{"namespace":"c","path":"d"}]}}"""
         val actual = Json.encodeToString(
             serializer(),
             PackMetadata(
                 PackMetadataSection(
-                    "a",
+                    LiteralComponent("a"),
                     10,
                 ),
                 ResourceFilterSection(

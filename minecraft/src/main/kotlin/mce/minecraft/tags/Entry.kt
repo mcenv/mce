@@ -1,7 +1,8 @@
-package mce.minecraft
+package mce.minecraft.tags
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import mce.minecraft.ResourceLocation
 
 @Serializable
 data class Entry(

@@ -1,4 +1,4 @@
-package mce.minecraft
+package mce.minecraft.tags
 
 import kotlinx.serialization.Serializable
 

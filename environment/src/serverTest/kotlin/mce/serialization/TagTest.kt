@@ -2,9 +2,9 @@ package mce.serialization
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import mce.minecraft.Entry
 import mce.minecraft.ResourceLocation
-import mce.minecraft.Tag
+import mce.minecraft.tags.Entry
+import mce.minecraft.tags.Tag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
