@@ -2,10 +2,10 @@ package mce.serialization
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import mce.ast.pack.Advancement
-import mce.ast.pack.AdvancementRewards
-import mce.ast.pack.Criterion
 import mce.minecraft.ResourceLocation
+import mce.minecraft.advancements.Advancement
+import mce.minecraft.advancements.AdvancementRewards
+import mce.minecraft.advancements.Criterion
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

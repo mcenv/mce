@@ -15,6 +15,7 @@ import mce.ast.pack.SourceComparator.*
 import mce.ast.pack.SourceProvider.From
 import mce.ast.pack.SourceProvider.Value
 import mce.minecraft.ResourceLocation
+import mce.minecraft.advancements.Advancement
 import mce.minecraft.tags.Entry
 import mce.minecraft.tags.Tag
 import mce.pass.Config

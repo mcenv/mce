@@ -11,6 +11,7 @@ import mce.ast.pack.Execute.Run
 import mce.ast.pack.Execute.StoreValue
 import mce.ast.pack.SourceComparator.EqConst
 import mce.minecraft.ResourceLocation
+import mce.minecraft.advancements.Advancement
 import mce.minecraft.chat.LiteralComponent
 import mce.minecraft.packs.PackMetadata
 import mce.minecraft.packs.PackMetadataSection
