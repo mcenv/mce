@@ -2,6 +2,7 @@ package mce.minecraft.packs
 
 import mce.minecraft.ResourceLocation
 import mce.minecraft.advancements.Advancement
+import mce.minecraft.tags.Tag
 
 // TODO: fill in [Any]
 data class Pack(
@@ -12,11 +13,11 @@ data class Pack(
     val itemModifiers: Map<ResourceLocation, Any> = emptyMap(),
     val lootTables: Map<ResourceLocation, Any> = emptyMap(),
     val predicates: Map<ResourceLocation, Any> = emptyMap(),
-    val tagsBlocks: Map<ResourceLocation, Any> = emptyMap(),
-    val tagsEntityTypes: Map<ResourceLocation, Any> = emptyMap(),
-    val tagsFluids: Map<ResourceLocation, Any> = emptyMap(),
-    val tagsGameEvents: Map<ResourceLocation, Any> = emptyMap(),
-    val tagsItems: Map<ResourceLocation, Any> = emptyMap(),
+    val tagsBlocks: Map<ResourceLocation, Tag> = emptyMap(),
+    val tagsEntityTypes: Map<ResourceLocation, Tag> = emptyMap(),
+    val tagsFluids: Map<ResourceLocation, Tag> = emptyMap(),
+    val tagsGameEvents: Map<ResourceLocation, Tag> = emptyMap(),
+    val tagsItems: Map<ResourceLocation, Tag> = emptyMap(),
     val dimensionType: Map<ResourceLocation, Any> = emptyMap(),
     val worldgenBiome: Map<ResourceLocation, Any> = emptyMap(),
     val worldgenNoiseSettings: Map<ResourceLocation, Any> = emptyMap(),
