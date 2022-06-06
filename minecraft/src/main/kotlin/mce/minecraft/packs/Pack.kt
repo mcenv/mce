@@ -13,6 +13,7 @@ data class Pack(
     val itemModifiers: Map<ResourceLocation, Any> = emptyMap(),
     val lootTables: Map<ResourceLocation, Any> = emptyMap(),
     val predicates: Map<ResourceLocation, Any> = emptyMap(),
+    val tagsFunctions: Map<ResourceLocation, Tag> = emptyMap(),
     val tagsBlocks: Map<ResourceLocation, Tag> = emptyMap(),
     val tagsEntityTypes: Map<ResourceLocation, Tag> = emptyMap(),
     val tagsFluids: Map<ResourceLocation, Tag> = emptyMap(),
