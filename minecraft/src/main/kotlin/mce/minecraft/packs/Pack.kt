@@ -34,4 +34,8 @@ data class Pack(
     val worldgenWorldPreset: Map<ResourceLocation, Any> = emptyMap(),
     val worldgenFlatLevelGeneratorPreset: Map<ResourceLocation, Any> = emptyMap(),
     val chatType: Map<ResourceLocation, Any> = emptyMap(),
-)
+) {
+    fun gen() {
+        TODO()
+    }
+}

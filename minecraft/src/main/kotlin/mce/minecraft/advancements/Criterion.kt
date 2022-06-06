@@ -177,7 +177,7 @@ sealed interface Criterion {
 
     @Serializable
     @SerialName("player_interacted_with_entity")
-    object PlayerInteractWithEntity : Criterion
+    object PlayerInteractedWithEntity : Criterion
 
     @Serializable
     @SerialName("started_riding")
