@@ -8,6 +8,9 @@ import mce.minecraft.chat.LiteralComponent
 import mce.minecraft.packs.Pack
 import mce.minecraft.packs.PackMetadata
 import mce.minecraft.packs.PackMetadataSection
+import java.nio.file.Paths
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.outputStream
 
 // TODO: minify
 
@@ -60,5 +63,7 @@ val PACK = Pack(
 )
 
 fun main() {
-    PACK.gen()
+    ZipOutputStream(Paths.get("pack.zip").outputStream().buffered()).use {
+        PACK.gen(it)
+    }
 }

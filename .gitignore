@@ -4,3 +4,4 @@
 /kotlin-js-store/
 !**/src/**/build/
 !gradle-wrapper.jar
+*.zip
