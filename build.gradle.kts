@@ -1,3 +1,3 @@
 plugins {
-    kotlin("multiplatform") version "1.6.21" apply false
+    kotlin("multiplatform") version "1.7.0" apply false
 }
