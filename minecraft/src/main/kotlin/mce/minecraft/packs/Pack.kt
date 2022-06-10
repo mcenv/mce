@@ -47,7 +47,12 @@ data class Pack(
 
         functions.forEach { (name, function) ->
             putNextEntry(ZipEntry("data/${name.namespace}/functions/${name.path}.mcfunction"))
-            function.commands.forEach { write(it.toByteArray()) }
+            function.commands.forEachIndexed { index, command ->
+                if (index != 0) {
+                    write('\n'.code)
+                }
+                write(command.toString().toByteArray()) // TODO
+            }
             closeEntry()
         }
 
