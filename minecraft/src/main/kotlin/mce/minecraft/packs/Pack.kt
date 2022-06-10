@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import mce.minecraft.ResourceLocation
 import mce.minecraft.advancements.Advancement
+import mce.minecraft.commands.CommandFunction
 import mce.minecraft.tags.Tag
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -11,7 +12,7 @@ import java.util.zip.ZipOutputStream
 // TODO: fill in [Any]
 data class Pack(
     val metadata: PackMetadata,
-    val functions: Map<ResourceLocation, Any> = emptyMap(),
+    val functions: Map<ResourceLocation, CommandFunction> = emptyMap(),
     val advancements: Map<ResourceLocation, Advancement> = emptyMap(),
     val recipes: Map<ResourceLocation, Any> = emptyMap(),
     val itemModifiers: Map<ResourceLocation, Any> = emptyMap(),
@@ -44,7 +45,12 @@ data class Pack(
         Json.encodeToStream(metadata, this)
         closeEntry()
 
-        functions.forEach { /* TODO */ }
+        functions.forEach { (name, function) ->
+            putNextEntry(ZipEntry("data/${name.namespace}/functions/${name.path}.mcfunction"))
+            function.commands.forEach { write(it.toByteArray()) }
+            closeEntry()
+        }
+
         advancements.forEach(json("advancements"))
         recipes.forEach(json("recipes"))
         itemModifiers.forEach(json("item_modifiers"))
