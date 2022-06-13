@@ -1,8 +1,11 @@
 package mce.minecraft.commands
 
 import mce.minecraft.ResourceLocation
+import java.io.OutputStream
 
 sealed class Command {
+    fun gen(output: OutputStream): Unit = TODO()
+
     sealed class Advancement : Command() {
         data class Perform(val action: Action, val targets: String, val mode: Mode) : Advancement()
 
