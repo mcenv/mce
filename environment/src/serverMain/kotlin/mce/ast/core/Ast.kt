@@ -188,232 +188,214 @@ sealed class Term {
  */
 sealed class VTerm {
     abstract val id: Id?
-    abstract fun hash(): KInt
+    abstract val hash: Lazy<KInt>
 
     data class Hole(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_3
+        override val hash: Lazy<KInt> = lazyOf(PRIME_3)
     }
 
     data class Meta(val index: KInt, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_4 xor index.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_4 xor index.hashCode() }
     }
 
     data class Command(val body: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_5 xor body.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_5 xor body.value.hash.value }
     }
 
     data class Var(val name: KString, val level: KInt, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_6 xor name.hashCode() xor level.hashCode()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_6 xor name.hashCode() xor level.hashCode() }
     }
 
     data class Def(val name: KString, val arguments: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_7 xor name.hashCode() xor arguments.fold(0) { acc, argument -> acc xor argument.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_7 xor name.hashCode() xor arguments.fold(0) { acc, argument -> acc xor argument.value.hash.value } }
     }
 
     data class Match(val scrutinee: VTerm, val clauses: KList<Pair<Pat, Lazy<VTerm>>>, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = 0 // TODO
+        override val hash: Lazy<KInt> = lazyOf(0) // TODO
     }
 
     data class UnitOf(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_9
+        override val hash: Lazy<KInt> = lazyOf(PRIME_9)
     }
 
     data class BoolOf(val value: KBoolean, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_10 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_10 xor value.hashCode() }
     }
 
     data class ByteOf(val value: KByte, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_11 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_11 xor value.hashCode() }
     }
 
     data class ShortOf(val value: KShort, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_12 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_12 xor value.hashCode() }
     }
 
     data class IntOf(val value: KInt, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_13 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_13 xor value.hashCode() }
     }
 
     data class LongOf(val value: KLong, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_14 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_14 xor value.hashCode() }
     }
 
     data class FloatOf(val value: KFloat, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_15 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_15 xor value.hashCode() }
     }
 
     data class DoubleOf(val value: KDouble, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_16 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_16 xor value.hashCode() }
     }
 
     data class StringOf(val value: KString, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_17 xor value.hashCode()
+        override val hash: Lazy<KInt> = lazy { PRIME_17 xor value.hashCode() }
     }
 
     data class ByteArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_18 xor elements.fold(0) { acc, element -> acc xor element.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_18 xor elements.fold(0) { acc, element -> acc xor element.value.hash.value } }
     }
 
     data class IntArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_19 xor elements.fold(0) { acc, element -> acc xor element.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_19 xor elements.fold(0) { acc, element -> acc xor element.value.hash.value } }
     }
 
     data class LongArrayOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_20 xor elements.fold(0) { acc, element -> acc xor element.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_20 xor elements.fold(0) { acc, element -> acc xor element.value.hash.value } }
     }
 
     data class ListOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_21 xor elements.fold(0) { acc, element -> acc xor element.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_21 xor elements.fold(0) { acc, element -> acc xor element.value.hash.value } }
     }
 
     data class CompoundOf(val elements: LinkedHashMap<KString, Entry>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_22 xor elements.values.fold(0) { acc, (name, element) -> acc xor name.hashCode() xor element.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_22 xor elements.values.fold(0) { acc, (name, element) -> acc xor name.hashCode() xor element.value.hash.value } }
 
         data class Entry(val name: Name, val element: Lazy<VTerm>)
     }
 
     data class TupleOf(val elements: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_23 xor elements.fold(0) { acc, element -> acc xor element.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_23 xor elements.fold(0) { acc, element -> acc xor element.value.hash.value } }
     }
 
     data class RefOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_24 xor element.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_24 xor element.value.hash.value }
     }
 
     data class Refl(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_25
+        override val hash: Lazy<KInt> = lazyOf(PRIME_25)
     }
 
     data class FunOf(val params: KList<Name>, val body: Term, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_26 xor params.fold(0) { acc, param -> acc xor param.hashCode() } /* TODO: xor body.hash() */).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_26 xor params.fold(0) { acc, param -> acc xor param.hashCode() } /* xor body.hash.value */ }
     }
 
     data class Apply(val function: VTerm, val arguments: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_27 xor function.hash() xor arguments.fold(0) { acc, argument -> acc xor argument.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_27 xor function.hash.value xor arguments.fold(0) { acc, argument -> acc xor argument.value.hash.value } }
     }
 
     data class CodeOf(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_28 xor element.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_28 xor element.value.hash.value }
     }
 
     data class Splice(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_29 xor element.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_29 xor element.value.hash.value }
     }
 
     data class Singleton(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_30 xor element.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_30 xor element.value.hash.value }
     }
 
     data class Or(val variants: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_31 xor variants.fold(0) { acc, variant -> acc xor variant.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy {
+            PRIME_31 xor variants.fold(0) { acc, variant -> acc xor variant.value.hash.value }
+        }
     }
 
     data class And(val variants: KList<Lazy<VTerm>>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_32 xor variants.fold(0) { acc, variant -> acc xor variant.value.hash() }).also { hash = it }
+        override val hash: Lazy<KInt> = lazy {
+            PRIME_32 xor variants.fold(0) { acc, variant -> acc xor variant.value.hash.value }
+        }
     }
 
     data class Unit(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_33
+        override val hash: Lazy<KInt> = lazyOf(PRIME_33)
     }
 
     data class Bool(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_34
+        override val hash: Lazy<KInt> = lazyOf(PRIME_34)
     }
 
     data class Byte(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_35
+        override val hash: Lazy<KInt> = lazyOf(PRIME_35)
     }
 
     data class Short(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_36
+        override val hash: Lazy<KInt> = lazyOf(PRIME_36)
     }
 
     data class Int(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_37
+        override val hash: Lazy<KInt> = lazyOf(PRIME_37)
     }
 
     data class Long(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_38
+        override val hash: Lazy<KInt> = lazyOf(PRIME_38)
     }
 
     data class Float(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_39
+        override val hash: Lazy<KInt> = lazyOf(PRIME_39)
     }
 
     data class Double(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_40
+        override val hash: Lazy<KInt> = lazyOf(PRIME_40)
     }
 
     data class String(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_41
+        override val hash: Lazy<KInt> = lazyOf(PRIME_41)
     }
 
     data class ByteArray(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_42
+        override val hash: Lazy<KInt> = lazyOf(PRIME_42)
     }
 
     data class IntArray(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_43
+        override val hash: Lazy<KInt> = lazyOf(PRIME_43)
     }
 
     data class LongArray(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_44
+        override val hash: Lazy<KInt> = lazyOf(PRIME_44)
     }
 
     data class List(val element: Lazy<VTerm>, val size: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_45 xor element.value.hash() xor size.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_45 xor element.value.hash.value xor size.value.hash.value }
     }
 
     data class Compound(val elements: LinkedHashMap<KString, Entry>, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = 0 // TODO
+        override val hash: Lazy<KInt> = lazyOf(0) // TODO
 
         data class Entry(val relevant: KBoolean, val name: Name, val type: Lazy<VTerm>, val id: Id?)
     }
 
     data class Tuple(val elements: KList<Term.Tuple.Entry>, override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = 0 // TODO
+        override val hash: Lazy<KInt> = lazyOf(0) // TODO
     }
 
     data class Ref(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_48 xor element.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_48 xor element.value.hash.value }
     }
 
     data class Eq(val left: Lazy<VTerm>, val right: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_49 xor left.value.hash() xor right.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_49 xor left.value.hash.value xor right.value.hash.value }
     }
 
     data class Fun(val params: KList<Param>, val resultant: Term, val effs: KSet<Eff>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_50 xor params.fold(0) { acc, param -> acc xor param.hashCode() } /* TODO: xor resultant.hash() xor effs.hash() */).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_50 xor params.fold(0) { acc, param -> acc xor param.hashCode() } /* TODO: xor resultant.hash() xor effs.hash() */ }
     }
 
     data class Code(val element: Lazy<VTerm>, override val id: Id? = null) : VTerm() {
-        private var hash: KInt? = null
-        override fun hash(): KInt = hash ?: (PRIME_51 xor element.value.hash()).also { hash = it }
+        override val hash: Lazy<KInt> = lazy { PRIME_51 xor element.value.hash.value }
     }
 
     data class Type(override val id: Id? = null) : VTerm() {
-        override fun hash(): KInt = PRIME_52
+        override val hash: Lazy<KInt> = lazyOf(PRIME_52)
     }
 }
 
