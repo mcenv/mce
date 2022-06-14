@@ -17,7 +17,6 @@ import kotlin.collections.List as KList
 @Serializable
 sealed class Item {
     abstract val imports: KList<KString>
-    abstract val exports: KList<KString>
     abstract val modifiers: KList<Modifier>
     abstract val name: KString
     abstract val id: Id
@@ -25,7 +24,6 @@ sealed class Item {
     @Serializable
     data class Def(
         override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KList<Modifier>,
         override val name: KString,
         val params: KList<Param>,
@@ -38,7 +36,6 @@ sealed class Item {
     @Serializable
     data class Mod(
         override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KList<Modifier>,
         override val name: KString,
         val type: Module,
@@ -49,7 +46,6 @@ sealed class Item {
     @Serializable
     data class Test(
         override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KList<Modifier>,
         override val name: KString,
         val body: Term,
@@ -59,7 +55,6 @@ sealed class Item {
     @Serializable
     data class Advancement(
         override val imports: KList<KString>,
-        override val exports: KList<KString>,
         override val modifiers: KList<Modifier>,
         override val name: KString,
         val body: Term,
@@ -72,7 +67,6 @@ sealed class Item {
         override val id: Id,
     ) : Item() {
         override val imports: KList<KString> = emptyList()
-        override val exports: KList<KString> = emptyList()
         override val modifiers: KList<Modifier> = emptyList()
         override val name: KString = "pack"
     }

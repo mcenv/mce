@@ -6,7 +6,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mce.ast.Modifier
-import mce.ast.surface.Item
 import mce.minecraft.ResourceLocation
 import mce.minecraft.advancements.Advancement
 import mce.minecraft.tags.Tag
@@ -47,7 +46,6 @@ class Build(
                         is Key.ElabResult -> {
                             val surfaceItem = fetch(Key.SurfaceItem(key.name))
                             val items = surfaceItem.imports
-                                .filter { visible(fetch(Key.SurfaceItem(it)), surfaceItem.name) } // filter by visibility
                                 .flatMap { fetch(Key.SurfaceItem(it)).imports + it }              // import dependencies recursively
                                 .map { async { fetch(Key.ElabResult(it)).item } }                 // elab it
                                 .awaitAll()
@@ -84,11 +82,6 @@ class Build(
             }
         }
     }
-
-    private fun visible(item: Item, name: String): Boolean =
-        item.modifiers.contains(Modifier.BUILTIN) ||
-                item.exports.contains("*") ||
-                item.exports.contains(name)
 
     fun getCount(key: Key<*>): Int = counter[key]?.get() ?: 0
 }

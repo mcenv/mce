@@ -1,3 +1,0 @@
-import {wildcard_export}
-
-def wildcard_import [] : int ≔ (wildcard_export [])

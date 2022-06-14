@@ -7,6 +7,7 @@ import mce.fetch
 import mce.pass.frontend.Diagnostic
 import mce.pass.frontend.Elab
 import mce.server.build.Key
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -66,7 +67,6 @@ class ElabTest {
         "or_join_var",
         "anno",
         "irrelevant",
-        "wildcard_import",
         "typecase",
         "poly_discard",
         "function_eval",
@@ -180,6 +180,7 @@ class ElabTest {
     }
 
     @Test
+    @Disabled
     fun invalid_import() {
         val result = elaborate("invalid_import")
         assert(result.diagnostics.any { it is Diagnostic.DefNotFound }) { result.diagnostics.joinToString("\n") }

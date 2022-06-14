@@ -17,7 +17,6 @@ class Parse private constructor(
         val modifiers = if (peekChar() == '{') parseList('{', '}') { parseModifier() } else emptyList()
         var word = readWord()
         val imports = if (word == "import") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
-        val exports = if (word == "export") parseList('{', '}') { readWord() }.also { word = readWord() } else emptyList()
         return when (word) {
             "def" -> {
                 val name = readWord()
@@ -34,7 +33,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                Item.Def(imports, exports, modifiers, name, params, resultant, effects, body, id)
+                Item.Def(imports, modifiers, name, params, resultant, effects, body, id)
             }
             "mod" -> {
                 val name = readWord()
@@ -42,7 +41,7 @@ class Parse private constructor(
                 val type = parseModule()
                 expectString("≔")
                 val body = parseModule()
-                Item.Mod(imports, exports, modifiers, name, type, body, id)
+                Item.Mod(imports, modifiers, name, type, body, id)
             }
             "test" -> {
                 val name = readWord()
@@ -50,7 +49,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                Item.Test(imports, exports, modifiers, name, body, id)
+                Item.Test(imports, modifiers, name, body, id)
             }
             "pack" -> {
                 val body = parseTerm()
@@ -62,7 +61,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                Item.Advancement(imports, exports, modifiers, name, body, id)
+                Item.Advancement(imports, modifiers, name, body, id)
             }
             else -> error("unexpected item '$word'")
         }

@@ -1,3 +1,0 @@
-export {*}
-
-def wildcard_export [] : int ≔ 0
