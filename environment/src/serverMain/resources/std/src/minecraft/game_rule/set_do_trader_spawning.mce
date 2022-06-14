@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_do_trader_spawning [value : bool] : code unit ≔
   `/("gamerule doTraderSpawning " string/+ (bool/to_string [value]))

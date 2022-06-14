@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_fire_damage [value : bool] : code unit ≔
   `/("gamerule fireDamage " string/+ (bool/to_string [value]))

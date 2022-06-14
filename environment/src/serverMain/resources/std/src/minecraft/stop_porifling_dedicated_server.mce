@@ -1,6 +1,4 @@
 {static}
 
-export {*}
-
 def minecraft/stop_porifling_dedicated_server [] : code unit ≔
   `/"perf stop"

@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_max_entity_cramming [value : int] : code unit ≔
   `/("gamerule maxEntityCramming " string/+ (int/to_string [value]))

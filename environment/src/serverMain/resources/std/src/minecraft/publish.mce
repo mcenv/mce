@@ -1,6 +1,4 @@
 {static}
 
-export {*}
-
 def minecraft/publish [] : code unit ≔
   `/"publish"

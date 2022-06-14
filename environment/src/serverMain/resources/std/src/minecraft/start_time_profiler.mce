@@ -1,6 +1,4 @@
 {static}
 
-export {*}
-
 def minecraft/start_time_profiler [] : code unit ≔
   `/"debug start"

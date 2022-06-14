@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_spectators_generate_chunks [value : bool] : code unit ≔
   `/("gamerule spectatorsGenerateChunks " string/+ (bool/to_string [value]))

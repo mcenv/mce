@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_do_mob_loot [value : bool] : code unit ≔
   `/("gamerule doMobLoot " string/+ (bool/to_string [value]))

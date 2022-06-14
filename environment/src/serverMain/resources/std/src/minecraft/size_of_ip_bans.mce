@@ -1,6 +1,4 @@
 {static}
 
-export {*}
-
 def minecraft/size_of_ip_bans [] : code unit ≔
   `/"banlist ips"

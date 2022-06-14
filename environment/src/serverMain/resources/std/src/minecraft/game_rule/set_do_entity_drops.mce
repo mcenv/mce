@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_do_entity_drops [value : bool] : code unit ≔
   `/("gamerule doEntityDrops " string/+ (bool/to_string [value]))

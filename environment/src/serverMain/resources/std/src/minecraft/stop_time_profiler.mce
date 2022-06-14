@@ -1,6 +1,4 @@
 {static}
 
-export {*}
-
 def minecraft/stop_time_profiler [] : code unit ≔
   `/"debug stop"

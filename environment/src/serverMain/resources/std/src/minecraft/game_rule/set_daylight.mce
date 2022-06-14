@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_daylight [value : bool] : code unit ≔
   `/("gamerule doDaylightCycle " string/+ (bool/to_string [value]))

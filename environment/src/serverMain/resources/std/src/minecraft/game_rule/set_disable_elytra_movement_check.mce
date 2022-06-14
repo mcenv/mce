@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_disable_elytra_movement_check [value : bool] : code unit ≔
   `/("gamerule disableElytraMovementCheck " string/+ (bool/to_string [value]))

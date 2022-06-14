@@ -5,7 +5,5 @@ import {
   string/+
 }
 
-export {*}
-
 def minecraft/game_rule/set_announce_advancements [value : bool] : code unit ≔
   `/("gamerule announceAdvancements " string/+ (bool/to_string [value]))

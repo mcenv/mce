@@ -1,6 +1,4 @@
 {static}
 
-export {*}
-
 def minecraft/reload [] : code unit ≔
   `/"reload"
