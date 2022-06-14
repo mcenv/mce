@@ -80,7 +80,7 @@ class Elab private constructor(
             }
             is SItem.Advancement -> {
                 modify { it.copy(phase = Phase.STATIC) }
-                val body = checkTerm(item.body, ANY, Phase.STATIC, PURE) // TODO: type
+                val body = checkTerm(item.body, ADVANCEMENT, Phase.STATIC, PURE)
                 CItem.Advancement(modifiers, item.name, body.term, item.id) to CVSignature.Advancement(item.name, null)
             }
         }
@@ -1159,6 +1159,20 @@ class Elab private constructor(
         private val END = CVTerm.Or(emptyList())
         private val ANY = CVTerm.And(emptyList())
         private val TYPE = CVTerm.Type()
+        private val ADVANCEMENT = CVTerm.Compound(
+            listOf(
+                // TODO: add missing properties
+                "rewards" to CVTerm.Compound.Entry(
+                    false, Name("rewards", freshId()), lazyOf(
+                        CVTerm.Compound(
+                            listOf(
+                                "function" to CVTerm.Compound.Entry(false, Name("function", freshId()), lazyOf(UNIT), null),
+                            ).toLinkedHashMap()
+                        )
+                    ), null
+                ),
+            ).toLinkedHashMap()
+        )
         private val INFER = null
         private val PURE = emptySet<CEff>()
 
