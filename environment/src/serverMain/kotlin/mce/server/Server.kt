@@ -27,8 +27,6 @@ class Server(config: Config) {
     internal val build: Build = Build(config, Packs)
 
     suspend fun launch(port: Int) {
-        val server = Server(Config)
-
         embeddedServer(Netty, port = port) {
             install(WebSockets) @ExperimentalSerializationApi {
                 contentConverter = KotlinxWebsocketSerializationConverter(Mce)
@@ -43,8 +41,10 @@ class Server(config: Config) {
                         try {
                             val response: Response? = when (val request = receiveDeserialized<Request>()) {
                                 is Request.Init -> null.also { init() }
-                                is Request.Hover -> server.hover(request)
-                                is Request.Completion -> server.completion(request)
+                                is Request.Hover -> hover(request)
+                                is Request.Completion -> completion(request)
+                                is Request.Replace -> null.also { replace(request) }
+                                is Request.Move -> null.also { move(request) }
                             }
                             response?.let { sendSerialized<Response>(it) }
                         } catch (t: Throwable) {
@@ -63,13 +63,13 @@ class Server(config: Config) {
         }
     }
 
-    suspend fun hover(request: Request.Hover): Response.Hover {
+    internal suspend fun hover(request: Request.Hover): Response.Hover {
         val result = build.fetch(Key.ElabResult(request.name))
         val type = printTerm(Store(result.normalizer).quoteTerm(result.types[request.target]!!))
         return Response.Hover(type, request.id)
     }
 
-    suspend fun completion(request: Request.Completion): Response.Completion {
+    internal suspend fun completion(request: Request.Completion): Response.Completion {
         val result = build.fetch(Key.ElabResult(request.name))
         return Response.Completion(
             result.completions[request.target]?.let { completions ->
@@ -77,6 +77,14 @@ class Server(config: Config) {
             } ?: emptyList(),
             request.id
         )
+    }
+
+    private suspend fun replace(request: Request.Replace) {
+        TODO()
+    }
+
+    private suspend fun move(request: Request.Move) {
+        TODO()
     }
 
     suspend fun build() {
