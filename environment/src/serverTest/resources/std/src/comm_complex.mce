@@ -1,3 +1,1 @@
-import {+}
-
 def comm_complex [a : int, b : int, c : int, d : int] : (((a + b) + (c + d)) = ((c + d) + (a + b))) ≔ refl

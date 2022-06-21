@@ -1,3 +1,1 @@
-import {+}
-
 def builtin_open [a : int, b : int] : ((a + b) = (a + b)) ≔ refl

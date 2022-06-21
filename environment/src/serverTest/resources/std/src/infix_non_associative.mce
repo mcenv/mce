@@ -1,3 +1,1 @@
-import {+}
-
 def infix_non_associative [] : int ≔ (1 + 2 + 3)

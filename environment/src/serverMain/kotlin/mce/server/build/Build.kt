@@ -14,6 +14,7 @@ import mce.pass.backend.Defun
 import mce.pass.backend.Gen
 import mce.pass.backend.Pack
 import mce.pass.backend.Stage
+import mce.pass.builtin.prelude
 import mce.pass.frontend.Elab
 import mce.pass.frontend.Parse
 import mce.pass.frontend.Zonk
@@ -45,9 +46,10 @@ class Build(
                         is Key.SurfaceItem -> Parse(key.name, fetch(Key.Source(key.name))) as V
                         is Key.ElabResult -> {
                             val surfaceItem = fetch(Key.SurfaceItem(key.name))
-                            val items = surfaceItem.imports
-                                .flatMap { fetch(Key.SurfaceItem(it)).imports + it }              // import dependencies recursively
-                                .map { async { fetch(Key.ElabResult(it)).item } }                 // elab it
+                            val prelude = if (prelude.contains(key.name)) emptySet() else prelude
+                            val items = (prelude + surfaceItem.imports)
+                                .flatMap { fetch(Key.SurfaceItem(it)).imports + it } // import dependencies recursively
+                                .map { async { fetch(Key.ElabResult(it)).item } }    // elab it
                                 .awaitAll()
                                 .associateBy { it.name }
                             Elab(config, surfaceItem to items) as V
