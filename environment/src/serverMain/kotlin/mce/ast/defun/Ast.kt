@@ -22,6 +22,7 @@ sealed class Item {
         override val modifiers: KSet<Modifier>,
         override val name: KString,
         val params: KList<Param>,
+        val withs: KList<Param>,
         val body: Term,
     ) : Item()
 

@@ -16,8 +16,9 @@ abstract class Transform {
     protected fun transformItemInternal(item: Item): Item = when (item) {
         is Item.Def -> {
             val parameters = item.params.map { transformParam(it) }
+            val withs = item.withs.map { transformParam(it) }
             val body = transformTerm(item.body)
-            Item.Def(item.modifiers, item.name, parameters, item.resultant, item.effs, body, item.id)
+            Item.Def(item.modifiers, item.name, parameters, withs, item.resultant, item.effs, body, item.id)
         }
         is Item.Mod -> {
             val body = transformModule(item.body)

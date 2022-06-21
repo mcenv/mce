@@ -1,0 +1,1 @@
+def def_with [] with [x : int] : int ≔ x

@@ -21,6 +21,10 @@ class Parse private constructor(
             "def" -> {
                 val name = readWord()
                 val params = parseList('[', ']') { parseParam() }
+                val withs = if (peekChar() == 'w') {
+                    expectString("with")
+                    parseList('[', ']') { parseParam() }
+                } else emptyList()
                 val resultant = run {
                     expect(':')
                     parseTerm()
@@ -33,7 +37,7 @@ class Parse private constructor(
                     expectString("≔")
                     parseTerm()
                 }
-                Item.Def(imports, modifiers, name, params, resultant, effects, body, id)
+                Item.Def(imports, modifiers, name, params, withs, resultant, effects, body, id)
             }
             "mod" -> {
                 val name = readWord()

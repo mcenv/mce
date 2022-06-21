@@ -47,6 +47,7 @@ class Elab private constructor(
                 val phase = modifiers.toPhase()
                 modify { it.copy(phase = phase, termRelevant = false, typeRelevant = true) }
                 val params = bindParams(item.params, phase)
+                val withs = bindParams(item.withs, phase)
                 val effs = item.effs.map { elabEff(it) }.toSet()
                 val resultant = checkTerm(item.resultant, TYPE, phase, PURE)
                 val vResultant = map { it.normalizer }.evalTerm(resultant.term)
@@ -55,13 +56,13 @@ class Elab private constructor(
                     Typing(CTerm.Builtin(item.body.id), vResultant, phase, effs)
                 } else {
                     if (modifiers.contains(Modifier.RECURSIVE)) {
-                        items[item.name] = CItem.Def(modifiers, item.name, params, resultant.term, effs, CTerm.Builtin(item.body.id), item.id)
+                        items[item.name] = CItem.Def(modifiers, item.name, params, withs, resultant.term, effs, CTerm.Builtin(item.body.id), item.id)
                     }
 
                     modify { it.copy(termRelevant = true, typeRelevant = false) }
                     checkTerm(item.body, vResultant, phase, effs)
                 }
-                CItem.Def(modifiers, item.name, params, resultant.term, effs, body.term, item.id) to CVSignature.Def(item.name, params, resultant.term, null)
+                CItem.Def(modifiers, item.name, params, withs, resultant.term, effs, body.term, item.id) to CVSignature.Def(item.name, params, resultant.term, null)
             }
             is SItem.Mod -> {
                 val type = checkModule(item.type, CVModule.Type(null))
