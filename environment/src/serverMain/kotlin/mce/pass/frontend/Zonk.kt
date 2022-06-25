@@ -19,6 +19,7 @@ class Zonk private constructor(
     override fun transformTerm(term: Term): Term = when (term) {
         is Term.Meta -> when (val solution = normalizer.getSolution(term.index)) {
             null -> {
+                // TODO: insert default meta solution if possible
                 diagnostics += Diagnostic.UnsolvedMeta(term.id!!)
                 term
             }
