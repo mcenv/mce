@@ -49,7 +49,7 @@ class Elab private constructor(
                 val params = bindParams(item.params, phase)
                 val withs = bindParams(item.withs, phase)
                 val effs = item.effs.map { elabEff(it) }.toSet()
-                val resultant = checkTerm(item.resultant, TYPE, phase, PURE)
+                val resultant = elabTerm(item.resultant, TYPE, phase, PURE)
                 val vResultant = map { it.normalizer }.evalTerm(resultant.term)
                 val body = if (item.modifiers.contains(Modifier.BUILTIN)) {
                     types[item.body.id] = vResultant
@@ -60,7 +60,7 @@ class Elab private constructor(
                     }
 
                     modify { it.copy(termRelevant = true, typeRelevant = false) }
-                    checkTerm(item.body, vResultant, phase, effs)
+                    elabTerm(item.body, vResultant, phase, effs)
                 }
                 CItem.Def(modifiers, item.name, params, withs, resultant.term, effs, body.term, item.id) to CVSignature.Def(item.name, params, resultant.term, null)
             }
@@ -72,16 +72,16 @@ class Elab private constructor(
             }
             is SItem.Test -> {
                 val phase = modifiers.toPhase()
-                val body = checkTerm(item.body, BOOL, phase, INFER)
+                val body = elabTerm(item.body, BOOL, phase, INFER)
                 CItem.Test(modifiers, item.name, body.term, item.id) to CVSignature.Test(item.name, null)
             }
             is SItem.Pack -> {
-                val body = checkTerm(item.body, ANY, Phase.STATIC, PURE) // TODO: type
+                val body = elabTerm(item.body, ANY, Phase.STATIC, PURE) // TODO: type
                 CItem.Pack(body.term, item.id) to CVSignature.Pack(null)
             }
             is SItem.Advancement -> {
                 modify { it.copy(phase = Phase.STATIC) }
-                val body = checkTerm(item.body, ADVANCEMENT, Phase.STATIC, PURE)
+                val body = elabTerm(item.body, ADVANCEMENT, Phase.STATIC, PURE)
                 CItem.Advancement(modifiers, item.name, body.term, item.id) to CVSignature.Advancement(item.name, null)
             }
         }
@@ -114,11 +114,11 @@ class Elab private constructor(
      */
     private fun Store<Context>.bindParams(params: List<SParam>, phase: Phase): List<CParam> =
         params.map { param ->
-            val type = checkTerm(param.type, TYPE, phase, PURE)
+            val type = elabTerm(param.type, TYPE, phase, PURE)
             val vType = map { it.normalizer }.evalTerm(type.term)
-            val lower = param.lower?.let { checkTerm(it, vType, phase, PURE) }
+            val lower = param.lower?.let { elabTerm(it, vType, phase, PURE) }
             val vLower = lower?.let { lower -> map { it.normalizer }.evalTerm(lower.term) }
-            val upper = param.upper?.let { checkTerm(it, vType, phase, PURE) }
+            val upper = param.upper?.let { elabTerm(it, vType, phase, PURE) }
             val vUpper = upper?.let { upper -> map { it.normalizer }.evalTerm(upper.term) }
             modify { it.bind(Entry(param.termRelevant, param.name, vLower, vUpper, param.typeRelevant, vType, value.phase)) }
             types[param.id] = vType
@@ -219,7 +219,7 @@ class Elab private constructor(
                 restore {
                     modify { it.copy(termRelevant = false, typeRelevant = true) }
                     val params = bindParams(signature.params, Phase.TOP /* TODO */)
-                    val resultant = checkTerm(signature.resultant, TYPE, INFER, PURE)
+                    val resultant = elabTerm(signature.resultant, TYPE, INFER, PURE)
                     CSignature.Def(signature.name, params, resultant.term, signature.id)
                 }
             is SSignature.Mod -> {
@@ -240,414 +240,407 @@ class Elab private constructor(
     }
 
     /**
-     * Infers the type of the [term] under the context.
+     * Elaborates the [term] under the context.
      */
-    private fun Store<Context>.inferTerm(term: STerm, phase: Phase?, effs: Set<CEff>?): Typing {
+    private fun Store<Context>.elabTerm(term: STerm, type: CVTerm?, phase: Phase?, effs: Set<CEff>?): Typing {
+        val type = type?.let { value.normalizer.force(it) } // use the top type as default?
         val phase = phase ?: Phase.BOTTOM
         val effs = effs ?: PURE
-        return when {
-            term is STerm.Hole -> {
-                completions[term.id] = value.entries.map { it.name to it.type }
-                Typing(CTerm.Hole(term.id), diagnose(Diagnostic.TermExpected(printTerm(map { it.normalizer }.quoteTerm(END)), term.id)), phase, PURE)
-            }
-            term is STerm.Meta -> {
-                val type = value.normalizer.fresh(term.id)
-                val term = checkTerm(term, type, phase, INFER)
-                Typing(term.term, type, phase, effs)
-            }
-            term is STerm.Command && subtypePhase(phase, Phase.DYNAMIC, term.id) -> restore {
-                modify { it.copy(phase = Phase.STATIC) }
-                val body = checkTerm(term.body, STRING, Phase.STATIC, PURE)
-                Typing(CTerm.Command(body.term, term.id), UNIT, phase, PURE)
-            }
-            term is STerm.Block -> restore {
-                val elements = term.elements.map { inferTerm(it, phase, INFER) }
-                val type = elements.lastOrNull()?.type ?: UNIT
-                val effs = elements.fold(effs) { effs, element -> effs union element.effs }
-                Typing(CTerm.Block(elements.map { it.term }, term.id), type, phase, effs)
-            }
-            term is STerm.Anno -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val type = map { it.normalizer }.evalTerm(checkTerm(term.type, TYPE, phase, PURE).term)
-                val element = checkTerm(term.element, type, phase, PURE)
-                Typing(element.term, type, phase, PURE)
-            }
-            term is STerm.Var -> {
-                val level = value.lookup(term.name)
-                val type = when (level) {
-                    -1 -> diagnose(Diagnostic.VarNotFound(term.name, term.id))
-                    else -> {
-                        val entry = value.entries[level]
-                        var type = entry.type
-                        if (value.phase != entry.phase) type = diagnose(Diagnostic.PhaseMismatch(value.phase, entry.phase, term.id))
-                        if (value.termRelevant && !entry.termRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
-                        if (value.typeRelevant && !entry.typeRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
-                        map { it.normalizer }.checkRepr(term.id, type)
-                        type
+        return when (type) {
+            INFER -> when {
+                term is STerm.Hole -> {
+                    completions[term.id] = value.entries.map { it.name to it.type }
+                    Typing(CTerm.Hole(term.id), diagnose(Diagnostic.TermExpected(printTerm(map { it.normalizer }.quoteTerm(END)), term.id)), phase, PURE)
+                }
+                term is STerm.Meta -> {
+                    val type = value.normalizer.fresh(term.id)
+                    val term = elabTerm(term, type, phase, INFER)
+                    Typing(term.term, type, phase, effs)
+                }
+                term is STerm.Command && subtypePhase(phase, Phase.DYNAMIC, term.id) -> restore {
+                    modify { it.copy(phase = Phase.STATIC) }
+                    val body = elabTerm(term.body, STRING, Phase.STATIC, PURE)
+                    Typing(CTerm.Command(body.term, term.id), UNIT, phase, PURE)
+                }
+                term is STerm.Block -> restore {
+                    val elements = term.elements.map { elabTerm(it, INFER, phase, INFER) }
+                    val type = elements.lastOrNull()?.type ?: UNIT
+                    val effs = elements.fold(effs) { effs, element -> effs union element.effs }
+                    Typing(CTerm.Block(elements.map { it.term }, term.id), type, phase, effs)
+                }
+                term is STerm.Anno -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val type = map { it.normalizer }.evalTerm(elabTerm(term.type, TYPE, phase, PURE).term)
+                    val element = elabTerm(term.element, type, phase, PURE)
+                    Typing(element.term, type, phase, PURE)
+                }
+                term is STerm.Var -> {
+                    val level = value.lookup(term.name)
+                    val type = when (level) {
+                        -1 -> diagnose(Diagnostic.VarNotFound(term.name, term.id))
+                        else -> {
+                            val entry = value.entries[level]
+                            var type = entry.type
+                            if (value.phase != entry.phase) type = diagnose(Diagnostic.PhaseMismatch(value.phase, entry.phase, term.id))
+                            if (value.termRelevant && !entry.termRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
+                            if (value.typeRelevant && !entry.typeRelevant) type = diagnose(Diagnostic.RelevanceMismatch(term.id))
+                            map { it.normalizer }.checkRepr(term.id, type)
+                            type
+                        }
+                    }
+                    Typing(CTerm.Var(term.name, level /* TODO: avoid [IndexOutOfBoundsException] */, term.id), type, phase, PURE)
+                }
+                term is STerm.Def -> when (val item = items[term.name]) {
+                    is CItem.Def -> {
+                        if (item.params.size != term.arguments.size) {
+                            diagnose(Diagnostic.SizeMismatch(item.params.size, term.arguments.size, term.id))
+                        }
+                        map { it.normalizer }.run {
+                            val arguments = (term.arguments zip item.params).map { (argument, param) ->
+                                val id = argument.id
+                                val argument = elabTerm(argument, evalTerm(param.type), phase, PURE).term
+                                val vArgument = evalTerm(argument)
+                                param.lower?.let { evalTerm(it) }?.also { lower ->
+                                    if (!subtypeTerms(lower, vArgument)) {
+                                        diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(vArgument)), printTerm(quoteTerm(lower)), id))
+                                    }
+                                }
+                                param.upper?.let { evalTerm(it) }?.also { upper ->
+                                    if (!subtypeTerms(vArgument, upper)) {
+                                        diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(upper)), printTerm(quoteTerm(vArgument)), id))
+                                    }
+                                }
+                                modify { it.bind(lazyOf(vArgument)) }
+                                argument
+                            }
+                            val resultant = evalTerm(item.resultant)
+                            Typing(CTerm.Def(term.name, arguments, term.id), resultant, phase, item.effs)
+                        }
+                    }
+                    else -> Typing(CTerm.Def(term.name, emptyList() /* TODO? */, term.id), diagnose(Diagnostic.DefNotFound(term.name, term.id)), phase, PURE)
+                }
+                term is STerm.Let -> {
+                    val init = elabTerm(term.init, INFER, phase, INFER)
+                    modify { it.bind(Entry(true /* TODO */, term.name, END, ANY, true, init.type, value.phase)) }
+                    Typing(CTerm.Let(term.name, init.term, term.id), UNIT, phase, init.effs)
+                }
+                term is STerm.Match -> {
+                    val type = value.normalizer.fresh(term.id) // TODO: use union of element types
+                    val scrutinee = elabTerm(term.scrutinee, INFER, phase, PURE)
+                    val clauses = term.clauses.map { (pat, body) ->
+                        restore {
+                            val pat = checkPat(pat, scrutinee.type)
+                            val body = elabTerm(body, type, phase, INFER)
+                            pat to body
+                        }
+                    }
+                    checkExhaustiveness(clauses.map { it.first }, scrutinee.type, term.id)
+                    val effs = clauses.fold(effs) { effs, (_, body) -> effs union body.effs }
+                    Typing(CTerm.Match(scrutinee.term, clauses.map { (pat, body) -> pat to body.term }, term.id), type, phase, effs)
+                }
+                term is STerm.UnitOf -> Typing(CTerm.UnitOf(term.id), UNIT, phase, PURE)
+                term is STerm.BoolOf -> Typing(CTerm.BoolOf(term.value, term.id), BOOL, phase, PURE)
+                term is STerm.ByteOf -> Typing(CTerm.ByteOf(term.value, term.id), BYTE, phase, PURE)
+                term is STerm.ShortOf -> Typing(CTerm.ShortOf(term.value, term.id), SHORT, phase, PURE)
+                term is STerm.IntOf -> Typing(CTerm.IntOf(term.value, term.id), INT, phase, PURE)
+                term is STerm.LongOf -> Typing(CTerm.LongOf(term.value, term.id), LONG, phase, PURE)
+                term is STerm.FloatOf -> Typing(CTerm.FloatOf(term.value, term.id), FLOAT, phase, PURE)
+                term is STerm.DoubleOf -> Typing(CTerm.DoubleOf(term.value, term.id), DOUBLE, phase, PURE)
+                term is STerm.StringOf -> Typing(CTerm.StringOf(term.value, term.id), STRING, phase, PURE)
+                term is STerm.ByteArrayOf -> {
+                    val elements = term.elements.map { elabTerm(it, BYTE, phase, PURE).term }
+                    Typing(CTerm.ByteArrayOf(elements, term.id), BYTE_ARRAY, phase, PURE)
+                }
+                term is STerm.IntArrayOf -> {
+                    val elements = term.elements.map { elabTerm(it, INT, phase, PURE).term }
+                    Typing(CTerm.IntArrayOf(elements, term.id), INT_ARRAY, phase, PURE)
+                }
+                term is STerm.LongArrayOf -> {
+                    val elements = term.elements.map { elabTerm(it, LONG, phase, PURE).term }
+                    Typing(CTerm.LongArrayOf(elements, term.id), LONG_ARRAY, phase, PURE)
+                }
+                term is STerm.ListOf -> if (term.elements.isEmpty()) {
+                    Typing(CTerm.ListOf(emptyList(), term.id), CVTerm.List(lazyOf(END), lazyOf(CVTerm.IntOf(0))), phase, PURE)
+                } else { // TODO: use union of element types
+                    val head = elabTerm(term.elements.first(), INFER, phase, PURE)
+                    val tail = term.elements.drop(1).map { elabTerm(it, head.type, phase, PURE).term }
+                    val elements = listOf(head.term) + tail
+                    val size = CVTerm.IntOf(elements.size)
+                    Typing(CTerm.ListOf(elements, term.id), CVTerm.List(lazyOf(head.type), lazyOf(size)), phase, PURE)
+                }
+                term is STerm.CompoundOf -> {
+                    val (elementTerms, elementTypes) = term.elements.map { entry ->
+                        val element = elabTerm(entry.element, INFER, phase, PURE)
+                        CTerm.CompoundOf.Entry(entry.name, element.term) to CVTerm.Compound.Entry(true, entry.name, lazyOf(element.type), null)
+                    }.unzip()
+                    Typing(CTerm.CompoundOf(elementTerms, term.id), CVTerm.Compound(elementTypes.map { it.name.text to it }.toLinkedHashMap()), phase, PURE)
+                }
+                term is STerm.TupleOf -> {
+                    val elements = term.elements.map { element -> elabTerm(element, INFER, phase, PURE) }
+                    Typing(
+                        CTerm.TupleOf(elements.map { it.term }, term.id),
+                        CVTerm.Tuple(elements.map { CTerm.Tuple.Entry(true, Name("", freshId()), map { it.normalizer }.quoteTerm(it.type), null) }),
+                        phase,
+                        PURE
+                    )
+                }
+                term is STerm.RefOf -> {
+                    val element = elabTerm(term.element, INFER, phase, PURE)
+                    Typing(CTerm.RefOf(element.term, term.id), CVTerm.Ref(lazyOf(element.type)), phase, PURE)
+                }
+                term is STerm.Refl -> {
+                    val left = lazy { value.normalizer.fresh(term.id) }
+                    Typing(CTerm.Refl(term.id), CVTerm.Eq(left, left), phase, PURE)
+                }
+                term is STerm.FunOf -> {
+                    val types = term.params.map { value.normalizer.fresh(term.id) }
+                    restore {
+                        (term.params zip types).forEach { (param, type) ->
+                            this@Elab.types[param.id] = type
+                            modify { it.bind(Entry(true /* TODO */, param.text, END, ANY, true, type, value.phase)) }
+                        }
+                        val body = elabTerm(term.body, INFER, phase, INFER)
+                        map { it.normalizer }.run {
+                            val params = (term.params zip types).map { (param, type) ->
+                                CParam(true /* TODO */, param.text, quoteTerm(END), quoteTerm(ANY), true, quoteTerm(type), param.id)
+                            }
+                            Typing(CTerm.FunOf(term.params, body.term, term.id), CVTerm.Fun(params, quoteTerm(body.type), body.effs), phase, PURE)
+                        }
                     }
                 }
-                Typing(CTerm.Var(term.name, level /* TODO: avoid [IndexOutOfBoundsException] */, term.id), type, phase, PURE)
-            }
-            term is STerm.Def -> when (val item = items[term.name]) {
-                is CItem.Def -> {
-                    if (item.params.size != term.arguments.size) {
-                        diagnose(Diagnostic.SizeMismatch(item.params.size, term.arguments.size, term.id))
+                term is STerm.Apply -> {
+                    val function = elabTerm(term.function, INFER, phase, INFER)
+                    val type = map { it.normalizer }.run {
+                        when (val type = value.force(function.type)) {
+                            is CVTerm.Fun -> type
+                            else -> {
+                                val params = term.arguments.map {
+                                    CParam(true, "", null, null, true, quoteTerm(value.fresh(freshId())), freshId())
+                                }
+                                val resultant = quoteTerm(value.fresh(freshId()))
+                                unifyTerms(type, CVTerm.Fun(params, resultant, function.effs, null))
+                                CVTerm.Fun(params, resultant, function.effs, type.id)
+                            }
+                        }
+                    }
+                    if (type.params.size != term.arguments.size) {
+                        diagnose(Diagnostic.SizeMismatch(type.params.size, term.arguments.size, term.id))
                     }
                     map { it.normalizer }.run {
-                        val arguments = (term.arguments zip item.params).map { (argument, param) ->
-                            val id = argument.id
-                            val argument = checkTerm(argument, evalTerm(param.type), phase, PURE).term
-                            val vArgument = evalTerm(argument)
+                        val arguments = (term.arguments zip type.params).map { (argument, param) ->
+                            val tArgument = elabTerm(argument, evalTerm(param.type), phase, PURE).term
+                            val vArgument = evalTerm(tArgument)
                             param.lower?.let { evalTerm(it) }?.also { lower ->
                                 if (!subtypeTerms(lower, vArgument)) {
-                                    diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(vArgument)), printTerm(quoteTerm(lower)), id))
+                                    diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(vArgument)), printTerm(quoteTerm(lower)), argument.id))
                                 }
                             }
                             param.upper?.let { evalTerm(it) }?.also { upper ->
                                 if (!subtypeTerms(vArgument, upper)) {
-                                    diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(upper)), printTerm(quoteTerm(vArgument)), id))
+                                    diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(upper)), printTerm(quoteTerm(vArgument)), argument.id))
                                 }
                             }
                             modify { it.bind(lazyOf(vArgument)) }
-                            argument
+                            tArgument
                         }
-                        val resultant = evalTerm(item.resultant)
-                        Typing(CTerm.Def(term.name, arguments, term.id), resultant, phase, item.effs)
+                        val resultant = evalTerm(type.resultant)
+                        Typing(CTerm.Apply(function.term, arguments, term.id), resultant, phase, type.effs)
                     }
                 }
-                else -> Typing(CTerm.Def(term.name, emptyList() /* TODO? */, term.id), diagnose(Diagnostic.DefNotFound(term.name, term.id)), phase, PURE)
+                term is STerm.CodeOf && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
+                    modify { it.copy(phase = Phase.DYNAMIC) }
+                    val element = elabTerm(term.element, INFER, Phase.DYNAMIC, PURE)
+                    Typing(CTerm.CodeOf(element.term, term.id), CVTerm.Code(lazyOf(element.type)), Phase.STATIC, PURE)
+                }
+                term is STerm.Splice && subtypePhase(phase, Phase.DYNAMIC, term.id) -> restore {
+                    modify { it.copy(phase = Phase.STATIC) }
+                    val element = elabTerm(term.element, INFER, Phase.STATIC, PURE)
+                    val type = when (val type = value.normalizer.force(element.type)) {
+                        is CVTerm.Code -> type.element.value
+                        else -> type.also { type ->
+                            map { it.normalizer }.unifyTerms(type, CVTerm.Code(lazyOf(value.normalizer.fresh(freshId()))))
+                        }
+                    }
+                    Typing(CTerm.Splice(element.term, term.id), type, Phase.DYNAMIC, PURE)
+                }
+                term is STerm.Singleton -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val element = elabTerm(term.element, INFER, phase, PURE)
+                    Typing(CTerm.Singleton(element.term, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Or -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val variants = term.variants.map { elabTerm(it, TYPE, phase, PURE).term }
+                    Typing(CTerm.Or(variants, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.And -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val variants = term.variants.map { elabTerm(it, TYPE, phase, PURE).term }
+                    Typing(CTerm.And(variants, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Unit -> Typing(CTerm.Unit(term.id), TYPE, phase, PURE)
+                term is STerm.Bool -> Typing(CTerm.Bool(term.id), TYPE, phase, PURE)
+                term is STerm.Byte -> Typing(CTerm.Byte(term.id), TYPE, phase, PURE)
+                term is STerm.Short -> Typing(CTerm.Short(term.id), TYPE, phase, PURE)
+                term is STerm.Int -> Typing(CTerm.Int(term.id), TYPE, phase, PURE)
+                term is STerm.Long -> Typing(CTerm.Long(term.id), TYPE, phase, PURE)
+                term is STerm.Float -> Typing(CTerm.Float(term.id), TYPE, phase, PURE)
+                term is STerm.Double -> Typing(CTerm.Double(term.id), TYPE, phase, PURE)
+                term is STerm.String -> Typing(CTerm.String(term.id), TYPE, phase, PURE)
+                term is STerm.ByteArray -> Typing(CTerm.ByteArray(term.id), TYPE, phase, PURE)
+                term is STerm.IntArray -> Typing(CTerm.IntArray(term.id), TYPE, phase, PURE)
+                term is STerm.LongArray -> Typing(CTerm.LongArray(term.id), TYPE, phase, PURE)
+                term is STerm.List -> restore {
+                    val element = elabTerm(term.element, TYPE, phase, PURE)
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val size = elabTerm(term.size, INT, phase, PURE)
+                    Typing(CTerm.List(element.term, size.term, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Compound -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val elements = term.elements.map { entry ->
+                        val element = elabTerm(entry.type, TYPE, phase, PURE)
+                        CTerm.Compound.Entry(entry.relevant, entry.name, element.term, entry.id)
+                    }
+                    Typing(CTerm.Compound(elements, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Tuple -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val elements = term.elements.map { entry ->
+                        val element = elabTerm(entry.type, TYPE, phase, PURE)
+                        modify { it.bind(Entry(false, entry.name.text, END, ANY, true, map { it.normalizer }.evalTerm(element.term), value.phase)) }
+                        CTerm.Tuple.Entry(entry.relevant, entry.name, element.term, entry.id)
+                    }
+                    Typing(CTerm.Tuple(elements, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Ref -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val element = elabTerm(term.element, TYPE, phase, PURE)
+                    Typing(CTerm.Ref(element.term, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Eq -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val left = elabTerm(term.left, INFER, phase, PURE)
+                    val right = elabTerm(term.right, left.type, phase, PURE)
+                    Typing(CTerm.Eq(left.term, right.term, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Fun -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val params = bindParams(term.params, phase)
+                    val resultant = elabTerm(term.resultant, TYPE, phase, PURE)
+                    val effs = term.effs.map { elabEff(it) }.toSet()
+                    Typing(CTerm.Fun(params, resultant.term, effs, term.id), TYPE, phase, PURE)
+                }
+                term is STerm.Code && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
+                    modify { it.copy(termRelevant = false, typeRelevant = true) }
+                    val element = elabTerm(term.element, TYPE, phase, PURE)
+                    Typing(CTerm.Code(element.term, term.id), TYPE, Phase.STATIC, PURE)
+                }
+                term is STerm.Type -> Typing(CTerm.Type(term.id), TYPE, phase, PURE)
+                else -> Typing(CTerm.Hole(term.id), END, phase, PURE)
             }
-            term is STerm.Let -> {
-                val init = inferTerm(term.init, phase, INFER)
-                modify { it.bind(Entry(true /* TODO */, term.name, END, ANY, true, init.type, value.phase)) }
-                Typing(CTerm.Let(term.name, init.term, term.id), UNIT, phase, init.effs)
-            }
-            term is STerm.Match -> {
-                val type = value.normalizer.fresh(term.id) // TODO: use union of element types
-                val scrutinee = inferTerm(term.scrutinee, phase, PURE)
-                val clauses = term.clauses.map { (pat, body) ->
+            else -> when {
+                term is STerm.Hole -> {
+                    completions[term.id] = value.entries.map { it.name to it.type }
+                    diagnose(Diagnostic.TermExpected(printTerm(map { it.normalizer }.quoteTerm(type)), term.id))
+                    Typing(CTerm.Hole(term.id), type, phase, PURE)
+                }
+                term is STerm.Meta ->
+                    Typing(map { it.normalizer }.quoteTerm(value.normalizer.fresh(term.id)), type, phase, PURE)
+                term is STerm.Block -> restore {
+                    val elements = term.elements.map { elabTerm(it, INFER, phase, INFER) }
+                    val effs = elements.fold(mutableSetOf<CEff>()) { effs, element -> effs.also { it += element.effs } }
+                    Typing(CTerm.Block(elements.map { it.term }, term.id), type, Phase.TOP /* TODO */, effs)
+                }
+                term is STerm.Let -> {
+                    val init = elabTerm(term.init, INFER, phase, INFER)
+                    modify { it.bind(Entry(true /* TODO */, term.name, END, ANY, true, init.type, value.phase)) }
+                    Typing(CTerm.Let(term.name, init.term, term.id), type, init.phase, init.effs)
+                }
+                term is STerm.Match -> {
+                    val scrutinee = elabTerm(term.scrutinee, INFER, phase, PURE)
+                    val clauses = term.clauses.map { (pat, body) ->
+                        restore {
+                            val pat = checkPat(pat, scrutinee.type)
+                            val body = elabTerm(body, type, scrutinee.phase, INFER)
+                            pat to body
+                        }
+                    }
+                    checkExhaustiveness(clauses.map { it.first }, scrutinee.type, term.id)
+                    val effs = clauses.fold(mutableSetOf<CEff>()) { effs, (_, body) -> effs.also { it += body.effs } }
+                    Typing(CTerm.Match(scrutinee.term, clauses.map { (pat, body) -> pat to body.term }, term.id), type, scrutinee.phase, effs)
+                }
+                term is STerm.ListOf && type is CVTerm.List -> {
+                    val elements = term.elements.map { elabTerm(it, type.element.value, phase, PURE).term }
+                    when (val size = value.normalizer.force(type.size.value)) {
+                        is CVTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
+                        else -> {}
+                    }
+                    Typing(CTerm.ListOf(elements, term.id), type, phase, PURE)
+                }
+                term is STerm.CompoundOf && type is CVTerm.Compound -> {
+                    if (type.elements.size != term.elements.size) {
+                        diagnose(Diagnostic.SizeMismatch(type.elements.size, term.elements.size, term.id))
+                    }
+                    val elements = (term.elements zip type.elements.values).map { (element, entry) ->
+                        val tElement = elabTerm(element.element, entry.type.value, phase, PURE)
+                        CTerm.CompoundOf.Entry(element.name, tElement.term)
+                    }
+                    Typing(CTerm.CompoundOf(elements, term.id), type, phase, PURE)
+                }
+                term is STerm.TupleOf && type is CVTerm.Tuple -> restore {
+                    val elements = (term.elements zip type.elements).map { (element, entry) ->
+                        val vType = map { it.normalizer }.evalTerm(entry.type)
+                        val tElement = elabTerm(element, vType, phase, PURE).term
+                        val vElement = map { it.normalizer }.evalTerm(tElement)
+                        modify { it.bind(Entry(entry.relevant, "", END, ANY, true, vType, value.phase), vElement) }
+                        tElement
+                    }
+                    Typing(CTerm.TupleOf(elements, term.id), type, phase, PURE)
+                }
+                term is STerm.RefOf && type is CVTerm.Ref -> {
+                    val element = elabTerm(term.element, type.element.value, phase, PURE)
+                    Typing(CTerm.RefOf(element.term, term.id), type, phase, PURE)
+                }
+                term is STerm.FunOf && type is CVTerm.Fun -> {
+                    if (type.params.size != term.params.size) {
+                        diagnose(Diagnostic.SizeMismatch(type.params.size, term.params.size, term.id))
+                    }
                     restore {
-                        val pat = checkPat(pat, scrutinee.type)
-                        val body = checkTerm(body, type, phase, INFER)
-                        pat to body
-                    }
-                }
-                checkExhaustiveness(clauses.map { it.first }, scrutinee.type, term.id)
-                val effs = clauses.fold(effs) { effs, (_, body) -> effs union body.effs }
-                Typing(CTerm.Match(scrutinee.term, clauses.map { (pat, body) -> pat to body.term }, term.id), type, phase, effs)
-            }
-            term is STerm.UnitOf -> Typing(CTerm.UnitOf(term.id), UNIT, phase, PURE)
-            term is STerm.BoolOf -> Typing(CTerm.BoolOf(term.value, term.id), BOOL, phase, PURE)
-            term is STerm.ByteOf -> Typing(CTerm.ByteOf(term.value, term.id), BYTE, phase, PURE)
-            term is STerm.ShortOf -> Typing(CTerm.ShortOf(term.value, term.id), SHORT, phase, PURE)
-            term is STerm.IntOf -> Typing(CTerm.IntOf(term.value, term.id), INT, phase, PURE)
-            term is STerm.LongOf -> Typing(CTerm.LongOf(term.value, term.id), LONG, phase, PURE)
-            term is STerm.FloatOf -> Typing(CTerm.FloatOf(term.value, term.id), FLOAT, phase, PURE)
-            term is STerm.DoubleOf -> Typing(CTerm.DoubleOf(term.value, term.id), DOUBLE, phase, PURE)
-            term is STerm.StringOf -> Typing(CTerm.StringOf(term.value, term.id), STRING, phase, PURE)
-            term is STerm.ByteArrayOf -> {
-                val elements = term.elements.map { checkTerm(it, BYTE, phase, PURE).term }
-                Typing(CTerm.ByteArrayOf(elements, term.id), BYTE_ARRAY, phase, PURE)
-            }
-            term is STerm.IntArrayOf -> {
-                val elements = term.elements.map { checkTerm(it, INT, phase, PURE).term }
-                Typing(CTerm.IntArrayOf(elements, term.id), INT_ARRAY, phase, PURE)
-            }
-            term is STerm.LongArrayOf -> {
-                val elements = term.elements.map { checkTerm(it, LONG, phase, PURE).term }
-                Typing(CTerm.LongArrayOf(elements, term.id), LONG_ARRAY, phase, PURE)
-            }
-            term is STerm.ListOf -> if (term.elements.isEmpty()) {
-                Typing(CTerm.ListOf(emptyList(), term.id), CVTerm.List(lazyOf(END), lazyOf(CVTerm.IntOf(0))), phase, PURE)
-            } else { // TODO: use union of element types
-                val head = inferTerm(term.elements.first(), phase, PURE)
-                val tail = term.elements.drop(1).map { checkTerm(it, head.type, phase, PURE).term }
-                val elements = listOf(head.term) + tail
-                val size = CVTerm.IntOf(elements.size)
-                Typing(CTerm.ListOf(elements, term.id), CVTerm.List(lazyOf(head.type), lazyOf(size)), phase, PURE)
-            }
-            term is STerm.CompoundOf -> {
-                val (elementTerms, elementTypes) = term.elements.map { entry ->
-                    val element = inferTerm(entry.element, phase, PURE)
-                    CTerm.CompoundOf.Entry(entry.name, element.term) to CVTerm.Compound.Entry(true, entry.name, lazyOf(element.type), null)
-                }.unzip()
-                Typing(CTerm.CompoundOf(elementTerms, term.id), CVTerm.Compound(elementTypes.map { it.name.text to it }.toLinkedHashMap()), phase, PURE)
-            }
-            term is STerm.TupleOf -> {
-                val elements = term.elements.map { element -> inferTerm(element, phase, PURE) }
-                Typing(
-                    CTerm.TupleOf(elements.map { it.term }, term.id),
-                    CVTerm.Tuple(elements.map { CTerm.Tuple.Entry(true, Name("", freshId()), map { it.normalizer }.quoteTerm(it.type), null) }),
-                    phase,
-                    PURE
-                )
-            }
-            term is STerm.RefOf -> {
-                val element = inferTerm(term.element, phase, PURE)
-                Typing(CTerm.RefOf(element.term, term.id), CVTerm.Ref(lazyOf(element.type)), phase, PURE)
-            }
-            term is STerm.Refl -> {
-                val left = lazy { value.normalizer.fresh(term.id) }
-                Typing(CTerm.Refl(term.id), CVTerm.Eq(left, left), phase, PURE)
-            }
-            term is STerm.FunOf -> {
-                val types = term.params.map { value.normalizer.fresh(term.id) }
-                restore {
-                    (term.params zip types).forEach { (param, type) ->
-                        this@Elab.types[param.id] = type
-                        modify { it.bind(Entry(true /* TODO */, param.text, END, ANY, true, type, value.phase)) }
-                    }
-                    val body = inferTerm(term.body, phase, INFER)
-                    map { it.normalizer }.run {
-                        val params = (term.params zip types).map { (param, type) ->
-                            CParam(true /* TODO */, param.text, quoteTerm(END), quoteTerm(ANY), true, quoteTerm(type), param.id)
+                        modify { it.empty() }
+                        (term.params zip type.params).forEach { (name, param) ->
+                            val lower = param.lower?.let { map { it.normalizer }.evalTerm(it) }
+                            val upper = param.upper?.let { map { it.normalizer }.evalTerm(it) }
+                            val type = map { it.normalizer }.evalTerm(param.type)
+                            this@Elab.types[param.id] = type
+                            modify { it.bind(Entry(param.termRelevant, name.text, lower, upper, param.typeRelevant, type, value.phase)) }
                         }
-                        Typing(CTerm.FunOf(term.params, body.term, term.id), CVTerm.Fun(params, quoteTerm(body.type), body.effs), phase, PURE)
+                        val resultant = elabTerm(term.body, map { it.normalizer }.evalTerm(type.resultant), phase, effs)
+                        Typing(CTerm.FunOf(term.params, resultant.term, term.id), type, resultant.phase, PURE)
                     }
                 }
-            }
-            term is STerm.Apply -> {
-                val function = inferTerm(term.function, phase, INFER)
-                val type = map { it.normalizer }.run {
-                    when (val type = value.force(function.type)) {
-                        is CVTerm.Fun -> type
-                        else -> {
-                            val params = term.arguments.map {
-                                CParam(true, "", null, null, true, quoteTerm(value.fresh(freshId())), freshId())
-                            }
-                            val resultant = quoteTerm(value.fresh(freshId()))
-                            unifyTerms(type, CVTerm.Fun(params, resultant, function.effs, null))
-                            CVTerm.Fun(params, resultant, function.effs, type.id)
-                        }
+                term is STerm.CodeOf && type is CVTerm.Code && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
+                    modify { it.copy(phase = Phase.DYNAMIC) }
+                    val element = elabTerm(term.element, type.element.value, Phase.DYNAMIC, PURE)
+                    Typing(CTerm.CodeOf(element.term, term.id), type, phase, PURE)
+                }
+                else -> {
+                    val id = term.id
+                    val inferred = elabTerm(term, INFER, phase, INFER)
+                    if (!subtypeTerms(inferred.type, type)) {
+                        types[id] = END
+                        val expected = printTerm(map { it.normalizer }.quoteTerm(type))
+                        val actual = printTerm(map { it.normalizer }.quoteTerm(inferred.type))
+                        diagnose(Diagnostic.TermMismatch(expected, actual, id))
                     }
-                }
-                if (type.params.size != term.arguments.size) {
-                    diagnose(Diagnostic.SizeMismatch(type.params.size, term.arguments.size, term.id))
-                }
-                map { it.normalizer }.run {
-                    val arguments = (term.arguments zip type.params).map { (argument, param) ->
-                        val tArgument = checkTerm(argument, evalTerm(param.type), phase, PURE).term
-                        val vArgument = evalTerm(tArgument)
-                        param.lower?.let { evalTerm(it) }?.also { lower ->
-                            if (!subtypeTerms(lower, vArgument)) {
-                                diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(vArgument)), printTerm(quoteTerm(lower)), argument.id))
-                            }
-                        }
-                        param.upper?.let { evalTerm(it) }?.also { upper ->
-                            if (!subtypeTerms(vArgument, upper)) {
-                                diagnose(Diagnostic.TermMismatch(printTerm(quoteTerm(upper)), printTerm(quoteTerm(vArgument)), argument.id))
-                            }
-                        }
-                        modify { it.bind(lazyOf(vArgument)) }
-                        tArgument
+                    if (!effs.containsAll(inferred.effs)) {
+                        diagnose(Diagnostic.EffMismatch(effs.map { printEff(it) }, inferred.effs.map { printEff(it) }, id))
                     }
-                    val resultant = evalTerm(type.resultant)
-                    Typing(CTerm.Apply(function.term, arguments, term.id), resultant, phase, type.effs)
+                    Typing(inferred.term, type, inferred.phase, inferred.effs)
                 }
             }
-            term is STerm.CodeOf && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
-                modify { it.copy(phase = Phase.DYNAMIC) }
-                val element = inferTerm(term.element, Phase.DYNAMIC, PURE)
-                Typing(CTerm.CodeOf(element.term, term.id), CVTerm.Code(lazyOf(element.type)), Phase.STATIC, PURE)
-            }
-            term is STerm.Splice && subtypePhase(phase, Phase.DYNAMIC, term.id) -> restore {
-                modify { it.copy(phase = Phase.STATIC) }
-                val element = inferTerm(term.element, Phase.STATIC, PURE)
-                val type = when (val type = value.normalizer.force(element.type)) {
-                    is CVTerm.Code -> type.element.value
-                    else -> type.also { type ->
-                        map { it.normalizer }.unifyTerms(type, CVTerm.Code(lazyOf(value.normalizer.fresh(freshId()))))
-                    }
-                }
-                Typing(CTerm.Splice(element.term, term.id), type, Phase.DYNAMIC, PURE)
-            }
-            term is STerm.Singleton -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val element = inferTerm(term.element, phase, PURE)
-                Typing(CTerm.Singleton(element.term, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Or -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val variants = term.variants.map { checkTerm(it, TYPE, phase, PURE).term }
-                Typing(CTerm.Or(variants, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.And -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val variants = term.variants.map { checkTerm(it, TYPE, phase, PURE).term }
-                Typing(CTerm.And(variants, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Unit -> Typing(CTerm.Unit(term.id), TYPE, phase, PURE)
-            term is STerm.Bool -> Typing(CTerm.Bool(term.id), TYPE, phase, PURE)
-            term is STerm.Byte -> Typing(CTerm.Byte(term.id), TYPE, phase, PURE)
-            term is STerm.Short -> Typing(CTerm.Short(term.id), TYPE, phase, PURE)
-            term is STerm.Int -> Typing(CTerm.Int(term.id), TYPE, phase, PURE)
-            term is STerm.Long -> Typing(CTerm.Long(term.id), TYPE, phase, PURE)
-            term is STerm.Float -> Typing(CTerm.Float(term.id), TYPE, phase, PURE)
-            term is STerm.Double -> Typing(CTerm.Double(term.id), TYPE, phase, PURE)
-            term is STerm.String -> Typing(CTerm.String(term.id), TYPE, phase, PURE)
-            term is STerm.ByteArray -> Typing(CTerm.ByteArray(term.id), TYPE, phase, PURE)
-            term is STerm.IntArray -> Typing(CTerm.IntArray(term.id), TYPE, phase, PURE)
-            term is STerm.LongArray -> Typing(CTerm.LongArray(term.id), TYPE, phase, PURE)
-            term is STerm.List -> restore {
-                val element = checkTerm(term.element, TYPE, phase, PURE)
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val size = checkTerm(term.size, INT, phase, PURE)
-                Typing(CTerm.List(element.term, size.term, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Compound -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val elements = term.elements.map { entry ->
-                    val element = checkTerm(entry.type, TYPE, phase, PURE)
-                    CTerm.Compound.Entry(entry.relevant, entry.name, element.term, entry.id)
-                }
-                Typing(CTerm.Compound(elements, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Tuple -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val elements = term.elements.map { entry ->
-                    val element = checkTerm(entry.type, TYPE, phase, PURE)
-                    modify { it.bind(Entry(false, entry.name.text, END, ANY, true, map { it.normalizer }.evalTerm(element.term), value.phase)) }
-                    CTerm.Tuple.Entry(entry.relevant, entry.name, element.term, entry.id)
-                }
-                Typing(CTerm.Tuple(elements, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Ref -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val element = checkTerm(term.element, TYPE, phase, PURE)
-                Typing(CTerm.Ref(element.term, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Eq -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val left = inferTerm(term.left, phase, PURE)
-                val right = checkTerm(term.right, left.type, phase, PURE)
-                Typing(CTerm.Eq(left.term, right.term, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Fun -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val params = bindParams(term.params, phase)
-                val resultant = checkTerm(term.resultant, TYPE, phase, PURE)
-                val effs = term.effs.map { elabEff(it) }.toSet()
-                Typing(CTerm.Fun(params, resultant.term, effs, term.id), TYPE, phase, PURE)
-            }
-            term is STerm.Code && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
-                modify { it.copy(termRelevant = false, typeRelevant = true) }
-                val element = checkTerm(term.element, TYPE, phase, PURE)
-                Typing(CTerm.Code(element.term, term.id), TYPE, Phase.STATIC, PURE)
-            }
-            term is STerm.Type -> Typing(CTerm.Type(term.id), TYPE, phase, PURE)
-            else -> Typing(CTerm.Hole(term.id), END, phase, PURE)
         }.also {
             types[term.id] = it.type
-        }
-    }
-
-    /**
-     * Checks the [term] against the [type] under the context.
-     */
-    private fun Store<Context>.checkTerm(term: STerm, type: CVTerm, phase: Phase?, effs: Set<CEff>?): Typing {
-        val type = value.normalizer.force(type).also {
-            types[term.id] = it
-        }
-        val phase = phase ?: Phase.BOTTOM
-        return when {
-            term is STerm.Hole -> {
-                completions[term.id] = value.entries.map { it.name to it.type }
-                diagnose(Diagnostic.TermExpected(printTerm(map { it.normalizer }.quoteTerm(type)), term.id))
-                Typing(CTerm.Hole(term.id), type, phase, PURE)
-            }
-            term is STerm.Meta ->
-                Typing(map { it.normalizer }.quoteTerm(value.normalizer.fresh(term.id)), type, phase, PURE)
-            term is STerm.Block -> restore {
-                val elements = term.elements.map { inferTerm(it, phase, INFER) }
-                val effs = elements.fold(mutableSetOf<CEff>()) { effs, element -> effs.also { it += element.effs } }
-                Typing(CTerm.Block(elements.map { it.term }, term.id), type, Phase.TOP /* TODO */, effs)
-            }
-            term is STerm.Let -> {
-                val init = inferTerm(term.init, phase, INFER)
-                modify { it.bind(Entry(true /* TODO */, term.name, END, ANY, true, init.type, value.phase)) }
-                Typing(CTerm.Let(term.name, init.term, term.id), type, init.phase, init.effs)
-            }
-            term is STerm.Match -> {
-                val scrutinee = inferTerm(term.scrutinee, phase, PURE)
-                val clauses = term.clauses.map { (pat, body) ->
-                    restore {
-                        val pat = checkPat(pat, scrutinee.type)
-                        val body = checkTerm(body, type, scrutinee.phase, INFER)
-                        pat to body
-                    }
-                }
-                checkExhaustiveness(clauses.map { it.first }, scrutinee.type, term.id)
-                val effs = clauses.fold(mutableSetOf<CEff>()) { effs, (_, body) -> effs.also { it += body.effs } }
-                Typing(CTerm.Match(scrutinee.term, clauses.map { (pat, body) -> pat to body.term }, term.id), type, scrutinee.phase, effs)
-            }
-            term is STerm.ListOf && type is CVTerm.List -> {
-                val elements = term.elements.map { checkTerm(it, type.element.value, phase, PURE).term }
-                when (val size = value.normalizer.force(type.size.value)) {
-                    is CVTerm.IntOf -> if (size.value != elements.size) diagnose(Diagnostic.SizeMismatch(size.value, elements.size, term.id))
-                    else -> {}
-                }
-                Typing(CTerm.ListOf(elements, term.id), type, phase, PURE)
-            }
-            term is STerm.CompoundOf && type is CVTerm.Compound -> {
-                if (type.elements.size != term.elements.size) {
-                    diagnose(Diagnostic.SizeMismatch(type.elements.size, term.elements.size, term.id))
-                }
-                val elements = (term.elements zip type.elements.values).map { (element, entry) ->
-                    val tElement = checkTerm(element.element, entry.type.value, phase, PURE)
-                    CTerm.CompoundOf.Entry(element.name, tElement.term)
-                }
-                Typing(CTerm.CompoundOf(elements, term.id), type, phase, PURE)
-            }
-            term is STerm.TupleOf && type is CVTerm.Tuple -> restore {
-                val elements = (term.elements zip type.elements).map { (element, entry) ->
-                    val vType = map { it.normalizer }.evalTerm(entry.type)
-                    val tElement = checkTerm(element, vType, phase, PURE).term
-                    val vElement = map { it.normalizer }.evalTerm(tElement)
-                    modify { it.bind(Entry(entry.relevant, "", END, ANY, true, vType, value.phase), vElement) }
-                    tElement
-                }
-                Typing(CTerm.TupleOf(elements, term.id), type, phase, PURE)
-            }
-            term is STerm.RefOf && type is CVTerm.Ref -> {
-                val element = checkTerm(term.element, type.element.value, phase, PURE)
-                Typing(CTerm.RefOf(element.term, term.id), type, phase, PURE)
-            }
-            term is STerm.FunOf && type is CVTerm.Fun -> {
-                if (type.params.size != term.params.size) {
-                    diagnose(Diagnostic.SizeMismatch(type.params.size, term.params.size, term.id))
-                }
-                restore {
-                    modify { it.empty() }
-                    (term.params zip type.params).forEach { (name, param) ->
-                        val lower = param.lower?.let { map { it.normalizer }.evalTerm(it) }
-                        val upper = param.upper?.let { map { it.normalizer }.evalTerm(it) }
-                        val type = map { it.normalizer }.evalTerm(param.type)
-                        this@Elab.types[param.id] = type
-                        modify { it.bind(Entry(param.termRelevant, name.text, lower, upper, param.typeRelevant, type, value.phase)) }
-                    }
-                    val resultant = checkTerm(term.body, map { it.normalizer }.evalTerm(type.resultant), phase, effs)
-                    Typing(CTerm.FunOf(term.params, resultant.term, term.id), type, resultant.phase, PURE)
-                }
-            }
-            term is STerm.CodeOf && type is CVTerm.Code && subtypePhase(phase, Phase.STATIC, term.id) -> restore {
-                modify { it.copy(phase = Phase.DYNAMIC) }
-                val element = checkTerm(term.element, type.element.value, Phase.DYNAMIC, PURE)
-                Typing(CTerm.CodeOf(element.term, term.id), type, phase, PURE)
-            }
-            else -> {
-                val id = term.id
-                val inferred = inferTerm(term, phase, INFER)
-                if (!subtypeTerms(inferred.type, type)) {
-                    types[id] = END
-                    val expected = printTerm(map { it.normalizer }.quoteTerm(type))
-                    val actual = printTerm(map { it.normalizer }.quoteTerm(inferred.type))
-                    diagnose(Diagnostic.TermMismatch(expected, actual, id))
-                }
-                if (effs?.containsAll(inferred.effs) == false) {
-                    diagnose(Diagnostic.EffMismatch(effs.map { printEff(it) }, inferred.effs.map { printEff(it) }, id))
-                }
-                Typing(inferred.term, type, inferred.phase, inferred.effs)
-            }
         }
     }
 
