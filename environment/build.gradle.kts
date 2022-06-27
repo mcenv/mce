@@ -68,7 +68,7 @@ kotlin {
 
         val serverTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.4")
             }
         }
 
