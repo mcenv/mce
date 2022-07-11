@@ -56,7 +56,7 @@ kotlin {
 
         val serverMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3.4")
+                implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3.5")
                 implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3.5")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.3.3")
                 implementation("io.ktor:ktor-server-core-jvm:2.0.3")
